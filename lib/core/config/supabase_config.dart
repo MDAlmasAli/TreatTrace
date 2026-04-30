@@ -13,8 +13,8 @@
 
 class SupabaseConfig {
   // Your Supabase project URL — looks like: https://xyzabc.supabase.co
-  static const String supabaseUrl = 'YOUR_SUPABASE_PROJECT_URL';
+  static const String supabaseUrl = 'https://prwnsmocfzlwtlvfucnz.supabase.co';
 
   // Your Supabase anonymous/public API key — a long JWT string
-  static const String supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByd25zbW9jZnpsd3RsdmZ1Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NTUyNTgsImV4cCI6MjA5MzEzMTI1OH0.wLafWGvLwNlSunO-F1i7twUofmqMXgFVQGap-g4Q-A0';
 }

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Confirm Your Account — TreatTrace</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet"/>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: #EEF2FF;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      color: #1A2038;
+      padding: 40px 16px;
+    }
+
+    .wrapper { max-width: 600px; margin: 0 auto; }
+
+    .brand-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+      padding: 0 4px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: #2563EB;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 20px;
+      color: #1A2038;
+      letter-spacing: -0.3px;
+    }
+
+    .card {
+      background: #FFFFFF;
+      border-radius: 24px;
+      border: 1px solid #DBEAFE;
+    }
+
+    .hero {
+      background: #1D4ED8;
+      background-image: radial-gradient(circle at 80% 20%, #3B82F6 0%, #1D4ED8 60%, #1E3A8A 100%);
+      padding: 52px 48px 44px;
+      border-radius: 22px 22px 0 0;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.28);
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.92);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #93C5FD;
+      display: inline-block;
+    }
+
+    .hero h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 38px;
+      line-height: 1.15;
+      color: #FFFFFF;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .hero h1 em { font-style: italic; color: #BAD8FF; }
+
+    .hero p {
+      font-size: 15px;
+      color: rgba(255,255,255,0.75);
+      line-height: 1.6;
+      max-width: 360px;
+    }
+
+    .icon-strip {
+      background: #F0F4FF;
+      border-top: 1px solid #DBEAFE;
+      border-bottom: 1px solid #DBEAFE;
+      padding: 16px 48px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .strip-icon-box {
+      width: 38px;
+      height: 38px;
+      background: #DBEAFE;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .icon-strip p { font-size: 13px; color: #4A5580; line-height: 1.5; }
+    .icon-strip strong { color: #1A2038; font-weight: 500; }
+
+    .body { padding: 44px 48px; }
+
+    .greeting { font-size: 15px; color: #4A5580; margin-bottom: 20px; line-height: 1.7; }
+    .greeting strong { color: #1A2038; font-weight: 500; }
+
+    .steps { margin: 32px 0; display: flex; flex-direction: column; gap: 12px; }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px 20px;
+      background: #F5F7FF;
+      border: 1px solid #DBEAFE;
+      border-radius: 14px;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #2563EB;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .step-text strong { display: block; font-size: 14px; font-weight: 500; color: #1A2038; margin-bottom: 2px; }
+    .step-text span { font-size: 13px; color: #6272A4; }
+
+    .cta-wrap { text-align: center; margin: 36px 0 28px; }
+
+    .cta-btn {
+      display: inline-block;
+      background: #2563EB;
+      color: #FFFFFF;
+      text-decoration: none;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 0.2px;
+      padding: 16px 44px;
+      border-radius: 100px;
+    }
+
+    .cta-note { font-size: 12px; color: #8AA5D0; margin-top: 14px; }
+
+    .divider { height: 1px; background: #DBEAFE; margin: 28px 0; }
+
+    .alt-link-block {
+      background: #F0F4FF;
+      border: 1px solid #DBEAFE;
+      border-radius: 14px;
+      padding: 18px 20px;
+    }
+
+    .alt-link-block p { font-size: 12.5px; color: #6272A4; margin-bottom: 8px; }
+    .alt-link-block .url { font-size: 12px; color: #2563EB; word-break: break-all; font-weight: 500; }
+
+    .footer {
+      background: #F0F4FF;
+      border-top: 1px solid #DBEAFE;
+      padding: 28px 48px;
+      text-align: center;
+      border-radius: 0 0 22px 22px;
+    }
+
+    .trust-row { display: flex; justify-content: center; gap: 24px; margin-bottom: 20px; flex-wrap: wrap; }
+    .trust-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: #7A8FBF; }
+
+    .footer-pills { display: flex; justify-content: center; gap: 20px; margin-bottom: 18px; flex-wrap: wrap; }
+    .footer-pills a { font-size: 12px; color: #6272A4; text-decoration: none; }
+
+    .footer-copy { font-size: 12px; color: #93A8D0; line-height: 1.6; }
+    .footer-copy a { color: #2563EB; text-decoration: none; }
+
+    @media (max-width: 520px) {
+      .hero { padding: 40px 28px 36px; }
+      .hero h1 { font-size: 30px; }
+      .body { padding: 36px 28px; }
+      .icon-strip { padding: 16px 28px; }
+      .footer { padding: 24px 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+
+    <div class="brand-bar">
+      <div class="brand-icon">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 3H13V8H18V11H13V17H10V11H5V8H10V3Z" fill="white" opacity="0.9"/>
+        </svg>
+      </div>
+      <span class="brand-name">TreatTrace</span>
+    </div>
+
+    <div class="card">
+
+      <div class="hero">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          Action Required
+        </div>
+        <h1>Verify your<br><em>email address</em></h1>
+        <p>One quick step to activate your account and access your personal health dashboard.</p>
+      </div>
+
+      <div class="icon-strip">
+        <div class="strip-icon-box">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 1.5L3 4V9C3 12.315 5.595 15.405 9 16.5C12.405 15.405 15 12.315 15 9V4L9 1.5Z" stroke="#2563EB" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M6.5 9L8.5 11L12 7" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <p><strong>Encrypted &amp; Secure.</strong> This verification link is unique to your account and expires in 24 hours.</p>
+      </div>
+
+      <div class="body">
+        <p class="greeting">
+          Hello, <strong>New Member</strong> 👋<br><br>
+          Thank you for joining TreatTrace. To keep your account and health data protected, we need to confirm your email address before you can get started.
+        </p>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-text">
+              <strong>Click the button below</strong>
+              <span>Tap "Confirm My Email" to verify your address</span>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-text">
+              <strong>You'll be redirected</strong>
+              <span>Land directly on your personal health dashboard</span>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-text">
+              <strong>Start using TreatTrace</strong>
+              <span>Manage appointments, records, and more</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cta-wrap">
+          <a href="{{ .ConfirmationURL }}" class="cta-btn">Confirm My Email →</a>
+          <p class="cta-note">This link expires in <strong>24 hours</strong> and can only be used once.</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="alt-link-block">
+          <p>If the button doesn't work, copy and paste this link into your browser:</p>
+          <span class="url">{{ .ConfirmationURL }}</span>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="trust-row">
+          <span class="trust-badge">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6.5 1L3 3V6.5C3 8.985 4.685 11.31 6.5 12C8.315 11.31 10 8.985 10 6.5V3L6.5 1Z" stroke="#7A8FBF" stroke-width="1.2"/>
+            </svg>
+            HIPAA Compliant
+          </span>
+          <span class="trust-badge">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="5.5" width="9" height="6.5" rx="1.5" stroke="#7A8FBF" stroke-width="1.2"/>
+              <path d="M4.5 5.5V3.5C4.5 2.395 5.395 1.5 6.5 1.5C7.605 1.5 8.5 2.395 8.5 3.5V5.5" stroke="#7A8FBF" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+            256-bit SSL
+          </span>
+          <span class="trust-badge">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="6.5" cy="6.5" r="5" stroke="#7A8FBF" stroke-width="1.2"/>
+              <path d="M4 6.5L5.8 8.5L9 4.5" stroke="#7A8FBF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Verified Platform
+          </span>
+        </div>
+
+        <div class="footer-pills">
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+          <a href="#">Help Center</a>
+          <a href="#">Unsubscribe</a>
+        </div>
+
+        <p class="footer-copy">
+          © 2026 TreatTrace, Inc.<br>
+          You received this email because you signed up for <a href="#">TreatTrace</a>.<br>
+          If you didn't create this account, you can safely ignore this email.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
