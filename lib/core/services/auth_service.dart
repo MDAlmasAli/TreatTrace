@@ -115,4 +115,19 @@ class AuthService {
 
     return response;
   }
+
+  // ── Update Email ──────────────────────────────────────────────────────────
+
+  /// Initiates an email address change for the current user.
+  /// Supabase sends a confirmation email to the new address.
+  Future<void> updateEmail(String newEmail) async {
+    await _client.auth.updateUser(UserAttributes(email: newEmail.trim()));
+  }
+
+  // ── Update Password ───────────────────────────────────────────────────────
+
+  /// Updates the current user's password directly via Supabase Auth.
+  Future<void> updatePassword(String newPassword) async {
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
+  }
 }

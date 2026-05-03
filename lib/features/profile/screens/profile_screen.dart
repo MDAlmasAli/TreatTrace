@@ -1,55 +1,45 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// profile_screen.dart
-//
-// User profile screen for TreatTrace.
-//
-// Data flow:
-//   initState → ProfileService.fetchHealthProfile()
-//     ├─ null    → new user, no row exists yet   → show empty states
-//     └─ profile → existing data                 → show real values
-//
-//   Edit button → EditProfileScreen (pre-filled)
-//     └─ returns true on save → reload profile
-//
-// Sections:
-//   1. Header              — avatar, name, profession, edit button
-//   2. Medical Identity    — vitals grid + auto BMI
-//   3. Health Records      — allergies, ongoing treatment
-//   4. Emergency Contact   — ICE card (red tint)
-//   5. Settings            — dark mode toggle, language, logout
+// profile_screen.dart — Dark futuristic profile screen for TreatTrace.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import 'package:image_picker/image_picker.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/app_strings.dart';
+import '../../../core/services/account_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/profile_service.dart';
 import '../../auth/screens/login_screen.dart';
 import '../models/health_profile.dart';
 import 'edit_profile_screen.dart';
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const Color _deepBlue  = Color(0xFF2563EB);
-const Color _blueBg    = Color(0xFFEEF2FF);
-const Color _blueBorder = Color(0xFFBFD7FF);
-const Color _textDark  = Color(0xFF1E293B);
-const Color _textMid   = Color(0xFF475569);
-const Color _textLight = Color(0xFF94A3B8);
-
+// ── BMI color helper ──────────────────────────────────────────────────────────
 Color _bmiColor(double bmi) {
-  if (bmi < 18.5) return const Color(0xFF3B82F6);
-  if (bmi < 25.0) return const Color(0xFF22C55E);
-  if (bmi < 30.0) return const Color(0xFFF59E0B);
-  return const Color(0xFFEF4444);
+  if (bmi < 18.5) return DarkColors.cyan;
+  if (bmi < 25.0) return DarkColors.green;
+  if (bmi < 30.0) return DarkColors.amber;
+  return DarkColors.red;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ProfileScreen
 // ══════════════════════════════════════════════════════════════════════════════
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final void Function(String) onThemeChanged;
+  final void Function(String) onLocaleChanged;
+  final String currentTheme;
+  final String currentLocale;
+
+  const ProfileScreen({
+    super.key,
+    required this.onThemeChanged,
+    required this.onLocaleChanged,
+    required this.currentTheme,
+    required this.currentLocale,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -58,43 +48,274 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _authService    = AuthService();
   final _profileService = ProfileService();
+  final _accountService = AccountService();
+  final _imagePicker    = ImagePicker();
 
-  // ── State ─────────────────────────────────────────────────────────────────
-  bool           _isLoading = true;
-  HealthProfile? _profile;
-  bool           _darkMode  = false;
-  String         _language  = 'English';
+  bool            _isLoading     = true;
+  HealthProfile?  _health;
+  Map<String, dynamic>? _account;
+  String?         _avatarUrl;
+  bool            _uploadingAvatar = false;
 
-  // ── Getters ───────────────────────────────────────────────────────────────
   String get _displayName {
+    final fromAccount = _account?['full_name'] as String?;
+    if (fromAccount != null && fromAccount.isNotEmpty) return fromAccount;
     final meta = _authService.currentUser?.userMetadata;
     return (meta?['full_name'] as String?) ?? 'Your Name';
   }
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
+  String get _email =>
+      _authService.currentUser?.email ?? '';
+
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    _loadAll();
   }
 
-  Future<void> _loadProfile() async {
+  Future<void> _loadAll() async {
     setState(() => _isLoading = true);
     try {
-      _profile = await _profileService.fetchHealthProfile();
+      final results = await Future.wait([
+        _profileService.fetchHealthProfile(),
+        _accountService.fetchProfile(),
+      ]);
+      _health   = results[0] as HealthProfile?;
+      _account  = results[1] as Map<String, dynamic>?;
+      _avatarUrl = _account?['avatar_url'] as String?;
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // ── Navigation ────────────────────────────────────────────────────────────
   Future<void> _goToEdit() async {
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => EditProfileScreen(existing: _profile),
+        builder: (_) => EditProfileScreen(
+          existing:       _health,
+          accountData:    _account,
+        ),
       ),
     );
-    if (saved == true) _loadProfile();
+    if (saved == true) _loadAll();
+  }
+
+  // ── Avatar picker ─────────────────────────────────────────────────────────
+  Future<void> _pickAvatar() async {
+    final source = await _showImageSourceDialog();
+    if (source == null) return;
+
+    final picked = await _imagePicker.pickImage(
+      source: source,
+      imageQuality: 80,
+      maxWidth: 512,
+    );
+    if (picked == null) return;
+
+    setState(() => _uploadingAvatar = true);
+    try {
+      final url = await _accountService.uploadAvatar(picked.path);
+      setState(() => _avatarUrl = url);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Avatar upload failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
+
+  Future<ImageSource?> _showImageSourceDialog() {
+    return showDialog<ImageSource>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Choose photo source',
+            style: GoogleFonts.poppins(
+                color: DarkColors.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 16)),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.photo_library_rounded,
+                color: DarkColors.purpleBright),
+            label: Text('Gallery',
+                style: GoogleFonts.poppins(color: DarkColors.purpleBright)),
+            onPressed: () => Navigator.of(ctx).pop(ImageSource.gallery),
+          ),
+          TextButton.icon(
+            icon: const Icon(Icons.camera_alt_rounded,
+                color: DarkColors.cyan),
+            label: Text('Camera',
+                style: GoogleFonts.poppins(color: DarkColors.cyan)),
+            onPressed: () => Navigator.of(ctx).pop(ImageSource.camera),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Account dialogs ───────────────────────────────────────────────────────
+  Future<void> _showChangePasswordDialog() async {
+    final ctrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Change Password',
+            style: GoogleFonts.poppins(
+                color: DarkColors.textPrimary, fontWeight: FontWeight.w600)),
+        content: TextFormField(
+          controller: ctrl,
+          obscureText: true,
+          style: GoogleFonts.poppins(color: DarkColors.textPrimary),
+          decoration: InputDecoration(
+            hintText: 'New password (min 8 chars)',
+            hintStyle: GoogleFonts.poppins(color: DarkColors.textMuted),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text('Cancel',
+                  style: GoogleFonts.poppins(color: DarkColors.textSec))),
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text('Update',
+                  style: GoogleFonts.poppins(
+                      color: DarkColors.purpleBright,
+                      fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+    if (ok == true && ctrl.text.trim().length >= 8) {
+      try {
+        await _accountService.updatePassword(ctrl.text.trim());
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Password updated successfully.')));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error: $e')));
+        }
+      }
+    }
+    ctrl.dispose();
+  }
+
+  Future<void> _showChangeEmailDialog() async {
+    final ctrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Change Email',
+            style: GoogleFonts.poppins(
+                color: DarkColors.textPrimary, fontWeight: FontWeight.w600)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextFormField(
+              controller: ctrl,
+              keyboardType: TextInputType.emailAddress,
+              style: GoogleFonts.poppins(color: DarkColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'New email address',
+                hintStyle: GoogleFonts.poppins(color: DarkColors.textMuted),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'A confirmation email will be sent to the new address.',
+              style: GoogleFonts.poppins(
+                  fontSize: 11, color: DarkColors.textSec),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text('Cancel',
+                  style: GoogleFonts.poppins(color: DarkColors.textSec))),
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text('Send',
+                  style: GoogleFonts.poppins(
+                      color: DarkColors.purpleBright,
+                      fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+    if (ok == true && ctrl.text.trim().isNotEmpty) {
+      try {
+        await _accountService.updateEmail(ctrl.text.trim());
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text(
+                  'Confirmation email sent. Check your new inbox.')));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
+      }
+    }
+    ctrl.dispose();
+  }
+
+  Future<void> _showChangePhoneDialog() async {
+    final ctrl = TextEditingController(
+        text: _account?['phone'] as String? ?? '');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Change Phone Number',
+            style: GoogleFonts.poppins(
+                color: DarkColors.textPrimary, fontWeight: FontWeight.w600)),
+        content: TextFormField(
+          controller: ctrl,
+          keyboardType: TextInputType.phone,
+          style: GoogleFonts.poppins(color: DarkColors.textPrimary),
+          decoration: InputDecoration(
+            hintText: '+880 1XXX-XXXXXX',
+            hintStyle: GoogleFonts.poppins(color: DarkColors.textMuted),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text('Cancel',
+                  style: GoogleFonts.poppins(color: DarkColors.textSec))),
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text('Save',
+                  style: GoogleFonts.poppins(
+                      color: DarkColors.purpleBright,
+                      fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+    if (ok == true) {
+      try {
+        await _accountService.updatePhone(ctrl.text.trim());
+        setState(() {
+          _account = {...?_account, 'phone': ctrl.text.trim()};
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Phone number updated.')));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
+      }
+    }
+    ctrl.dispose();
   }
 
   // ── Logout ────────────────────────────────────────────────────────────────
@@ -102,25 +323,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18)),
         title: Text('Log Out',
-            style: GoogleFonts.dmSerifDisplay(
-                fontSize: 20, color: _textDark)),
+            style: GoogleFonts.poppins(
+                color: DarkColors.textPrimary, fontWeight: FontWeight.w600)),
         content: Text('Are you sure you want to log out?',
-            style: GoogleFonts.dmSans(fontSize: 13, color: _textMid)),
+            style: GoogleFonts.poppins(
+                fontSize: 13, color: DarkColors.textSec)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancel',
-                style: GoogleFonts.dmSans(color: _textMid)),
-          ),
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text('Cancel',
+                  style: GoogleFonts.poppins(color: DarkColors.textSec))),
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Log Out',
-                style: GoogleFonts.dmSans(
-                    color: Colors.red, fontWeight: FontWeight.w700)),
-          ),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text('Log Out',
+                  style: GoogleFonts.poppins(
+                      color: DarkColors.red,
+                      fontWeight: FontWeight.w700))),
         ],
       ),
     );
@@ -143,63 +362,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
       statusBarIconBrightness: Brightness.light,
     ));
 
+    final s = S.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
+      backgroundColor: DarkColors.bg,
       body: Column(
         children: [
-          _buildProfileHeader(MediaQuery.of(context).padding.top),
-
+          _buildHeader(MediaQuery.of(context).padding.top),
           Expanded(
             child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: _deepBlue),
-                  )
+                ? Center(
+                    child: CircularProgressIndicator(
+                        color: DarkColors.purpleBright))
                 : SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // 1. Medical Identity
-                        const _SectionLabel(text: 'Medical Identity'),
+                        _SectionLabel(text: s.medicalIdentity),
                         const SizedBox(height: 12),
                         _MedicalIdentityCard(
-                          profile:  _profile,
+                          profile:  _health,
                           onAddTap: _goToEdit,
                         ).animate().fadeIn(delay: 80.ms).slideY(begin: 0.06),
 
                         const SizedBox(height: 24),
 
                         // 2. Health Records
-                        const _SectionLabel(text: 'Health Records'),
+                        _SectionLabel(text: s.healthRecords),
                         const SizedBox(height: 12),
                         _HealthRecordsCard(
-                          profile:  _profile,
+                          profile:   _health,
                           onEditTap: _goToEdit,
-                        ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.06),
+                        ).animate().fadeIn(delay: 140.ms).slideY(begin: 0.06),
 
                         const SizedBox(height: 24),
 
                         // 3. Emergency Contact
-                        const _SectionLabel(text: 'Emergency Contact (ICE)'),
+                        _SectionLabel(text: s.emergencyContact),
                         const SizedBox(height: 12),
                         _EmergencyContactCard(
-                          profile:  _profile,
+                          profile:  _health,
                           onAddTap: _goToEdit,
-                        ).animate().fadeIn(delay: 210.ms).slideY(begin: 0.06),
+                        ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.06),
 
                         const SizedBox(height: 24),
 
-                        // 4. Settings
-                        const _SectionLabel(text: 'Settings & Preferences'),
+                        // 4. Account Settings (NEW)
+                        _SectionLabel(text: s.accountSettings),
                         const SizedBox(height: 12),
-                        _SettingsCard(
-                          darkMode:          _darkMode,
-                          onDarkModeToggle:  (v) => setState(() => _darkMode = v),
-                          language:          _language,
-                          onLanguageChanged: (v) =>
-                              setState(() => _language = v ?? _language),
-                          onLogout: _confirmLogout,
-                        ).animate().fadeIn(delay: 270.ms).slideY(begin: 0.06),
+                        _AccountSettingsCard(
+                          onChangePassword: _showChangePasswordDialog,
+                          onChangeEmail:    _showChangeEmailDialog,
+                          onChangePhone:    _showChangePhoneDialog,
+                        ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.06),
+
+                        const SizedBox(height: 24),
+
+                        // 5. App Settings
+                        _SectionLabel(text: s.settings),
+                        const SizedBox(height: 12),
+                        _AppSettingsCard(
+                          currentTheme:    widget.currentTheme,
+                          currentLocale:   widget.currentLocale,
+                          onThemeChanged:  widget.onThemeChanged,
+                          onLocaleChanged: widget.onLocaleChanged,
+                          onLogout:        _confirmLogout,
+                        ).animate().fadeIn(delay: 320.ms).slideY(begin: 0.06),
                       ],
                     ),
                   ),
@@ -209,26 +439,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ── Blue profile header ───────────────────────────────────────────────────
-  Widget _buildProfileHeader(double topPad) {
+  // ── Dark profile header ───────────────────────────────────────────────────
+  Widget _buildHeader(double topPad) {
     return Container(
       width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [DarkColors.card, DarkColors.surface],
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft:  Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+        border: Border(
+          bottom: BorderSide(color: DarkColors.border, width: 1),
+        ),
+      ),
       padding: EdgeInsets.only(
         top:    topPad + 14,
         left:   24,
         right:  24,
         bottom: 32,
       ),
-      decoration: const BoxDecoration(
-        color: _deepBlue,
-        borderRadius: BorderRadius.only(
-          bottomLeft:  Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
-      ),
       child: Column(
         children: [
-          // Top row: back (left) + edit (right)
           Row(
             children: [
               GestureDetector(
@@ -245,36 +481,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           const SizedBox(height: 20),
 
-          // Circular avatar with camera badge
+          // Avatar with gradient ring + camera badge
           Stack(
             children: [
+              // Gradient ring around avatar
               Container(
-                width: 94,
-                height: 94,
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withAlpha(30),
-                  border: Border.all(
-                      color: Colors.white.withAlpha(100), width: 3),
+                  gradient: DarkColors.accentGradient,
+                  boxShadow: [
+                    BoxShadow(
+                      color: DarkColors.purpleBright.withAlpha(60),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: const Icon(Icons.person_rounded,
-                    size: 54, color: Colors.white),
+                padding: const EdgeInsets.all(3),
+                child: ClipOval(
+                  child: _uploadingAvatar
+                      ? Container(
+                          color: DarkColors.card,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: DarkColors.purpleBright,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        )
+                      : _avatarUrl != null && _avatarUrl!.isNotEmpty
+                          ? Image.network(
+                              _avatarUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, e, s) => _defaultAvatar(),
+                            )
+                          : _defaultAvatar(),
+                ),
               ),
+
+              // Camera badge
               Positioned(
                 bottom: 0,
                 right:  0,
                 child: GestureDetector(
-                  onTap: _goToEdit,
+                  onTap: _pickAvatar,
                   child: Container(
-                    width: 28,
-                    height: 28,
+                    width: 30,
+                    height: 30,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF60A5FA),
+                      gradient: DarkColors.accentGradient,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: DarkColors.surface, width: 2),
                     ),
                     child: const Icon(Icons.camera_alt_rounded,
-                        size: 13, color: Colors.white),
+                        size: 14, color: Colors.white),
                   ),
                 ),
               ),
@@ -285,46 +547,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           Text(
             _displayName,
-            style: GoogleFonts.dmSerifDisplay(
-                fontSize: 24, color: Colors.white),
+            style: GoogleFonts.poppins(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: DarkColors.textPrimary,
+            ),
           ),
 
-          const SizedBox(height: 5),
+          const SizedBox(height: 4),
 
           Text(
-            'General Patient',
-            style: GoogleFonts.dmSans(
+            _email,
+            style: GoogleFonts.poppins(
               fontSize: 13,
-              color: Colors.white.withAlpha(210),
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 14, vertical: 5),
-            decoration: BoxDecoration(
-              color:  Colors.white.withAlpha(22),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withAlpha(50)),
-            ),
-            child: Text(
-              'TreatTrace Member',
-              style: GoogleFonts.dmSans(
-                fontSize: 12,
-                color: Colors.white.withAlpha(220),
-                fontWeight: FontWeight.w500,
-              ),
+              color: DarkColors.textSec,
             ),
           ),
         ],
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.05);
   }
+
+  Widget _defaultAvatar() {
+    return Container(
+      color: DarkColors.card,
+      child: const Icon(Icons.person_rounded,
+          size: 54, color: DarkColors.textMuted),
+    );
+  }
 }
 
-// Small icon button used in the blue header.
+// ── Header icon button ────────────────────────────────────────────────────────
 class _HeaderIconBtn extends StatelessWidget {
   final IconData icon;
   const _HeaderIconBtn({required this.icon});
@@ -335,18 +588,16 @@ class _HeaderIconBtn extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(28),
+        color: DarkColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withAlpha(45)),
+        border: Border.all(color: DarkColors.border, width: 1),
       ),
-      child: Icon(icon, color: Colors.white, size: 20),
+      child: Icon(icon, color: DarkColors.textSec, size: 20),
     );
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// _SectionLabel
-// ══════════════════════════════════════════════════════════════════════════════
+// ── Section label ─────────────────────────────────────────────────────────────
 class _SectionLabel extends StatelessWidget {
   final String text;
   const _SectionLabel({required this.text});
@@ -354,32 +605,43 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
         text,
-        style: GoogleFonts.dmSerifDisplay(fontSize: 18, color: _textDark),
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: DarkColors.textPrimary,
+        ),
       );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// _ProfileCard — shared white card shell.
-// ══════════════════════════════════════════════════════════════════════════════
-class _ProfileCard extends StatelessWidget {
-  final Widget             child;
+// ── Dark card shell ───────────────────────────────────────────────────────────
+class _DarkCard extends StatelessWidget {
+  final Widget child;
+  final Color  accentColor;
   final EdgeInsetsGeometry? padding;
 
-  const _ProfileCard({required this.child, this.padding});
+  const _DarkCard({
+    required this.child,
+    required this.accentColor,
+    this.padding,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: padding ?? const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DarkColors.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-            color: const Color(0xFFE8EFFF), width: 1.2),
+        border: Border(
+          left:   BorderSide(color: accentColor, width: 4),
+          top:    const BorderSide(color: DarkColors.border, width: 1),
+          right:  const BorderSide(color: DarkColors.border, width: 1),
+          bottom: const BorderSide(color: DarkColors.border, width: 1),
+        ),
         boxShadow: [
           BoxShadow(
-            color: _deepBlue.withAlpha(14),
-            blurRadius: 14,
+            color: accentColor.withAlpha(15),
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
@@ -389,9 +651,7 @@ class _ProfileCard extends StatelessWidget {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// _EmptyBanner — shown inside a card when a section has no data yet.
-// ══════════════════════════════════════════════════════════════════════════════
+// ── Empty banner ──────────────────────────────────────────────────────────────
 class _EmptyBanner extends StatelessWidget {
   final String       message;
   final VoidCallback onTap;
@@ -406,28 +666,32 @@ class _EmptyBanner extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _blueBg,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _blueBorder),
+          border: Border.all(
+            color: DarkColors.borderLight,
+            width: 1.5,
+            // dashed border via CustomPainter would be ideal but Border works fine
+          ),
         ),
         child: Row(
           children: [
-            const Icon(Icons.add_circle_outline_rounded,
-                color: _deepBlue, size: 22),
+            Icon(Icons.add_circle_outline_rounded,
+                color: DarkColors.purpleBright, size: 22),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 message,
-                style: GoogleFonts.dmSans(
-                    fontSize: 13, color: _textMid),
+                style: GoogleFonts.poppins(
+                    fontSize: 13, color: DarkColors.textSec),
               ),
             ),
             Text(
-              'Add Info',
-              style: GoogleFonts.dmSans(
+              S.of(context).addInfo,
+              style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: _deepBlue,
+                color: DarkColors.purpleBright,
               ),
             ),
           ],
@@ -438,95 +702,68 @@ class _EmptyBanner extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _MedicalIdentityCard — 2×2 vitals grid + auto-calculated BMI row.
+// _MedicalIdentityCard
 // ══════════════════════════════════════════════════════════════════════════════
 class _MedicalIdentityCard extends StatelessWidget {
   final HealthProfile? profile;
   final VoidCallback   onAddTap;
 
-  const _MedicalIdentityCard({
-    required this.profile,
-    required this.onAddTap,
-  });
+  const _MedicalIdentityCard({required this.profile, required this.onAddTap});
 
   @override
   Widget build(BuildContext context) {
     final hasData = profile != null && profile!.hasVitals;
 
-    return _ProfileCard(
+    return _DarkCard(
+      accentColor: DarkColors.cyan,
       child: Column(
         children: [
           if (!hasData)
             _EmptyBanner(
-              message:
-                  'No medical information yet. Tap to add your health details.',
+              message: 'No medical information yet. Tap to add your vitals.',
               onTap: onAddTap,
             )
           else ...[
-            // Row 1
             Row(
               children: [
-                Expanded(
-                  child: _InfoBlock(
-                    icon:      Icons.bloodtype_rounded,
-                    iconColor: const Color(0xFFEF4444),
-                    iconBg:    const Color(0xFFFEE2E2),
-                    label:     'Blood Group',
-                    value:     profile!.bloodGroup ?? '—',
-                  ),
-                ),
+                Expanded(child: _InfoBlock(
+                  icon: Icons.bloodtype_rounded,
+                  iconColor: DarkColors.red,
+                  label: 'Blood Group',
+                  value: profile!.bloodGroup ?? '—',
+                )),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: _InfoBlock(
-                    icon:      Icons.cake_rounded,
-                    iconColor: const Color(0xFF8B5CF6),
-                    iconBg:    const Color(0xFFEDE9FE),
-                    label:     'Age',
-                    value:     profile!.ageDisplay,
-                  ),
-                ),
+                Expanded(child: _InfoBlock(
+                  icon: Icons.cake_rounded,
+                  iconColor: DarkColors.purpleBright,
+                  label: 'Age',
+                  value: profile!.ageDisplay,
+                )),
               ],
             ),
-
             const SizedBox(height: 12),
-
-            // Row 2
             Row(
               children: [
-                Expanded(
-                  child: _InfoBlock(
-                    icon:      Icons.height_rounded,
-                    iconColor: const Color(0xFF0EA5E9),
-                    iconBg:    const Color(0xFFE0F2FE),
-                    label:     'Height',
-                    value:     profile!.heightDisplay,
-                  ),
-                ),
+                Expanded(child: _InfoBlock(
+                  icon: Icons.height_rounded,
+                  iconColor: DarkColors.cyan,
+                  label: 'Height',
+                  value: profile!.heightDisplay,
+                )),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: _InfoBlock(
-                    icon:      Icons.monitor_weight_rounded,
-                    iconColor: const Color(0xFF059669),
-                    iconBg:    const Color(0xFFD1FAE5),
-                    label:     'Weight',
-                    value:     profile!.weightDisplay,
-                  ),
-                ),
+                Expanded(child: _InfoBlock(
+                  icon: Icons.monitor_weight_rounded,
+                  iconColor: DarkColors.green,
+                  label: 'Weight',
+                  value: profile!.weightDisplay,
+                )),
               ],
             ),
-
-            // BMI row — only when both height and weight are available
             if (profile!.bmi != null) ...[
               const SizedBox(height: 16),
-              const Divider(
-                  height: 1,
-                  color: Color(0xFFEEF2FF),
-                  thickness: 1.5),
+              Divider(height: 1, color: DarkColors.border, thickness: 1),
               const SizedBox(height: 16),
-              _BmiRow(
-                bmi:   profile!.bmi!,
-                label: profile!.bmiLabel,
-              ),
+              _BmiRow(bmi: profile!.bmi!, label: profile!.bmiLabel),
             ],
           ],
         ],
@@ -535,18 +772,15 @@ class _MedicalIdentityCard extends StatelessWidget {
   }
 }
 
-// Single stat block used inside the medical identity grid.
 class _InfoBlock extends StatelessWidget {
   final IconData icon;
   final Color    iconColor;
-  final Color    iconBg;
   final String   label;
   final String   value;
 
   const _InfoBlock({
     required this.icon,
     required this.iconColor,
-    required this.iconBg,
     required this.label,
     required this.value,
   });
@@ -556,9 +790,9 @@ class _InfoBlock extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _blueBg,
+        color: DarkColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _blueBorder, width: 1),
+        border: Border.all(color: DarkColors.border, width: 1),
       ),
       child: Row(
         children: [
@@ -566,7 +800,7 @@ class _InfoBlock extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: iconBg,
+              color: iconColor.withAlpha(20),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: iconColor, size: 20),
@@ -577,14 +811,14 @@ class _InfoBlock extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 10, color: _textLight)),
+                    style: GoogleFonts.poppins(
+                        fontSize: 10, color: DarkColors.textMuted)),
                 const SizedBox(height: 1),
                 Text(value,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 15,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: _textDark,
+                      color: DarkColors.textPrimary,
                     )),
               ],
             ),
@@ -595,7 +829,6 @@ class _InfoBlock extends StatelessWidget {
   }
 }
 
-// BMI summary row inside the medical identity card.
 class _BmiRow extends StatelessWidget {
   final double bmi;
   final String label;
@@ -611,7 +844,7 @@ class _BmiRow extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: color.withAlpha(25),
+            color: color.withAlpha(20),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(Icons.analytics_rounded, color: color, size: 22),
@@ -621,31 +854,31 @@ class _BmiRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Body Mass Index (BMI)',
-                style: GoogleFonts.dmSans(
-                    fontSize: 11, color: _textLight)),
+                style: GoogleFonts.poppins(
+                    fontSize: 11, color: DarkColors.textMuted)),
             const SizedBox(height: 2),
             Text(bmi.toStringAsFixed(1),
-                style: GoogleFonts.dmSerifDisplay(
-                    fontSize: 22, color: _textDark)),
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: DarkColors.textPrimary,
+                )),
           ],
         ),
         const Spacer(),
         Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 12, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           decoration: BoxDecoration(
-            color:  color.withAlpha(22),
+            color: color.withAlpha(20),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: color.withAlpha(60)),
           ),
-          child: Text(
-            label,
-            style: GoogleFonts.dmSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
+          child: Text(label,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: color,
+              )),
         ),
       ],
     );
@@ -653,27 +886,24 @@ class _BmiRow extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _HealthRecordsCard — allergies + ongoing treatment tiles.
+// _HealthRecordsCard
 // ══════════════════════════════════════════════════════════════════════════════
 class _HealthRecordsCard extends StatelessWidget {
   final HealthProfile? profile;
   final VoidCallback   onEditTap;
 
-  const _HealthRecordsCard({
-    required this.profile,
-    required this.onEditTap,
-  });
+  const _HealthRecordsCard({required this.profile, required this.onEditTap});
 
   @override
   Widget build(BuildContext context) {
-    return _ProfileCard(
+    return _DarkCard(
+      accentColor: DarkColors.amber,
       padding: EdgeInsets.zero,
       child: Column(
         children: [
           _RecordTile(
             icon:      Icons.warning_amber_rounded,
-            iconColor: const Color(0xFFF59E0B),
-            iconBg:    const Color(0xFFFEF3C7),
+            iconColor: DarkColors.amber,
             title:     'Allergies & Conditions',
             subtitle:  profile?.allergies?.isNotEmpty == true
                 ? profile!.allergies!
@@ -681,16 +911,11 @@ class _HealthRecordsCard extends StatelessWidget {
             isFirst:   true,
             onTap:     onEditTap,
           ),
-          const Divider(
-              height: 1,
-              indent: 20,
-              endIndent: 20,
-              color: Color(0xFFEEF2FF),
-              thickness: 1),
+          Divider(height: 1, indent: 20, endIndent: 20,
+              color: DarkColors.border, thickness: 1),
           _RecordTile(
             icon:      Icons.medication_rounded,
-            iconColor: const Color(0xFF059669),
-            iconBg:    const Color(0xFFD1FAE5),
+            iconColor: DarkColors.green,
             title:     'Ongoing Treatment',
             subtitle:  profile?.ongoingTreatment?.isNotEmpty == true
                 ? profile!.ongoingTreatment!
@@ -707,7 +932,6 @@ class _HealthRecordsCard extends StatelessWidget {
 class _RecordTile extends StatelessWidget {
   final IconData     icon;
   final Color        iconColor;
-  final Color        iconBg;
   final String       title;
   final String       subtitle;
   final VoidCallback onTap;
@@ -717,7 +941,6 @@ class _RecordTile extends StatelessWidget {
   const _RecordTile({
     required this.icon,
     required this.iconColor,
-    required this.iconBg,
     required this.title,
     required this.subtitle,
     required this.onTap,
@@ -736,15 +959,14 @@ class _RecordTile extends StatelessWidget {
         ),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 18, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           child: Row(
             children: [
               Container(
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: iconBg,
+                  color: iconColor.withAlpha(20),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: iconColor, size: 22),
@@ -755,28 +977,26 @@ class _RecordTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
-                        style: GoogleFonts.dmSans(
+                        style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: _textDark,
+                          color: DarkColors.textPrimary,
                         )),
                     const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.dmSans(
-                        fontSize: 12,
-                        color: subtitle.contains('Not added')
-                            ? _textLight
-                            : _textMid,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    Text(subtitle,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: subtitle.contains('Not added')
+                              ? DarkColors.textMuted
+                              : DarkColors.textSec,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: _textLight, size: 22),
+              Icon(Icons.chevron_right_rounded,
+                  color: DarkColors.textMuted, size: 22),
             ],
           ),
         ),
@@ -786,103 +1006,79 @@ class _RecordTile extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _EmergencyContactCard — light red ICE card.
+// _EmergencyContactCard
 // ══════════════════════════════════════════════════════════════════════════════
 class _EmergencyContactCard extends StatelessWidget {
   final HealthProfile? profile;
   final VoidCallback   onAddTap;
 
-  const _EmergencyContactCard({
-    required this.profile,
-    required this.onAddTap,
-  });
+  const _EmergencyContactCard(
+      {required this.profile, required this.onAddTap});
 
-  bool get _hasContact =>
-      profile != null && profile!.hasEmergencyContact;
+  bool get _hasContact => profile != null && profile!.hasEmergencyContact;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFEBEE),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-            color: const Color(0xFFFFCDD2), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFEF4444).withAlpha(20),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+    return _DarkCard(
+      accentColor: DarkColors.red,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Card header
           Row(
             children: [
               Container(
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFCDD2),
+                  color: DarkColors.red.withAlpha(20),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.emergency_rounded,
-                    color: Color(0xFFEF4444), size: 22),
+                    color: DarkColors.red, size: 22),
               ),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Emergency Contact',
-                      style: GoogleFonts.dmSans(
+                      style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFFB91C1C),
+                        color: DarkColors.red,
                       )),
                   Text('In Case of Emergency (ICE)',
-                      style: GoogleFonts.dmSans(
-                          fontSize: 11,
-                          color: const Color(0xFFEF4444))),
+                      style: GoogleFonts.poppins(
+                          fontSize: 11, color: DarkColors.red.withAlpha(180))),
                 ],
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
-          // Content: empty state OR actual contact
           if (!_hasContact)
             _EmptyBanner(
-              message:
-                  'No emergency contact set. Tap to add one.',
+              message: 'No emergency contact set. Tap to add one.',
               onTap: onAddTap,
             )
           else ...[
             _ContactRow(
-              icon:  Icons.person_rounded,
-              label: 'Contact Name',
-              value: profile!.emergencyName ?? '—',
-            ),
+                icon: Icons.person_rounded,
+                label: 'Contact Name',
+                value: profile!.emergencyName ?? '—'),
             const SizedBox(height: 10),
             Row(
               children: [
                 Expanded(
                   child: _ContactRow(
-                    icon:  Icons.phone_rounded,
-                    label: 'Phone Number',
-                    value: profile!.emergencyPhone ?? '—',
-                  ),
+                      icon: Icons.phone_rounded,
+                      label: 'Phone Number',
+                      value: profile!.emergencyPhone ?? '—'),
                 ),
                 const SizedBox(width: 12),
                 Container(
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E),
+                    color: DarkColors.green,
                     borderRadius: BorderRadius.circular(13),
                   ),
                   child: const Icon(Icons.call_rounded,
@@ -902,30 +1098,26 @@ class _ContactRow extends StatelessWidget {
   final String   label;
   final String   value;
 
-  const _ContactRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  const _ContactRow(
+      {required this.icon, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: const Color(0xFFEF4444)),
+        Icon(icon, size: 16, color: DarkColors.red),
         const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label,
-                style: GoogleFonts.dmSans(
-                    fontSize: 10,
-                    color: const Color(0xFFEF4444))),
+                style: GoogleFonts.poppins(
+                    fontSize: 10, color: DarkColors.red.withAlpha(180))),
             Text(value,
-                style: GoogleFonts.dmSans(
+                style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFFB91C1C),
+                  color: DarkColors.textPrimary,
                 )),
           ],
         ),
@@ -935,84 +1127,139 @@ class _ContactRow extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _SettingsCard — dark mode, language picker, logout.
+// _AccountSettingsCard — change password / email / phone
 // ══════════════════════════════════════════════════════════════════════════════
-class _SettingsCard extends StatelessWidget {
-  final bool                  darkMode;
-  final ValueChanged<bool>    onDarkModeToggle;
-  final String                language;
-  final ValueChanged<String?> onLanguageChanged;
-  final VoidCallback          onLogout;
+class _AccountSettingsCard extends StatelessWidget {
+  final VoidCallback onChangePassword;
+  final VoidCallback onChangeEmail;
+  final VoidCallback onChangePhone;
 
-  const _SettingsCard({
-    required this.darkMode,
-    required this.onDarkModeToggle,
-    required this.language,
-    required this.onLanguageChanged,
+  const _AccountSettingsCard({
+    required this.onChangePassword,
+    required this.onChangeEmail,
+    required this.onChangePhone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _DarkCard(
+      accentColor: DarkColors.green,
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          _SettingsTile(
+            icon:      Icons.lock_reset_rounded,
+            iconColor: DarkColors.green,
+            title:     'Change Password',
+            onTap:     onChangePassword,
+            isFirst:   true,
+          ),
+          Divider(height: 1, indent: 16, endIndent: 16,
+              color: DarkColors.border, thickness: 1),
+          _SettingsTile(
+            icon:      Icons.email_rounded,
+            iconColor: DarkColors.cyan,
+            title:     'Change Email',
+            onTap:     onChangeEmail,
+          ),
+          Divider(height: 1, indent: 16, endIndent: 16,
+              color: DarkColors.border, thickness: 1),
+          _SettingsTile(
+            icon:      Icons.phone_rounded,
+            iconColor: DarkColors.amber,
+            title:     'Change Phone Number',
+            onTap:     onChangePhone,
+            isLast:    true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// _AppSettingsCard — theme selector, language, logout
+// ══════════════════════════════════════════════════════════════════════════════
+class _AppSettingsCard extends StatelessWidget {
+  final String currentTheme;
+  final String currentLocale;
+  final void Function(String) onThemeChanged;
+  final void Function(String) onLocaleChanged;
+  final VoidCallback onLogout;
+
+  const _AppSettingsCard({
+    required this.currentTheme,
+    required this.currentLocale,
+    required this.onThemeChanged,
+    required this.onLocaleChanged,
     required this.onLogout,
   });
 
   @override
   Widget build(BuildContext context) {
-    return _ProfileCard(
+    return _DarkCard(
+      accentColor: DarkColors.purpleBright,
       padding: EdgeInsets.zero,
       child: Column(
         children: [
-          // Dark mode toggle
-          SwitchListTile.adaptive(
-            value:            darkMode,
-            onChanged:        onDarkModeToggle,
-            activeThumbColor: _deepBlue,
-            activeTrackColor: _deepBlue.withAlpha(80),
-            title: Text('Dark Mode',
-                style: GoogleFonts.dmSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: _textDark,
-                )),
-            subtitle: Text('Toggle dark theme',
-                style: GoogleFonts.dmSans(
-                    fontSize: 11, color: _textLight)),
-            secondary: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B).withAlpha(12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.dark_mode_rounded,
-                  color: Color(0xFF1E293B), size: 20),
-            ),
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.only(
-                topLeft:  Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-            ),
-          ),
-
-          const Divider(
-              height: 1,
-              indent: 16,
-              endIndent: 16,
-              color: Color(0xFFEEF2FF),
-              thickness: 1),
-
-          // Language selector
+          // ── Theme selector ─────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
             child: Row(
               children: [
                 Container(
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0EA5E9).withAlpha(18),
+                    color: DarkColors.purpleBright.withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.dark_mode_rounded,
+                      color: DarkColors.purpleBright, size: 20),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Theme',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: DarkColors.textPrimary,
+                          )),
+                      Text('System / Light / Dark',
+                          style: GoogleFonts.poppins(
+                              fontSize: 11, color: DarkColors.textMuted)),
+                    ],
+                  ),
+                ),
+                // 3-way theme selector
+                _ThemeSelector(
+                  current:   currentTheme,
+                  onChanged: onThemeChanged,
+                ),
+              ],
+            ),
+          ),
+
+          Divider(height: 1, indent: 16, endIndent: 16,
+              color: DarkColors.border, thickness: 1),
+
+          // ── Language picker ────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: DarkColors.cyan.withAlpha(20),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.language_rounded,
-                      color: Color(0xFF0EA5E9), size: 20),
+                      color: DarkColors.cyan, size: 20),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -1020,53 +1267,46 @@ class _SettingsCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Language',
-                          style: GoogleFonts.dmSans(
+                          style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: _textDark,
+                            color: DarkColors.textPrimary,
                           )),
-                      Text('Choose your preferred language',
-                          style: GoogleFonts.dmSans(
-                              fontSize: 11, color: _textLight)),
+                      Text('English / বাংলা',
+                          style: GoogleFonts.poppins(
+                              fontSize: 11, color: DarkColors.textMuted)),
                     ],
                   ),
                 ),
                 DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
-                    value: language,
-                    style: GoogleFonts.dmSans(
+                    value: currentLocale,
+                    dropdownColor: DarkColors.card,
+                    style: GoogleFonts.poppins(
                       fontSize: 13,
-                      color: _deepBlue,
+                      color: DarkColors.purpleBright,
                       fontWeight: FontWeight.w600,
                     ),
-                    icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: _deepBlue,
-                        size: 18),
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: DarkColors.purpleBright, size: 18),
                     borderRadius: BorderRadius.circular(12),
                     items: const [
-                      DropdownMenuItem(
-                          value: 'English',
-                          child: Text('English')),
-                      DropdownMenuItem(
-                          value: 'Bangla',
-                          child: Text('বাংলা')),
+                      DropdownMenuItem(value: 'en', child: Text('English')),
+                      DropdownMenuItem(value: 'bn', child: Text('বাংলা')),
                     ],
-                    onChanged: onLanguageChanged,
+                    onChanged: (v) {
+                      if (v != null) onLocaleChanged(v);
+                    },
                   ),
                 ),
               ],
             ),
           ),
 
-          const Divider(
-              height: 1,
-              indent: 16,
-              endIndent: 16,
-              color: Color(0xFFEEF2FF),
-              thickness: 1),
+          Divider(height: 1, indent: 16, endIndent: 16,
+              color: DarkColors.border, thickness: 1),
 
-          // Logout row
+          // ── Logout ─────────────────────────────────────────────────────────
           Material(
             color: Colors.transparent,
             child: InkWell(
@@ -1076,36 +1316,172 @@ class _SettingsCard extends StatelessWidget {
               ),
               onTap: onLogout,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: [
                     Container(
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444).withAlpha(18),
+                        color: DarkColors.red.withAlpha(20),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Icons.logout_rounded,
-                          color: Color(0xFFEF4444), size: 20),
+                          color: DarkColors.red, size: 20),
                     ),
                     const SizedBox(width: 14),
-                    Text('Logout',
-                        style: GoogleFonts.dmSans(
+                    Text('Log Out',
+                        style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFFEF4444),
+                          color: DarkColors.red,
                         )),
                     const Spacer(),
                     const Icon(Icons.chevron_right_rounded,
-                        color: Color(0xFFEF4444), size: 22),
+                        color: DarkColors.red, size: 22),
                   ],
                 ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── 3-way theme selector chip row ─────────────────────────────────────────────
+class _ThemeSelector extends StatelessWidget {
+  final String current;
+  final void Function(String) onChanged;
+
+  const _ThemeSelector({required this.current, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _ThemeChip(
+          label: 'Auto',
+          icon: Icons.brightness_auto_rounded,
+          selected: current == 'system',
+          onTap: () => onChanged('system'),
+        ),
+        const SizedBox(width: 6),
+        _ThemeChip(
+          label: 'Light',
+          icon: Icons.light_mode_rounded,
+          selected: current == 'light',
+          onTap: () => onChanged('light'),
+        ),
+        const SizedBox(width: 6),
+        _ThemeChip(
+          label: 'Dark',
+          icon: Icons.dark_mode_rounded,
+          selected: current == 'dark',
+          onTap: () => onChanged('dark'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ThemeChip extends StatelessWidget {
+  final String   label;
+  final IconData icon;
+  final bool     selected;
+  final VoidCallback onTap;
+
+  const _ThemeChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: selected
+              ? DarkColors.purpleBright.withAlpha(30)
+              : DarkColors.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? DarkColors.purpleBright : DarkColors.border,
+            width: 1,
+          ),
+        ),
+        child: Icon(
+          icon,
+          size: 16,
+          color: selected ? DarkColors.purpleBright : DarkColors.textMuted,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Generic settings tile ─────────────────────────────────────────────────────
+class _SettingsTile extends StatelessWidget {
+  final IconData     icon;
+  final Color        iconColor;
+  final String       title;
+  final VoidCallback onTap;
+  final bool         isFirst;
+  final bool         isLast;
+
+  const _SettingsTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.onTap,
+    this.isFirst = false,
+    this.isLast  = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.vertical(
+          top:    isFirst ? const Radius.circular(20) : Radius.zero,
+          bottom: isLast  ? const Radius.circular(20) : Radius.zero,
+        ),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: iconColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: DarkColors.textPrimary,
+                    )),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  color: DarkColors.textMuted, size: 22),
+            ],
+          ),
+        ),
       ),
     );
   }

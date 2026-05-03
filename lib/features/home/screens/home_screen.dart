@@ -1,31 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// home_screen.dart
-//
-// Main dashboard for TreatTrace.
-//
-// Design spec:
-//   • Deep Blue header  : #2563EB
-//   • Page background   : #EEF2FF
-//   • Headings font     : DM Serif Display
-//   • Body / UI font    : DM Sans
-//   • Card corners      : 20–24 px radius
-//
-// Layout:
-//   ┌─────────────────────────────────┐
-//   │  Blue header (greeting + icons) │
-//   ├─────────────────────────────────┤
-//   │  "Quick Actions" section title  │
-//   │  ┌────────────┐ ┌────────────┐  │
-//   │  │Prescription│ │Test Report │  │
-//   │  │[Man] [File]│ │ [File]     │  │
-//   │  └────────────┘ └────────────┘  │
-//   │  ┌────────────┐ ┌────────────┐  │
-//   │  │  Ongoing   │ │  My Health │  │
-//   │  │ Treatment  │ │            │  │
-//   │  └────────────┘ └────────────┘  │
-//   ├─────────────────────────────────┤
-//   │[LastPrescribed] [🔍 Search] [👤]│  ← Custom bottom bar
-//   └─────────────────────────────────┘
+// home_screen.dart — Dark futuristic dashboard for TreatTrace.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
@@ -33,47 +7,49 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/auth_service.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../profile/screens/profile_screen.dart';
-
-// ── Shared design tokens ─────────────────────────────────────────────────────
-const Color _deepBlue    = Color(0xFF2563EB);
-const Color _blueBg      = Color(0xFFEEF2FF);
-const Color _blueBorder  = Color(0xFFBFD7FF);
-const Color _textDark    = Color(0xFF1E293B);
-const Color _textMid     = Color(0xFF475569);
-const Color _textLight   = Color(0xFF94A3B8);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // HomeScreen
 // ══════════════════════════════════════════════════════════════════════════════
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final void Function(String) onThemeChanged;
+  final void Function(String) onLocaleChanged;
+  final String currentTheme;
+  final String currentLocale;
+
+  const HomeScreen({
+    super.key,
+    required this.onThemeChanged,
+    required this.onLocaleChanged,
+    required this.currentTheme,
+    required this.currentLocale,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _authService    = AuthService();
-  final _searchCtrl     = TextEditingController();
+  final _authService  = AuthService();
+  final _searchCtrl   = TextEditingController();
 
-  // ── Computed properties ───────────────────────────────────────────────────
-
-  /// First name extracted from the user's profile metadata.
   String get _firstName {
     final meta = _authService.currentUser?.userMetadata;
     final full = meta?['full_name'] as String?;
     return full?.split(' ').first ?? 'User';
   }
 
-  /// Time-aware greeting — updates every build (accurate for screen rebuilds).
   String get _greeting {
+    final s = S.of(context);
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning,';
-    if (h < 17) return 'Good afternoon,';
-    return 'Good evening,';
+    if (h < 12) return s.goodMorning;
+    if (h < 17) return s.goodAfternoon;
+    return s.goodEvening;
   }
 
   @override
@@ -82,34 +58,42 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // ── Profile navigation ────────────────────────────────────────────────────
   void _goToProfile() {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+      MaterialPageRoute(
+        builder: (_) => ProfileScreen(
+          onThemeChanged:  widget.onThemeChanged,
+          onLocaleChanged: widget.onLocaleChanged,
+          currentTheme:    widget.currentTheme,
+          currentLocale:   widget.currentLocale,
+        ),
+      ),
     );
   }
 
-  // ── Logout ────────────────────────────────────────────────────────────────
   Future<void> _confirmLogout() async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text('Log Out',
-            style: GoogleFonts.dmSerifDisplay(fontSize: 20, color: _textDark)),
+            style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: DarkColors.textPrimary)),
         content: Text('Are you sure you want to log out?',
-            style: GoogleFonts.dmSans(fontSize: 13, color: _textMid)),
+            style: GoogleFonts.poppins(
+                fontSize: 13, color: DarkColors.textSec)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text('Cancel',
-                style: GoogleFonts.dmSans(color: _textMid)),
+                style: GoogleFonts.poppins(color: DarkColors.textSec)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text('Log Out',
-                style: GoogleFonts.dmSans(
-                    color: Colors.red, fontWeight: FontWeight.w700)),
+                style: GoogleFonts.poppins(
+                    color: DarkColors.red, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -126,27 +110,24 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    // Make the status bar icons white so they're visible on the blue header.
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
     ));
 
+    final s = S.of(context);
+
     return Scaffold(
-      backgroundColor: _blueBg,
+      backgroundColor: DarkColors.bg,
       body: Column(
         children: [
-          // Blue header section — extends behind the status bar.
           _HomeHeader(
-            greeting: _greeting,
+            greeting:  _greeting,
             firstName: _firstName,
-            onLogout: _confirmLogout,
+            onLogout:  _confirmLogout,
           ),
-
-          // Scrollable page body.
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 26, 20, 12),
@@ -154,30 +135,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Section heading
-                  Text(
-                    'Quick Actions',
-                    style: GoogleFonts.dmSerifDisplay(
-                        fontSize: 21, color: _textDark),
+                  ShaderMask(
+                    shaderCallback: (bounds) =>
+                        DarkColors.accentGradient.createShader(bounds),
+                    child: Text(
+                      s.quickActions,
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
                   ).animate().fadeIn(delay: 100.ms),
 
                   const SizedBox(height: 16),
 
-                  // ── Row 1: Prescription  +  Test Report ───────────────────
-                  // IntrinsicHeight makes both cards in the same row equally
-                  // tall, even when one has more content than the other.
                   IntrinsicHeight(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(
-                          child: _PrescriptionCard()
+                          child: _PrescriptionCard(label: s.prescription)
                               .animate()
                               .fadeIn(delay: 150.ms)
                               .slideY(begin: 0.08),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
-                          child: _TestReportCard()
+                          child: _TestReportCard(label: s.testReport)
                               .animate()
                               .fadeIn(delay: 200.ms)
                               .slideY(begin: 0.08),
@@ -188,28 +173,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 14),
 
-                  // ── Row 2: Ongoing Treatment  +  My Health ────────────────
                   IntrinsicHeight(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(
                           child: _ActionCard(
-                            icon: Icons.medication_rounded,
-                            iconBg: const Color(0xFFD1FAE5),
-                            iconColor: const Color(0xFF059669),
-                            title: 'Ongoing\nTreatment',
-                            animDelay: 250,
+                            icon:       Icons.medication_rounded,
+                            accentColor:DarkColors.green,
+                            title:      s.ongoingTreatment,
+                            animDelay:  250,
                           ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: _ActionCard(
-                            icon: Icons.monitor_heart_rounded,
-                            iconBg: const Color(0xFFFCE7F3),
-                            iconColor: const Color(0xFFDB2777),
-                            title: 'My Health',
-                            animDelay: 300,
+                            icon:       Icons.monitor_heart_rounded,
+                            accentColor:DarkColors.purpleBright,
+                            title:      s.medicalIdentity,
+                            animDelay:  300,
                           ),
                         ),
                       ],
@@ -223,18 +205,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-
-      // Fixed custom bottom action bar.
       bottomNavigationBar: _BottomBar(
-        searchCtrl:    _searchCtrl,
-        onProfileTap:  _goToProfile,
+        searchCtrl:   _searchCtrl,
+        onProfileTap: _goToProfile,
       ),
     );
   }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _HomeHeader — blue gradient header with greeting and action icons.
+// _HomeHeader
 // ══════════════════════════════════════════════════════════════════════════════
 class _HomeHeader extends StatelessWidget {
   final String greeting;
@@ -249,17 +229,25 @@ class _HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // topPad keeps content below the device's status bar.
     final topPad = MediaQuery.of(context).padding.top;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: _deepBlue,
-        // Rounded corners only at the bottom to create a "card" effect.
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: DarkColors.card,
+        borderRadius: const BorderRadius.only(
           bottomLeft:  Radius.circular(28),
           bottomRight: Radius.circular(28),
         ),
+        border: const Border(
+          bottom: BorderSide(color: DarkColors.border, width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: DarkColors.purpleBright.withAlpha(20),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       padding: EdgeInsets.only(
         top:    topPad + 18,
@@ -270,75 +258,72 @@ class _HomeHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Top row: greeting text + icon buttons ────────────────────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Greeting column
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       greeting,
-                      style: GoogleFonts.dmSans(
+                      style: GoogleFonts.poppins(
                         fontSize: 13,
-                        color: Colors.white.withAlpha(195),
+                        color: DarkColors.textSec,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Welcome, $firstName!',
-                      style: GoogleFonts.dmSerifDisplay(
-                        fontSize: 28,
-                        color: Colors.white,
-                        height: 1.15,
+                      style: GoogleFonts.poppins(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: DarkColors.textPrimary,
+                        height: 1.2,
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Notification icon
               _HeaderIcon(icon: Icons.notifications_outlined),
               const SizedBox(width: 10),
-              // Logout icon (using person → opens profile/logout flow)
               _HeaderIcon(icon: Icons.logout_rounded, onTap: onLogout),
             ],
           ),
 
-          const SizedBox(height: 22),
+          const SizedBox(height: 20),
 
-          // ── Daily tip banner ─────────────────────────────────────────────
+          // Daily tip banner
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(22),
+              color: DarkColors.purpleBright.withAlpha(15),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withAlpha(45), width: 1),
+              border: Border.all(
+                  color: DarkColors.purpleBright.withAlpha(60), width: 1),
             ),
             child: Row(
               children: [
                 Container(
-                  width: 34,
-                  height: 34,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(30),
+                    color: DarkColors.amber.withAlpha(20),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.tips_and_updates_rounded,
-                      color: Colors.amber, size: 18),
+                      color: DarkColors.amber, size: 18),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Stay on track with your health today!',
-                    style: GoogleFonts.dmSans(
+                    style: GoogleFonts.poppins(
                       fontSize: 13,
-                      color: Colors.white.withAlpha(215),
+                      color: DarkColors.textSec,
                     ),
                   ),
                 ),
@@ -354,7 +339,6 @@ class _HomeHeader extends StatelessWidget {
   }
 }
 
-// Small icon button used in the header.
 class _HeaderIcon extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
@@ -369,64 +353,47 @@ class _HeaderIcon extends StatelessWidget {
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: Colors.white.withAlpha(28),
+          color: DarkColors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withAlpha(45), width: 1),
+          border: Border.all(color: DarkColors.border, width: 1),
         ),
-        child: Icon(icon, color: Colors.white, size: 21),
+        child: Icon(icon, color: DarkColors.textSec, size: 21),
       ),
     );
   }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _PrescriptionCard — card with two sub-option chips: Manual + File Upload.
+// _PrescriptionCard
 // ══════════════════════════════════════════════════════════════════════════════
 class _PrescriptionCard extends StatelessWidget {
+  final String label;
+  const _PrescriptionCard({required this.label});
+
   @override
   Widget build(BuildContext context) {
     return _CardShell(
+      accentColor: DarkColors.cyan,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon block
-          _CardIcon(
-            icon: Icons.upload_file_rounded,
-            bg: const Color(0xFFDBEAFE),
-            color: _deepBlue,
-          ),
+          _CardIcon(icon: Icons.upload_file_rounded, color: DarkColors.cyan),
           const SizedBox(height: 14),
-
-          // Card title
-          Text(
-            'Prescription',
-            style: GoogleFonts.dmSerifDisplay(
-                fontSize: 16, color: _textDark, height: 1.25),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Upload your prescription',
-            style: GoogleFonts.dmSans(fontSize: 11, color: _textLight),
-          ),
-
+          Text(label,
+              style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: DarkColors.textPrimary)),
+          const SizedBox(height: 4),
+          Text('Upload your prescription',
+              style: GoogleFonts.poppins(
+                  fontSize: 11, color: DarkColors.textSec)),
           const SizedBox(height: 14),
-
-          // Two sub-option chips side by side
           Row(
             children: [
-              Expanded(
-                child: _SubChip(
-                  icon: Icons.edit_note_rounded,
-                  label: 'Manual',
-                ),
-              ),
+              Expanded(child: _SubChip(icon: Icons.edit_note_rounded, label: 'Manual')),
               const SizedBox(width: 7),
-              Expanded(
-                child: _SubChip(
-                  icon: Icons.attach_file_rounded,
-                  label: 'File',
-                ),
-              ),
+              Expanded(child: _SubChip(icon: Icons.attach_file_rounded, label: 'File')),
             ],
           ),
         ],
@@ -436,43 +403,37 @@ class _PrescriptionCard extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _TestReportCard — card with single File Upload sub-option chip.
+// _TestReportCard
 // ══════════════════════════════════════════════════════════════════════════════
 class _TestReportCard extends StatelessWidget {
+  final String label;
+  const _TestReportCard({required this.label});
+
   @override
   Widget build(BuildContext context) {
     return _CardShell(
+      accentColor: DarkColors.purpleBright,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CardIcon(
-            icon: Icons.science_rounded,
-            bg: const Color(0xFFEDE9FE),
-            color: const Color(0xFF7C3AED),
-          ),
+          _CardIcon(icon: Icons.science_rounded, color: DarkColors.purpleBright),
           const SizedBox(height: 14),
-
-          Text(
-            'Test Report',
-            style: GoogleFonts.dmSerifDisplay(
-                fontSize: 16, color: _textDark, height: 1.25),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Upload your test results',
-            style: GoogleFonts.dmSans(fontSize: 11, color: _textLight),
-          ),
-
+          Text(label,
+              style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: DarkColors.textPrimary)),
+          const SizedBox(height: 4),
+          Text('Upload your test results',
+              style: GoogleFonts.poppins(
+                  fontSize: 11, color: DarkColors.textSec)),
           const SizedBox(height: 14),
-
-          // Single full-width chip
           SizedBox(
             width: double.infinity,
             child: _SubChip(
-              icon: Icons.attach_file_rounded,
-              label: 'File Upload',
-              fullWidth: true,
-            ),
+                icon: Icons.attach_file_rounded,
+                label: 'File Upload',
+                fullWidth: true),
           ),
         ],
       ),
@@ -481,19 +442,17 @@ class _TestReportCard extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _ActionCard — generic card for Ongoing Treatment and My Health.
+// _ActionCard
 // ══════════════════════════════════════════════════════════════════════════════
 class _ActionCard extends StatelessWidget {
   final IconData icon;
-  final Color iconBg;
-  final Color iconColor;
-  final String title;
-  final int animDelay;
+  final Color    accentColor;
+  final String   title;
+  final int      animDelay;
 
   const _ActionCard({
     required this.icon,
-    required this.iconBg,
-    required this.iconColor,
+    required this.accentColor,
     required this.title,
     required this.animDelay,
   });
@@ -501,67 +460,63 @@ class _ActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _CardShell(
+      accentColor: accentColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CardIcon(icon: icon, bg: iconBg, color: iconColor),
+          _CardIcon(icon: icon, color: accentColor),
           const SizedBox(height: 14),
-
-          Text(
-            title,
-            style: GoogleFonts.dmSerifDisplay(
-                fontSize: 16, color: _textDark, height: 1.3),
-          ),
-
+          Text(title,
+              style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: DarkColors.textPrimary,
+                  height: 1.3)),
           const Spacer(),
-
-          // Arrow button — visual affordance showing the card is tappable.
           Align(
             alignment: Alignment.bottomRight,
             child: Container(
               width: 30,
               height: 30,
               decoration: BoxDecoration(
-                color: _blueBg,
+                color: accentColor.withAlpha(20),
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: const Icon(Icons.arrow_forward_rounded,
-                  size: 16, color: _deepBlue),
+              child: Icon(Icons.arrow_forward_rounded,
+                  size: 16, color: accentColor),
             ),
           ),
         ],
       ),
-    )
-        .animate()
-        .fadeIn(delay: Duration(milliseconds: animDelay))
-        .slideY(begin: 0.08);
+    ).animate().fadeIn(delay: Duration(milliseconds: animDelay)).slideY(begin: 0.08);
   }
 }
 
-// ── Shared card shell ─────────────────────────────────────────────────────────
+// ── Shared dark card shell ────────────────────────────────────────────────────
 class _CardShell extends StatelessWidget {
   final Widget child;
+  final Color  accentColor;
 
-  const _CardShell({required this.child});
+  const _CardShell({required this.child, required this.accentColor});
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: DarkColors.card,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () {},
-        splashColor: _deepBlue.withAlpha(15),
-        highlightColor: _deepBlue.withAlpha(8),
+        splashColor: accentColor.withAlpha(15),
+        highlightColor: accentColor.withAlpha(8),
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE8EFFF), width: 1.2),
+            border: Border.all(color: DarkColors.border, width: 1),
             boxShadow: [
               BoxShadow(
-                color: _deepBlue.withAlpha(14),
+                color: accentColor.withAlpha(12),
                 blurRadius: 14,
                 offset: const Offset(0, 4),
               ),
@@ -574,13 +529,11 @@ class _CardShell extends StatelessWidget {
   }
 }
 
-// ── Shared icon block ─────────────────────────────────────────────────────────
 class _CardIcon extends StatelessWidget {
   final IconData icon;
-  final Color bg;
-  final Color color;
+  final Color    color;
 
-  const _CardIcon({required this.icon, required this.bg, required this.color});
+  const _CardIcon({required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -588,20 +541,19 @@ class _CardIcon extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: bg,
+        color: color.withAlpha(20),
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withAlpha(40), width: 1),
       ),
       child: Icon(icon, color: color, size: 26),
     );
   }
 }
 
-// ── Sub-option chip ───────────────────────────────────────────────────────────
-// Small labelled button shown inside the Prescription and Test Report cards.
 class _SubChip extends StatelessWidget {
   final IconData icon;
-  final String label;
-  final bool fullWidth;
+  final String   label;
+  final bool     fullWidth;
 
   const _SubChip({
     required this.icon,
@@ -614,22 +566,22 @@ class _SubChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
       decoration: BoxDecoration(
-        color: _blueBg,
+        color: DarkColors.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _blueBorder, width: 1.1),
+        border: Border.all(color: DarkColors.borderLight, width: 1),
       ),
       child: Row(
         mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 12, color: _deepBlue),
+          Icon(icon, size: 12, color: DarkColors.purpleBright),
           const SizedBox(width: 5),
           Text(
             label,
-            style: GoogleFonts.dmSans(
+            style: GoogleFonts.poppins(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: _deepBlue,
+              color: DarkColors.textSec,
             ),
           ),
         ],
@@ -639,9 +591,7 @@ class _SubChip extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _BottomBar — the horizontal bar at the bottom of the screen.
-//
-// Layout:  [Last Prescribed]   [🔍 Search bar …]   [My Profile]
+// _BottomBar
 // ══════════════════════════════════════════════════════════════════════════════
 class _BottomBar extends StatelessWidget {
   final TextEditingController searchCtrl;
@@ -661,15 +611,17 @@ class _BottomBar extends StatelessWidget {
         bottom: bottomPad + 14,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
-        // Rounded top corners only — blends with the page content above.
+        color: DarkColors.surface,
         borderRadius: const BorderRadius.only(
           topLeft:  Radius.circular(26),
           topRight: Radius.circular(26),
         ),
+        border: const Border(
+          top: BorderSide(color: DarkColors.border, width: 1),
+        ),
         boxShadow: [
           BoxShadow(
-            color: _deepBlue.withAlpha(22),
+            color: Colors.black.withAlpha(60),
             blurRadius: 28,
             offset: const Offset(0, -6),
           ),
@@ -677,32 +629,31 @@ class _BottomBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // ── Left: Last Prescribed ────────────────────────────────────────
           _BarButton(
-            icon: Icons.receipt_long_rounded,
+            icon:  Icons.receipt_long_rounded,
             label: 'Last\nPrescribed',
           ),
 
           const SizedBox(width: 12),
 
-          // ── Center: Search bar (takes all remaining width) ────────────────
           Expanded(
             child: Container(
               height: 46,
               decoration: BoxDecoration(
-                color: _blueBg,
+                color: DarkColors.card,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _blueBorder, width: 1.1),
+                border: Border.all(color: DarkColors.border, width: 1),
               ),
               child: TextField(
                 controller: searchCtrl,
-                style: GoogleFonts.dmSans(fontSize: 13, color: _textDark),
+                style: GoogleFonts.poppins(
+                    fontSize: 13, color: DarkColors.textPrimary),
                 decoration: InputDecoration(
-                  hintText: 'Search doctors, medicines…',
-                  hintStyle: GoogleFonts.dmSans(
-                      fontSize: 12, color: _textLight),
+                  hintText:  'Search doctors, medicines…',
+                  hintStyle: GoogleFonts.poppins(
+                      fontSize: 12, color: DarkColors.textMuted),
                   prefixIcon: const Icon(Icons.search_rounded,
-                      color: _deepBlue, size: 20),
+                      color: DarkColors.purpleBright, size: 20),
                   border: InputBorder.none,
                   contentPadding:
                       const EdgeInsets.symmetric(vertical: 14),
@@ -713,7 +664,6 @@ class _BottomBar extends StatelessWidget {
 
           const SizedBox(width: 12),
 
-          // ── Right: My Profile ─────────────────────────────────────────────
           _BarButton(
             icon:  Icons.person_rounded,
             label: 'My\nProfile',
@@ -725,7 +675,6 @@ class _BottomBar extends StatelessWidget {
   }
 }
 
-// Icon + label button used on both sides of the bottom bar.
 class _BarButton extends StatelessWidget {
   final IconData     icon;
   final String       label;
@@ -738,30 +687,30 @@ class _BarButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            color: _blueBg,
-            borderRadius: BorderRadius.circular(13),
-            border: Border.all(color: _blueBorder, width: 1.1),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: DarkColors.card,
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: DarkColors.border, width: 1),
+            ),
+            child: Icon(icon, color: DarkColors.purpleBright, size: 22),
           ),
-          child: Icon(icon, color: _deepBlue, size: 22),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.dmSans(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            color: _deepBlue,
-            height: 1.2,
+          const SizedBox(height: 5),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: DarkColors.textSec,
+              height: 1.2,
+            ),
           ),
-        ),
-      ],
+        ],
       ),
     );
   }

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Verify Phone Number — TreatTrace</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    body {
+      background-color: #F8FAFC;
+      font-family: 'DM Sans', Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .wrapper {
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    .brand-bar {
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .brand-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      color: #1E3A8A;
+      text-decoration: none;
+    }
+
+    .card {
+      background: #FFFFFF;
+      border-radius: 16px;
+      border: 1px solid #E2E8F0;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .hero {
+      background: #059669;
+      padding: 48px;
+      color: #FFFFFF;
+      text-align: left;
+    }
+
+    .hero h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 32px;
+      margin: 0 0 12px 0;
+      line-height: 1.2;
+    }
+
+    .hero p {
+      font-size: 16px;
+      color: #D1FAE5;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .body-content {
+      padding: 40px;
+    }
+
+    .greeting {
+      font-size: 16px;
+      color: #475569;
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    /* OTP Code Display */
+    .otp-container {
+      text-align: center;
+      padding: 32px 0 24px 0;
+    }
+
+    .otp-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #059669;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+
+    .otp-code {
+      display: inline-block;
+      background: #F0FDF4;
+      border: 2px solid #6EE7B7;
+      border-radius: 16px;
+      padding: 20px 40px;
+      font-family: 'DM Serif Display', serif;
+      font-size: 48px;
+      letter-spacing: 12px;
+      color: #065F46;
+      font-weight: 400;
+    }
+
+    .otp-expiry {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #94A3B8;
+    }
+
+    .step-item {
+      display: table;
+      width: 100%;
+      margin-bottom: 20px;
+      background: #F1F5F9;
+      border-radius: 12px;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    .step-num {
+      display: table-cell;
+      width: 32px;
+      height: 32px;
+      background: #059669;
+      color: #FFFFFF;
+      border-radius: 50%;
+      text-align: center;
+      vertical-align: middle;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .step-text {
+      display: table-cell;
+      padding-left: 16px;
+      vertical-align: middle;
+      font-size: 14px;
+      color: #1E293B;
+    }
+
+    .step-text strong {
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .phone-box {
+      background: #F0FDF4;
+      border: 1px solid #6EE7B7;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 28px;
+      font-size: 14px;
+      color: #065F46;
+    }
+
+    .phone-box strong {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #059669;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .alert-box {
+      display: table;
+      width: 100%;
+      background: #FEF3C7;
+      border: 1px solid #FCD34D;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 24px;
+      box-sizing: border-box;
+    }
+
+    .alert-icon {
+      display: table-cell;
+      width: 32px;
+      vertical-align: middle;
+      font-size: 20px;
+    }
+
+    .alert-text {
+      display: table-cell;
+      padding-left: 12px;
+      vertical-align: middle;
+      font-size: 14px;
+      color: #92400E;
+      line-height: 1.5;
+    }
+
+    .footer {
+      padding: 32px 40px;
+      background: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+      text-align: center;
+    }
+
+    .footer-text {
+      font-size: 12px;
+      color: #64748B;
+      line-height: 1.8;
+    }
+
+    @media screen and (max-width: 480px) {
+      .hero, .body-content, .footer { padding: 24px; }
+      .hero h1 { font-size: 26px; }
+      .otp-code { font-size: 36px; letter-spacing: 8px; padding: 16px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="brand-bar">
+      <span class="brand-name">TreatTrace</span>
+    </div>
+
+    <div class="card">
+      <div class="hero">
+        <h1>Verify your phone number</h1>
+        <p>Use the code below to confirm your new number.</p>
+      </div>
+
+      <div class="body-content">
+        <p class="greeting">
+          Hello, <strong>Member</strong> 👋<br><br>
+          A request was made to update the phone number on your TreatTrace account. Enter the verification code below to complete the change.
+        </p>
+
+        <div class="phone-box">
+          <strong>New Phone Number</strong>
+          {{ .Phone }}
+        </div>
+
+        <div class="otp-container">
+          <p class="otp-label">Your verification code</p>
+          <div class="otp-code">{{ .Token }}</div>
+          <p class="otp-expiry">⏱ Expires in 10 minutes</p>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <strong>Copy the Code</strong>
+            Use the 6-digit code shown above.
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <strong>Enter in App</strong>
+            Paste it into the verification field on TreatTrace.
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            <strong>Number Updated</strong>
+            Your new phone number will be saved securely.
+          </div>
+        </div>
+
+        <div class="alert-box">
+          <div class="alert-icon">⚠️</div>
+          <div class="alert-text">
+            <strong>Didn't request this?</strong> If you didn't initiate this change, please contact TreatTrace support immediately and secure your account.
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p class="footer-text">
+          © 2026 TreatTrace, Inc.<br>
+          Privacy Standard • Secure Connection • Verified Platform<br><br>
+          You received this because a phone number change was requested on your TreatTrace account.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

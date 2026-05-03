@@ -22,6 +22,12 @@ dependencies:
   # Cupertino Icons: iOS-style icon set
   cupertino_icons: ^1.0.8
 
+  # Persistent key-value storage — theme, locale, keep-me-logged-in
+  shared_preferences: ^2.3.2
+
+  # Image picker — avatar photo selection from gallery or camera
+  image_picker: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

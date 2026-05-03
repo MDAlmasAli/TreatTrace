@@ -1,43 +1,36 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // edit_profile_screen.dart
 //
-// Full edit form for the user's health profile.
-// Pre-populates from an existing HealthProfile when editing.
-// Returns true via Navigator.pop() on a successful save so the caller
-// knows to refresh its data.
+// Full edit form for the user's health profile + basic account fields.
+// Pre-populates from existing HealthProfile + account data when editing.
+// Returns true via Navigator.pop() on a successful save.
 //
 // Sections:
-//   1. Medical Identity  — blood group (dropdown), age, height (ft+in), weight
-//   2. Health Records    — allergies & conditions, ongoing treatment
-//   3. Emergency Contact — ICE name + phone
+//   0. Account Info     — full name, phone (saved via AccountService)
+//   1. Medical Identity — blood group, age, height, weight
+//   2. Health Records   — allergies & conditions, ongoing treatment
+//   3. Emergency Contact— ICE name + phone
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/constants/app_colors.dart';
+import '../../../core/services/account_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/profile_service.dart';
 import '../models/health_profile.dart';
-
-// ── Design tokens (mirror home/profile screens) ───────────────────────────────
-const Color _deepBlue  = Color(0xFF2563EB);
-const Color _blueBg    = Color(0xFFEEF2FF);
-const Color _blueBorder = Color(0xFFBFD7FF);
-const Color _textDark  = Color(0xFF1E293B);
-const Color _textMid   = Color(0xFF475569);
-const Color _textLight = Color(0xFF94A3B8);
 
 const List<String> _bloodGroupOptions = [
   'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-',
 ];
 
-// ── BMI colour helper (shared with profile_screen.dart) ───────────────────────
 Color _bmiColor(double bmi) {
-  if (bmi < 18.5) return const Color(0xFF3B82F6);
-  if (bmi < 25.0) return const Color(0xFF22C55E);
-  if (bmi < 30.0) return const Color(0xFFF59E0B);
-  return const Color(0xFFEF4444);
+  if (bmi < 18.5) return DarkColors.cyan;
+  if (bmi < 25.0) return DarkColors.green;
+  if (bmi < 30.0) return DarkColors.amber;
+  return DarkColors.red;
 }
 
 String _bmiLabel(double bmi) {
@@ -51,35 +44,42 @@ String _bmiLabel(double bmi) {
 // EditProfileScreen
 // ══════════════════════════════════════════════════════════════════════════════
 class EditProfileScreen extends StatefulWidget {
-  /// Pass the existing profile to pre-fill the form; null means new user.
-  final HealthProfile? existing;
+  final HealthProfile?          existing;
+  final Map<String, dynamic>?   accountData;
 
-  const EditProfileScreen({super.key, this.existing});
+  const EditProfileScreen({
+    super.key,
+    this.existing,
+    this.accountData,
+  });
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final _formKey        = GlobalKey<FormState>();
-  final _profileService = ProfileService();
-  final _authService    = AuthService();
+  final _formKey         = GlobalKey<FormState>();
+  final _profileService  = ProfileService();
+  final _authService     = AuthService();
+  final _accountService  = AccountService();
 
-  // ── Text controllers ──────────────────────────────────────────────────────
-  final _ageCtrl    = TextEditingController();
-  final _feetCtrl   = TextEditingController();
-  final _inchesCtrl = TextEditingController();
-  final _weightCtrl = TextEditingController();
+  // ── Account controllers ───────────────────────────────────────────────────
+  final _fullNameCtrl = TextEditingController();
+  final _phoneCtrl    = TextEditingController();
+
+  // ── Health controllers ────────────────────────────────────────────────────
+  final _ageCtrl     = TextEditingController();
+  final _feetCtrl    = TextEditingController();
+  final _inchesCtrl  = TextEditingController();
+  final _weightCtrl  = TextEditingController();
   final _allergyCtrl = TextEditingController();
-  final _treatCtrl  = TextEditingController();
+  final _treatCtrl   = TextEditingController();
   final _icNameCtrl  = TextEditingController();
   final _icPhoneCtrl = TextEditingController();
 
   String? _bloodGroup;
   bool    _isSaving   = false;
-  double? _bmiPreview; // live-computed as user types height + weight
-
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
+  double? _bmiPreview;
 
   @override
   void initState() {
@@ -90,19 +90,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  /// Pre-populate the form from an existing profile.
   void _prefill() {
+    // Account fields
+    final acct = widget.accountData;
+    if (acct != null) {
+      _fullNameCtrl.text = (acct['full_name'] as String?) ?? '';
+      _phoneCtrl.text    = (acct['phone']     as String?) ?? '';
+    }
+
+    // Health fields
     final p = widget.existing;
     if (p == null) return;
 
     _bloodGroup = p.bloodGroup;
-
     if (p.ageYears != null) _ageCtrl.text = '${p.ageYears}';
 
     if (p.heightCm != null) {
-      final totalInches = p.heightCm! / 2.54;
-      _feetCtrl.text   = (totalInches ~/ 12).toString();
-      _inchesCtrl.text = ((totalInches % 12).round()).toString();
+      final totalIn  = p.heightCm! / 2.54;
+      _feetCtrl.text   = (totalIn ~/ 12).toString();
+      _inchesCtrl.text = ((totalIn % 12).round()).toString();
     }
 
     if (p.weightKg != null) _weightCtrl.text = p.weightKg!.toStringAsFixed(1);
@@ -114,7 +120,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _recomputeBmi();
   }
 
-  /// Recalculate BMI preview whenever height or weight fields change.
   void _recomputeBmi() {
     final feet   = int.tryParse(_feetCtrl.text)   ?? 0;
     final inches = int.tryParse(_inchesCtrl.text) ?? 0;
@@ -132,6 +137,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void dispose() {
     for (final c in [
+      _fullNameCtrl, _phoneCtrl,
       _ageCtrl, _feetCtrl, _inchesCtrl, _weightCtrl,
       _allergyCtrl, _treatCtrl, _icNameCtrl, _icPhoneCtrl,
     ]) {
@@ -141,12 +147,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   // ── Save ──────────────────────────────────────────────────────────────────
-
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
     try {
+      // 1. Save account fields (full name + phone) via AccountService
+      final newName  = _fullNameCtrl.text.trim();
+      final newPhone = _phoneCtrl.text.trim();
+      if (newName.isNotEmpty) {
+        await _accountService.updateFullName(newName);
+      }
+      if (newPhone.isNotEmpty) {
+        await _accountService.updatePhone(newPhone);
+      }
+
+      // 2. Save health profile via ProfileService
       final feet   = int.tryParse(_feetCtrl.text)   ?? 0;
       final inches = int.tryParse(_inchesCtrl.text) ?? 0;
       final cm     = (feet * 12 + inches) * 2.54;
@@ -169,7 +185,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Could not save: $e'),
-            backgroundColor: Colors.red.shade700,
+            backgroundColor: DarkColors.red,
           ),
         );
       }
@@ -184,7 +200,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -193,7 +208,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     ));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
+      backgroundColor: DarkColors.bg,
       body: Column(
         children: [
           _buildHeader(MediaQuery.of(context).padding.top),
@@ -206,6 +221,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildAccountSection(),
+                    const SizedBox(height: 24),
                     _buildMedicalSection(),
                     const SizedBox(height: 24),
                     _buildHealthSection(),
@@ -224,10 +241,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   // ── Header ────────────────────────────────────────────────────────────────
-
   Widget _buildHeader(double topPad) {
     return Container(
-      color: _deepBlue,
+      color: DarkColors.card,
       padding: EdgeInsets.only(
           top: topPad + 14, left: 20, right: 20, bottom: 20),
       child: Row(
@@ -238,19 +254,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(28),
+                color: DarkColors.surface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withAlpha(45)),
+                border: Border.all(color: DarkColors.border),
               ),
               child: const Icon(Icons.arrow_back_rounded,
-                  color: Colors.white, size: 20),
+                  color: DarkColors.textSec, size: 20),
             ),
           ),
           const SizedBox(width: 14),
           Text(
             'Edit Profile',
-            style: GoogleFonts.dmSerifDisplay(
-                fontSize: 22, color: Colors.white),
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: DarkColors.textPrimary,
+            ),
           ),
           const Spacer(),
           if (_isSaving)
@@ -258,20 +277,51 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               width: 24,
               height: 24,
               child: CircularProgressIndicator(
-                  color: Colors.white, strokeWidth: 2.5),
+                  color: DarkColors.purpleBright, strokeWidth: 2.5),
             ),
         ],
       ),
     );
   }
 
-  // ── Form sections ─────────────────────────────────────────────────────────
+  // ── Account section ───────────────────────────────────────────────────────
+  Widget _buildAccountSection() {
+    return _FormSection(
+      title: 'Account Info',
+      accentColor: DarkColors.purpleBright,
+      children: [
+        _FormInput(
+          icon:       Icons.person_rounded,
+          label:      'Full Name',
+          controller: _fullNameCtrl,
+          hint:       'e.g. John Smith',
+          keyboardType: TextInputType.name,
+        ),
+        const SizedBox(height: 16),
+        _FormInput(
+          icon:         Icons.phone_rounded,
+          label:        'Phone Number',
+          controller:   _phoneCtrl,
+          hint:         '+880 1XXX-XXXXXX',
+          keyboardType: TextInputType.phone,
+          validator: (v) {
+            if (v == null || v.isEmpty) return null;
+            if (v.replaceAll(RegExp(r'\D'), '').length < 7) {
+              return 'Enter a valid phone number';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
 
+  // ── Medical section ───────────────────────────────────────────────────────
   Widget _buildMedicalSection() {
     return _FormSection(
       title: 'Medical Identity',
+      accentColor: DarkColors.cyan,
       children: [
-        // Blood group
         _DropdownField(
           icon:      Icons.bloodtype_rounded,
           label:     'Blood Group',
@@ -279,10 +329,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           items:     _bloodGroupOptions,
           onChanged: (v) => setState(() => _bloodGroup = v),
         ),
-
         const SizedBox(height: 16),
-
-        // Age
         _FormInput(
           icon:       Icons.cake_rounded,
           label:      'Age (years)',
@@ -297,10 +344,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             return null;
           },
         ),
-
         const SizedBox(height: 16),
-
-        // Height — feet + inches side by side
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -339,10 +383,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
           ],
         ),
-
         const SizedBox(height: 16),
-
-        // Weight
         _FormInput(
           icon:       Icons.monitor_weight_rounded,
           label:      'Weight (kg)',
@@ -355,12 +396,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           validator: (v) {
             if (v == null || v.isEmpty) return null;
             final n = double.tryParse(v);
-            if (n == null || n <= 0 || n > 500) return 'Enter a valid weight in kg';
+            if (n == null || n <= 0 || n > 500) return 'Enter a valid weight';
             return null;
           },
         ),
-
-        // Live BMI preview — only shown when enough data is entered
         if (_bmiPreview != null) ...[
           const SizedBox(height: 16),
           _BmiPreviewBanner(bmi: _bmiPreview!),
@@ -369,32 +408,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  // ── Health section ────────────────────────────────────────────────────────
   Widget _buildHealthSection() {
     return _FormSection(
       title: 'Health Records',
+      accentColor: DarkColors.amber,
       children: [
         _FormInput(
-          icon:       Icons.warning_amber_rounded,
-          label:      'Allergies & Conditions',
+          icon:     Icons.warning_amber_rounded,
+          label:    'Allergies & Conditions',
           controller: _allergyCtrl,
-          hint:       'e.g. Penicillin, Peanuts, Dust…',
-          maxLines:   3,
+          hint:     'e.g. Penicillin, Peanuts, Dust…',
+          maxLines: 3,
         ),
         const SizedBox(height: 16),
         _FormInput(
-          icon:       Icons.medication_rounded,
-          label:      'Ongoing Treatment',
+          icon:     Icons.medication_rounded,
+          label:    'Ongoing Treatment',
           controller: _treatCtrl,
-          hint:       'e.g. Metformin 500mg twice daily…',
-          maxLines:   3,
+          hint:     'e.g. Metformin 500mg twice daily…',
+          maxLines: 3,
         ),
       ],
     );
   }
 
+  // ── Emergency section ─────────────────────────────────────────────────────
   Widget _buildEmergencySection() {
     return _FormSection(
       title: 'Emergency Contact (ICE)',
+      accentColor: DarkColors.red,
       children: [
         _FormInput(
           icon:       Icons.person_rounded,
@@ -422,21 +465,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   // ── Save button ───────────────────────────────────────────────────────────
-
   Widget _buildSaveButton() {
     return SizedBox(
       width: double.infinity,
       height: 54,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [_deepBlue, Color(0xFF3B82F6)],
-          ),
+          gradient: DarkColors.accentGradient,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: _deepBlue.withAlpha(60),
-              blurRadius: 12,
+              color: DarkColors.purpleBright.withAlpha(60),
+              blurRadius: 16,
               offset: const Offset(0, 4),
             ),
           ],
@@ -457,7 +497,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     )
                   : Text(
                       'Save Changes',
-                      style: GoogleFonts.dmSans(
+                      style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
@@ -473,13 +513,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _FormSection — titled white card wrapping a group of form fields.
+// _FormSection
 // ══════════════════════════════════════════════════════════════════════════════
 class _FormSection extends StatelessWidget {
   final String       title;
+  final Color        accentColor;
   final List<Widget> children;
 
-  const _FormSection({required this.title, required this.children});
+  const _FormSection({
+    required this.title,
+    required this.accentColor,
+    required this.children,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -487,23 +532,23 @@ class _FormSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title,
-            style: GoogleFonts.dmSerifDisplay(
-                fontSize: 18, color: _textDark)),
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: DarkColors.textPrimary,
+            )),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: DarkColors.card,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-                color: const Color(0xFFE8EFFF), width: 1.2),
-            boxShadow: [
-              BoxShadow(
-                color: _deepBlue.withAlpha(14),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            border: Border(
+              left:   BorderSide(color: accentColor, width: 3),
+              top:    const BorderSide(color: DarkColors.border, width: 1),
+              right:  const BorderSide(color: DarkColors.border, width: 1),
+              bottom: const BorderSide(color: DarkColors.border, width: 1),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -516,15 +561,15 @@ class _FormSection extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _FormInput — labelled TextFormField with consistent styling.
+// _FormInput
 // ══════════════════════════════════════════════════════════════════════════════
 class _FormInput extends StatelessWidget {
-  final IconData                icon;
-  final String                  label;
-  final TextEditingController   controller;
-  final TextInputType?          keyboardType;
-  final String?                 hint;
-  final int                     maxLines;
+  final IconData                   icon;
+  final String                     label;
+  final TextEditingController      controller;
+  final TextInputType?             keyboardType;
+  final String?                    hint;
+  final int                        maxLines;
   final String? Function(String?)? validator;
   final List<TextInputFormatter>?  inputFormatters;
 
@@ -534,7 +579,7 @@ class _FormInput extends StatelessWidget {
     required this.controller,
     this.keyboardType,
     this.hint,
-    this.maxLines        = 1,
+    this.maxLines       = 1,
     this.validator,
     this.inputFormatters,
   });
@@ -546,67 +591,65 @@ class _FormInput extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, size: 14, color: _deepBlue),
+            Icon(icon, size: 14, color: DarkColors.purpleBright),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: GoogleFonts.dmSans(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: _textMid,
-              ),
-            ),
+            Text(label,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: DarkColors.textSec,
+                )),
           ],
         ),
         const SizedBox(height: 6),
         TextFormField(
-          controller:       controller,
-          keyboardType:     keyboardType,
-          maxLines:         maxLines,
-          inputFormatters:  inputFormatters,
-          validator:        validator,
+          controller:        controller,
+          keyboardType:      keyboardType,
+          maxLines:          maxLines,
+          inputFormatters:   inputFormatters,
+          validator:         validator,
           textAlignVertical: maxLines > 1
               ? TextAlignVertical.top
               : TextAlignVertical.center,
-          style: GoogleFonts.dmSans(
+          style: GoogleFonts.poppins(
             fontSize: 14,
-            color: _textDark,
+            color: DarkColors.textPrimary,
             fontWeight: FontWeight.w500,
           ),
           decoration: InputDecoration(
             hintText:  hint,
-            hintStyle: GoogleFonts.dmSans(
-                fontSize: 13, color: _textLight),
+            hintStyle: GoogleFonts.poppins(
+                fontSize: 13, color: DarkColors.textMuted),
             filled:    true,
-            fillColor: _blueBg,
+            fillColor: DarkColors.surface,
             contentPadding: EdgeInsets.symmetric(
               horizontal: 14,
               vertical:   maxLines > 1 ? 12 : 14,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: _blueBorder, width: 1),
+              borderSide:
+                  const BorderSide(color: DarkColors.border, width: 1),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: _blueBorder, width: 1),
+              borderSide:
+                  const BorderSide(color: DarkColors.border, width: 1),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(
-                  color: _deepBlue, width: 1.5),
+                  color: DarkColors.purpleBright, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: Color(0xFFEF4444), width: 1),
+              borderSide:
+                  const BorderSide(color: DarkColors.red, width: 1),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: Color(0xFFEF4444), width: 1.5),
+              borderSide:
+                  const BorderSide(color: DarkColors.red, width: 1.5),
             ),
           ),
         ),
@@ -616,13 +659,13 @@ class _FormInput extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _DropdownField — labelled DropdownButtonFormField with consistent styling.
+// _DropdownField
 // ══════════════════════════════════════════════════════════════════════════════
 class _DropdownField extends StatelessWidget {
-  final IconData          icon;
-  final String            label;
-  final String?           value;
-  final List<String>      items;
+  final IconData             icon;
+  final String               label;
+  final String?              value;
+  final List<String>         items;
   final ValueChanged<String?> onChanged;
 
   const _DropdownField({
@@ -640,44 +683,47 @@ class _DropdownField extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, size: 14, color: _deepBlue),
+            Icon(icon, size: 14, color: DarkColors.purpleBright),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: GoogleFonts.dmSans(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: _textMid,
-              ),
-            ),
+            Text(label,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: DarkColors.textSec,
+                )),
           ],
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           initialValue: value,
-          isExpanded: true,
+          isExpanded:   true,
+          dropdownColor: DarkColors.card,
           hint: Text('Select blood group',
-              style: GoogleFonts.dmSans(
-                  fontSize: 13, color: _textLight)),
-          style: GoogleFonts.dmSans(
-              fontSize: 14, color: _textDark, fontWeight: FontWeight.w500),
+              style: GoogleFonts.poppins(
+                  fontSize: 13, color: DarkColors.textMuted)),
+          style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: DarkColors.textPrimary,
+              fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             filled:    true,
-            fillColor: _blueBg,
+            fillColor: DarkColors.surface,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _blueBorder, width: 1),
+              borderSide:
+                  const BorderSide(color: DarkColors.border, width: 1),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _blueBorder, width: 1),
+              borderSide:
+                  const BorderSide(color: DarkColors.border, width: 1),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: _deepBlue, width: 1.5),
+              borderSide: const BorderSide(
+                  color: DarkColors.purpleBright, width: 1.5),
             ),
           ),
           borderRadius: BorderRadius.circular(12),
@@ -685,8 +731,9 @@ class _DropdownField extends StatelessWidget {
               .map((g) => DropdownMenuItem(
                     value: g,
                     child: Text(g,
-                        style: GoogleFonts.dmSans(
-                            fontSize: 14, color: _textDark)),
+                        style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: DarkColors.textPrimary)),
                   ))
               .toList(),
           onChanged: onChanged,
@@ -697,7 +744,7 @@ class _DropdownField extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _BmiPreviewBanner — live BMI result shown while the user types height/weight.
+// _BmiPreviewBanner
 // ══════════════════════════════════════════════════════════════════════════════
 class _BmiPreviewBanner extends StatelessWidget {
   final double bmi;
@@ -720,32 +767,29 @@ class _BmiPreviewBanner extends StatelessWidget {
           Icon(Icons.analytics_rounded, color: color, size: 20),
           const SizedBox(width: 10),
           Text('BMI Preview: ',
-              style: GoogleFonts.dmSans(fontSize: 13, color: _textMid)),
-          Text(
-            bmi.toStringAsFixed(1),
-            style: GoogleFonts.dmSans(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: _textDark,
-            ),
-          ),
+              style: GoogleFonts.poppins(
+                  fontSize: 13, color: DarkColors.textSec)),
+          Text(bmi.toStringAsFixed(1),
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: DarkColors.textPrimary,
+              )),
           const Spacer(),
           Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 10, vertical: 4),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color:        color.withAlpha(22),
               borderRadius: BorderRadius.circular(20),
               border:       Border.all(color: color.withAlpha(60)),
             ),
-            child: Text(
-              label,
-              style: GoogleFonts.dmSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
-            ),
+            child: Text(label,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                )),
           ),
         ],
       ),
