@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   full_name   TEXT,
   email       TEXT,
   avatar_url  TEXT,
+  phone       TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -257,6 +258,10 @@ CREATE INDEX IF NOT EXISTS idx_profiles_email
 -- profiles: fast lookup by full_name (future doctor search by name)
 CREATE INDEX IF NOT EXISTS idx_profiles_full_name
   ON public.profiles (full_name);
+
+-- profiles: fast lookup by phone
+CREATE INDEX IF NOT EXISTS idx_profiles_phone
+  ON public.profiles (phone);
 
 -- health_profiles: index on blood_group for potential future group queries
 CREATE INDEX IF NOT EXISTS idx_health_profiles_blood_group
@@ -401,6 +406,47 @@ CREATE POLICY "Users can update own health profile"
 -- deletion by the client is disabled by default-deny RLS.
 
 
+-- ── storage.objects (avatars bucket) ─────────────────────────────────────
+--
+-- Prerequisites: create the `avatars` bucket in the Supabase dashboard first:
+--   Storage → New bucket → Name: "avatars" → Public: OFF → Save
+--
+-- Files are uploaded to "<uid>/avatar.<ext>" so foldername(name)[1] = uid.
+
+DROP POLICY IF EXISTS "Avatar upload — own folder only"  ON storage.objects;
+DROP POLICY IF EXISTS "Avatar read  — own folder only"   ON storage.objects;
+DROP POLICY IF EXISTS "Avatar update — own folder only"  ON storage.objects;
+DROP POLICY IF EXISTS "Avatar delete — own folder only"  ON storage.objects;
+
+CREATE POLICY "Avatar upload — own folder only"
+  ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "Avatar read  — own folder only"
+  ON storage.objects FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "Avatar update — own folder only"
+  ON storage.objects FOR UPDATE TO authenticated
+  USING (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "Avatar delete — own folder only"
+  ON storage.objects FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+
 -- ═══════════════════════════════════════════════════════════════════════════
 -- SECTION 9 — SEED / SAMPLE DATA
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -515,6 +561,12 @@ CREATE POLICY "Users can update own <table_name>"
 --   --   • Detail
 -- ─────────────────────────────────────────────────────────────────────────
 
+-- [2026-05-03] v0.4 — Profile account settings added
+--   • profiles: phone TEXT column
+--   • Index: idx_profiles_phone
+--   • Storage RLS: INSERT / SELECT / UPDATE / DELETE for avatars bucket
+--     (requires creating the `avatars` bucket in Supabase dashboard first)
+
 -- [2026-05-03] v0.3 — Consolidated schema file created
 --   • Merged supabase_setup.sql → profiles table, handle_new_user(), set_updated_at()
 --   • Merged health_profile_setup.sql → health_profiles table + RLS
@@ -543,5 +595,5 @@ CREATE POLICY "Users can update own <table_name>"
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- END OF FILE
--- treattrace_schema.sql — TreatTrace v0.3
+-- treattrace_schema.sql — TreatTrace v0.4
 -- ═══════════════════════════════════════════════════════════════════════════
