@@ -291,10 +291,13 @@ Created on first profile save. All health fields are nullable — new users star
 
 ---
 
-## 👨‍💻 Author
+## 🧑‍💻 Authors / Contributors
 
-**MD Almas Ali**
-Built as a portfolio project — contributions and feedback welcome.
+- **MD Almas Ali**
+- **Tasmina Rahman Chowdhury**
+- **Sharon Sahrin Mim**
+
+Built as a collaborative project. Contributions and feedback are welcome.
 
 ---
 
