@@ -35,6 +35,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/services/auth_service.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../profile/screens/profile_screen.dart';
 
 // ── Shared design tokens ─────────────────────────────────────────────────────
 const Color _deepBlue    = Color(0xFF2563EB);
@@ -79,6 +80,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  // ── Profile navigation ────────────────────────────────────────────────────
+  void _goToProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
   }
 
   // ── Logout ────────────────────────────────────────────────────────────────
@@ -217,7 +225,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
 
       // Fixed custom bottom action bar.
-      bottomNavigationBar: _BottomBar(searchCtrl: _searchCtrl),
+      bottomNavigationBar: _BottomBar(
+        searchCtrl:    _searchCtrl,
+        onProfileTap:  _goToProfile,
+      ),
     );
   }
 }
@@ -634,8 +645,9 @@ class _SubChip extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 class _BottomBar extends StatelessWidget {
   final TextEditingController searchCtrl;
+  final VoidCallback? onProfileTap;
 
-  const _BottomBar({required this.searchCtrl});
+  const _BottomBar({required this.searchCtrl, this.onProfileTap});
 
   @override
   Widget build(BuildContext context) {
@@ -703,8 +715,9 @@ class _BottomBar extends StatelessWidget {
 
           // ── Right: My Profile ─────────────────────────────────────────────
           _BarButton(
-            icon: Icons.person_rounded,
+            icon:  Icons.person_rounded,
             label: 'My\nProfile',
+            onTap: onProfileTap,
           ),
         ],
       ),
@@ -714,14 +727,17 @@ class _BottomBar extends StatelessWidget {
 
 // Icon + label button used on both sides of the bottom bar.
 class _BarButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
+  final IconData     icon;
+  final String       label;
+  final VoidCallback? onTap;
 
-  const _BarButton({required this.icon, required this.label});
+  const _BarButton({required this.icon, required this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
@@ -746,6 +762,7 @@ class _BarButton extends StatelessWidget {
           ),
         ),
       ],
+      ),
     );
   }
 }
