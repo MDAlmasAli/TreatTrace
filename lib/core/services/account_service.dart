@@ -8,8 +8,7 @@
 //   profiles.full_name, profiles.email, profiles.avatar_url, profiles.phone
 // ─────────────────────────────────────────────────────────────────────────────
 
-import 'dart:io';
-
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AccountService {
@@ -77,24 +76,33 @@ class AccountService {
 
   // ── Upload avatar ─────────────────────────────────────────────────────────
 
-  /// Uploads an image file to Supabase Storage (`avatars/<uid>/avatar.<ext>`),
-  /// then updates `profiles.avatar_url` with the public URL.
-  ///
-  /// Returns the public URL of the uploaded avatar.
-  Future<String> uploadAvatar(String filePath) async {
+  /// Uploads an avatar using raw bytes — works on Flutter Web and mobile.
+  /// Reads bytes from [file] (XFile from image_picker), uploads to
+  /// `avatars/<uid>/avatar.<ext>`, and updates `profiles.avatar_url`.
+  /// Returns the public URL (with a cache-bust query param).
+  Future<String> uploadAvatar(XFile file) async {
     final uid = _uid;
     if (uid == null) throw Exception('Not authenticated');
 
-    final ext = filePath.split('.').last.toLowerCase();
+    final bytes = await file.readAsBytes();
+    final ext   = file.name.split('.').last.toLowerCase();
+    final mime  = ext == 'png'  ? 'image/png'
+                : ext == 'webp' ? 'image/webp'
+                : 'image/jpeg';
+
+    // Fixed path + upsert so we never accumulate stale files.
     final storagePath = '$uid/avatar.$ext';
 
-    await _client.storage.from('avatars').upload(
+    await _client.storage.from('avatars').uploadBinary(
       storagePath,
-      File(filePath),
-      fileOptions: const FileOptions(upsert: true),
+      bytes,
+      fileOptions: FileOptions(contentType: mime, upsert: true),
     );
 
-    final url = _client.storage.from('avatars').getPublicUrl(storagePath);
+    // Cache-bust query param so browsers re-fetch after an update.
+    final ts  = DateTime.now().millisecondsSinceEpoch;
+    final url =
+        '${_client.storage.from('avatars').getPublicUrl(storagePath)}?v=$ts';
 
     await _client
         .from('profiles')

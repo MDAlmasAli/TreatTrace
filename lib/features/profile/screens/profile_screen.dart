@@ -114,12 +114,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _uploadingAvatar = true);
     try {
-      final url = await _accountService.uploadAvatar(picked.path);
+      final url = await _accountService.uploadAvatar(picked);
       setState(() => _avatarUrl = url);
     } catch (e) {
+      debugPrint('Avatar upload error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Avatar upload failed: $e')),
+          const SnackBar(content: Text('Could not upload photo. Please try again.')),
         );
       }
     } finally {
@@ -614,6 +615,9 @@ class _SectionLabel extends StatelessWidget {
 }
 
 // ── Dark card shell ───────────────────────────────────────────────────────────
+// Uses ClipRRect + IntrinsicHeight so the left accent bar always stretches to
+// full card height without mixing non-uniform Border with borderRadius (which
+// Flutter does not support and causes children to paint as blank blocks).
 class _DarkCard extends StatelessWidget {
   final Widget child;
   final Color  accentColor;
@@ -628,16 +632,10 @@ class _DarkCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: padding ?? const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: DarkColors.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border(
-          left:   BorderSide(color: accentColor, width: 4),
-          top:    const BorderSide(color: DarkColors.border, width: 1),
-          right:  const BorderSide(color: DarkColors.border, width: 1),
-          bottom: const BorderSide(color: DarkColors.border, width: 1),
-        ),
+        border: Border.all(color: DarkColors.border, width: 1),
         boxShadow: [
           BoxShadow(
             color: accentColor.withAlpha(15),
@@ -646,7 +644,25 @@ class _DarkCard extends StatelessWidget {
           ),
         ],
       ),
-      child: child,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(19),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left accent bar — stretches to full card height.
+              Container(width: 4, color: accentColor),
+              // Card content.
+              Expanded(
+                child: Padding(
+                  padding: padding ?? const EdgeInsets.all(20),
+                  child: child,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
