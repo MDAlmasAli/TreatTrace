@@ -36,9 +36,11 @@ CREATE INDEX IF NOT EXISTS idx_profiles_phone
 -- 3. Storage RLS policies for the `avatars` bucket
 --
 --    Supabase Storage stores files in the `storage.objects` table.
---    We use `storage.foldername(name)[1]` which returns the first path
+--    We use `(storage.foldername(name))[1]` which returns the first path
 --    segment of the object name.  When the Flutter app uploads a file to
---    "<uid>/avatar.jpg", foldername(name)[1] = '<uid>'.
+--    "<uid>/avatar.jpg", (storage.foldername(name))[1] = '<uid>'.
+--    Note: parentheses around the function call are required for PostgreSQL
+--    to parse the array subscript correctly.
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- Drop existing policies first so this script stays idempotent.
@@ -54,7 +56,7 @@ CREATE POLICY "Avatar upload — own folder only"
   TO authenticated
   WITH CHECK (
     bucket_id = 'avatars'
-    AND storage.foldername(name)[1] = auth.uid()::text
+    AND (storage.foldername(name))[1] = auth.uid()::text
   );
 
 -- SELECT: users can read objects in their own folder.
@@ -64,7 +66,7 @@ CREATE POLICY "Avatar read  — own folder only"
   TO authenticated
   USING (
     bucket_id = 'avatars'
-    AND storage.foldername(name)[1] = auth.uid()::text
+    AND (storage.foldername(name))[1] = auth.uid()::text
   );
 
 -- UPDATE: users can overwrite (upsert) their own avatar.
@@ -74,7 +76,7 @@ CREATE POLICY "Avatar update — own folder only"
   TO authenticated
   USING (
     bucket_id = 'avatars'
-    AND storage.foldername(name)[1] = auth.uid()::text
+    AND (storage.foldername(name))[1] = auth.uid()::text
   );
 
 -- DELETE: users can delete their own avatar.
@@ -84,5 +86,5 @@ CREATE POLICY "Avatar delete — own folder only"
   TO authenticated
   USING (
     bucket_id = 'avatars'
-    AND storage.foldername(name)[1] = auth.uid()::text
+    AND (storage.foldername(name))[1] = auth.uid()::text
   );
