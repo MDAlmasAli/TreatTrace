@@ -13,6 +13,7 @@
 //        • Otherwise → stream-based auth routing (home vs login).
 // ─────────────────────────────────────────────────────────────────────────────
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -91,6 +92,7 @@ class _TreatTraceAppState extends State<TreatTraceApp> {
       child: MaterialApp(
         title: 'TreatTrace',
         debugShowCheckedModeBanner: false,
+        scrollBehavior: const _AppScrollBehavior(),
         theme:      AppTheme.light(),
         darkTheme:  AppTheme.dark(),
         themeMode:  _themeMode,
@@ -171,6 +173,18 @@ class _AuthGateState extends State<AuthGate> {
       },
     );
   }
+}
+
+// Enables mouse-drag scrolling on Flutter Web (in addition to touch/wheel).
+class _AppScrollBehavior extends MaterialScrollBehavior {
+  const _AppScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+      };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
