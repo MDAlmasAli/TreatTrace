@@ -9,7 +9,7 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 VALUES (
   'avatars',
   'avatars',
-  false,
+  true,
   5242880,                                         -- 5 MB
   ARRAY['image/jpeg', 'image/png', 'image/webp']
 )

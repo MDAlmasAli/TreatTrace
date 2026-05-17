@@ -37,6 +37,18 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _authService  = AuthService();
   final _searchCtrl   = TextEditingController();
+  String? _avatarUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvatar();
+  }
+
+  Future<void> _loadAvatar() async {
+    final profile = await _authService.fetchProfile();
+    if (mounted) setState(() => _avatarUrl = profile?['avatar_url'] as String?);
+  }
 
   String get _firstName {
     final meta = _authService.currentUser?.userMetadata;
@@ -58,8 +70,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _goToProfile() {
-    Navigator.of(context).push(
+  Future<void> _goToProfile() async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ProfileScreen(
           onThemeChanged:  widget.onThemeChanged,
@@ -69,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+    _loadAvatar();
   }
 
   Future<void> _confirmLogout() async {
@@ -208,6 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: _BottomBar(
         searchCtrl:   _searchCtrl,
         onProfileTap: _goToProfile,
+        avatarUrl:    _avatarUrl,
       ),
     );
   }
@@ -596,8 +610,9 @@ class _SubChip extends StatelessWidget {
 class _BottomBar extends StatelessWidget {
   final TextEditingController searchCtrl;
   final VoidCallback? onProfileTap;
+  final String?       avatarUrl;
 
-  const _BottomBar({required this.searchCtrl, this.onProfileTap});
+  const _BottomBar({required this.searchCtrl, this.onProfileTap, this.avatarUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -664,10 +679,10 @@ class _BottomBar extends StatelessWidget {
 
           const SizedBox(width: 12),
 
-          _BarButton(
-            icon:  Icons.person_rounded,
-            label: 'My\nProfile',
-            onTap: onProfileTap,
+          _ProfileBarButton(
+            label:     'My\nProfile',
+            onTap:     onProfileTap,
+            avatarUrl: avatarUrl,
           ),
         ],
       ),
@@ -676,11 +691,51 @@ class _BottomBar extends StatelessWidget {
 }
 
 class _BarButton extends StatelessWidget {
-  final IconData     icon;
-  final String       label;
-  final VoidCallback? onTap;
+  final IconData icon;
+  final String   label;
 
-  const _BarButton({required this.icon, required this.label, this.onTap});
+  const _BarButton({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: DarkColors.card,
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: DarkColors.border, width: 1),
+            ),
+            child: Icon(icon, color: DarkColors.purpleBright, size: 22),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: DarkColors.textSec,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileBarButton extends StatelessWidget {
+  final String        label;
+  final VoidCallback? onTap;
+  final String?       avatarUrl;
+
+  const _ProfileBarButton({required this.label, this.onTap, this.avatarUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -695,9 +750,31 @@ class _BarButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: DarkColors.card,
               borderRadius: BorderRadius.circular(13),
-              border: Border.all(color: DarkColors.border, width: 1),
+              border: Border.all(
+                color: avatarUrl != null
+                    ? DarkColors.purpleBright.withAlpha(120)
+                    : DarkColors.border,
+                width: avatarUrl != null ? 1.5 : 1,
+              ),
             ),
-            child: Icon(icon, color: DarkColors.purpleBright, size: 22),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: avatarUrl != null
+                  ? Image.network(
+                      avatarUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.person_rounded,
+                        color: DarkColors.purpleBright,
+                        size: 22,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.person_rounded,
+                      color: DarkColors.purpleBright,
+                      size: 22,
+                    ),
+            ),
           ),
           const SizedBox(height: 5),
           Text(
