@@ -20,6 +20,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config/supabase_config.dart';
+import 'core/services/reminder_service.dart';
 import 'core/constants/app_colors.dart';
 import 'core/l10n/app_strings.dart';
 import 'core/preferences/app_preferences.dart';
@@ -44,6 +45,8 @@ Future<void> main() async {
     url: SupabaseConfig.supabaseUrl,
     anonKey: SupabaseConfig.supabaseAnonKey,
   );
+
+  await ReminderService().init();
 
   runApp(const TreatTraceApp());
 }

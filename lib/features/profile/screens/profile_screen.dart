@@ -8,6 +8,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/account_service.dart';
 import '../../../core/services/auth_service.dart';
@@ -129,12 +130,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<ImageSource?> _showImageSourceDialog() {
+    final c = context.colors;
     return showDialog<ImageSource>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Choose photo source',
             style: GoogleFonts.poppins(
-                color: DarkColors.textPrimary,
+                color: c.textPrimary,
                 fontWeight: FontWeight.w600,
                 fontSize: 16)),
         actions: [
@@ -159,27 +161,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ── Account dialogs ───────────────────────────────────────────────────────
   Future<void> _showChangePasswordDialog() async {
+    final c = context.colors;
     final ctrl = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Change Password',
             style: GoogleFonts.poppins(
-                color: DarkColors.textPrimary, fontWeight: FontWeight.w600)),
+                color: c.textPrimary, fontWeight: FontWeight.w600)),
         content: TextFormField(
           controller: ctrl,
           obscureText: true,
-          style: GoogleFonts.poppins(color: DarkColors.textPrimary),
+          style: GoogleFonts.poppins(color: c.textPrimary),
           decoration: InputDecoration(
             hintText: 'New password (min 8 chars)',
-            hintStyle: GoogleFonts.poppins(color: DarkColors.textMuted),
+            hintStyle: GoogleFonts.poppins(color: c.textMuted),
           ),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
               child: Text('Cancel',
-                  style: GoogleFonts.poppins(color: DarkColors.textSec))),
+                  style: GoogleFonts.poppins(color: c.textSec))),
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text('Update',
@@ -207,13 +210,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _showChangeEmailDialog() async {
+    final c = context.colors;
     final ctrl = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Change Email',
             style: GoogleFonts.poppins(
-                color: DarkColors.textPrimary, fontWeight: FontWeight.w600)),
+                color: c.textPrimary, fontWeight: FontWeight.w600)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,17 +225,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             TextFormField(
               controller: ctrl,
               keyboardType: TextInputType.emailAddress,
-              style: GoogleFonts.poppins(color: DarkColors.textPrimary),
+              style: GoogleFonts.poppins(color: c.textPrimary),
               decoration: InputDecoration(
                 hintText: 'New email address',
-                hintStyle: GoogleFonts.poppins(color: DarkColors.textMuted),
+                hintStyle: GoogleFonts.poppins(color: c.textMuted),
               ),
             ),
             const SizedBox(height: 10),
             Text(
               'A confirmation email will be sent to the new address.',
               style: GoogleFonts.poppins(
-                  fontSize: 11, color: DarkColors.textSec),
+                  fontSize: 11, color: c.textSec),
             ),
           ],
         ),
@@ -239,7 +243,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
               child: Text('Cancel',
-                  style: GoogleFonts.poppins(color: DarkColors.textSec))),
+                  style: GoogleFonts.poppins(color: c.textSec))),
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text('Send',
@@ -268,6 +272,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _showChangePhoneDialog() async {
+    final c = context.colors;
     final ctrl = TextEditingController(
         text: _account?['phone'] as String? ?? '');
     final ok = await showDialog<bool>(
@@ -275,21 +280,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (ctx) => AlertDialog(
         title: Text('Change Phone Number',
             style: GoogleFonts.poppins(
-                color: DarkColors.textPrimary, fontWeight: FontWeight.w600)),
+                color: c.textPrimary, fontWeight: FontWeight.w600)),
         content: TextFormField(
           controller: ctrl,
           keyboardType: TextInputType.phone,
-          style: GoogleFonts.poppins(color: DarkColors.textPrimary),
+          style: GoogleFonts.poppins(color: c.textPrimary),
           decoration: InputDecoration(
             hintText: '+880 1XXX-XXXXXX',
-            hintStyle: GoogleFonts.poppins(color: DarkColors.textMuted),
+            hintStyle: GoogleFonts.poppins(color: c.textMuted),
           ),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
               child: Text('Cancel',
-                  style: GoogleFonts.poppins(color: DarkColors.textSec))),
+                  style: GoogleFonts.poppins(color: c.textSec))),
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text('Save',
@@ -321,20 +326,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ── Logout ────────────────────────────────────────────────────────────────
   Future<void> _confirmLogout() async {
+    final c = context.colors;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Log Out',
             style: GoogleFonts.poppins(
-                color: DarkColors.textPrimary, fontWeight: FontWeight.w600)),
+                color: c.textPrimary, fontWeight: FontWeight.w600)),
         content: Text('Are you sure you want to log out?',
             style: GoogleFonts.poppins(
-                fontSize: 13, color: DarkColors.textSec)),
+                fontSize: 13, color: c.textSec)),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
               child: Text('Cancel',
-                  style: GoogleFonts.poppins(color: DarkColors.textSec))),
+                  style: GoogleFonts.poppins(color: c.textSec))),
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text('Log Out',
@@ -358,21 +364,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    final c = context.colors;
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: c.statusBarIconBrightness,
     ));
 
     final s = S.of(context);
 
     return Scaffold(
-      backgroundColor: DarkColors.bg,
+      backgroundColor: c.bg,
       body: Column(
         children: [
           _buildHeader(MediaQuery.of(context).padding.top),
           Expanded(
             child: _isLoading
-                ? Center(
+                ? const Center(
                     child: CircularProgressIndicator(
                         color: DarkColors.purpleBright))
                 : SingleChildScrollView(
@@ -442,20 +449,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ── Dark profile header ───────────────────────────────────────────────────
   Widget _buildHeader(double topPad) {
+    final c = context.colors;
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [DarkColors.card, DarkColors.surface],
-        ),
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        gradient: c.headerGradient,
+        borderRadius: const BorderRadius.only(
           bottomLeft:  Radius.circular(32),
           bottomRight: Radius.circular(32),
         ),
         border: Border(
-          bottom: BorderSide(color: DarkColors.border, width: 1),
+          bottom: BorderSide(color: c.border, width: 1),
         ),
       ),
       padding: EdgeInsets.only(
@@ -504,8 +508,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: ClipOval(
                   child: _uploadingAvatar
                       ? Container(
-                          color: DarkColors.card,
-                          child: Center(
+                          color: context.colors.card,
+                          child: const Center(
                             child: CircularProgressIndicator(
                               color: DarkColors.purpleBright,
                               strokeWidth: 2,
@@ -534,7 +538,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: BoxDecoration(
                       gradient: DarkColors.accentGradient,
                       shape: BoxShape.circle,
-                      border: Border.all(color: DarkColors.surface, width: 2),
+                      border: Border.all(color: c.surface, width: 2),
                     ),
                     child: const Icon(Icons.camera_alt_rounded,
                         size: 14, color: Colors.white),
@@ -551,7 +555,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: GoogleFonts.poppins(
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: DarkColors.textPrimary,
+              color: c.textPrimary,
             ),
           ),
 
@@ -561,7 +565,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _email,
             style: GoogleFonts.poppins(
               fontSize: 13,
-              color: DarkColors.textSec,
+              color: c.textSec,
             ),
           ),
         ],
@@ -570,10 +574,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _defaultAvatar() {
+    final c = context.colors;
     return Container(
-      color: DarkColors.card,
-      child: const Icon(Icons.person_rounded,
-          size: 54, color: DarkColors.textMuted),
+      color: c.card,
+      child: Icon(Icons.person_rounded, size: 54, color: c.textMuted),
     );
   }
 }
@@ -585,15 +589,16 @@ class _HeaderIconBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: DarkColors.surface,
+        color: c.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: DarkColors.border, width: 1),
+        border: Border.all(color: c.border, width: 1),
       ),
-      child: Icon(icon, color: DarkColors.textSec, size: 20),
+      child: Icon(icon, color: c.textSec, size: 20),
     );
   }
 }
@@ -609,7 +614,7 @@ class _SectionLabel extends StatelessWidget {
         style: GoogleFonts.poppins(
           fontSize: 16,
           fontWeight: FontWeight.w700,
-          color: DarkColors.textPrimary,
+          color: context.colors.textPrimary,
         ),
       );
 }
@@ -631,11 +636,12 @@ class _DarkCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: DarkColors.card,
+        color: c.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: DarkColors.border, width: 1),
+        border: Border.all(color: c.border, width: 1),
         boxShadow: [
           BoxShadow(
             color: accentColor.withAlpha(15),
@@ -676,6 +682,7 @@ class _EmptyBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -684,22 +691,18 @@ class _EmptyBanner extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: DarkColors.borderLight,
-            width: 1.5,
-            // dashed border via CustomPainter would be ideal but Border works fine
-          ),
+          border: Border.all(color: c.borderLight, width: 1.5),
         ),
         child: Row(
           children: [
-            Icon(Icons.add_circle_outline_rounded,
+            const Icon(Icons.add_circle_outline_rounded,
                 color: DarkColors.purpleBright, size: 22),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 message,
                 style: GoogleFonts.poppins(
-                    fontSize: 13, color: DarkColors.textSec),
+                    fontSize: 13, color: c.textSec),
               ),
             ),
             Text(
@@ -777,7 +780,7 @@ class _MedicalIdentityCard extends StatelessWidget {
             ),
             if (profile!.bmi != null) ...[
               const SizedBox(height: 16),
-              Divider(height: 1, color: DarkColors.border, thickness: 1),
+              Divider(height: 1, color: context.colors.border, thickness: 1),
               const SizedBox(height: 16),
               _BmiRow(bmi: profile!.bmi!, label: profile!.bmiLabel),
             ],
@@ -803,12 +806,13 @@ class _InfoBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: DarkColors.surface,
+        color: c.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: DarkColors.border, width: 1),
+        border: Border.all(color: c.border, width: 1),
       ),
       child: Row(
         children: [
@@ -828,13 +832,13 @@ class _InfoBlock extends StatelessWidget {
               children: [
                 Text(label,
                     style: GoogleFonts.poppins(
-                        fontSize: 10, color: DarkColors.textMuted)),
+                        fontSize: 10, color: c.textMuted)),
                 const SizedBox(height: 1),
                 Text(value,
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: DarkColors.textPrimary,
+                      color: c.textPrimary,
                     )),
               ],
             ),
@@ -871,13 +875,13 @@ class _BmiRow extends StatelessWidget {
           children: [
             Text('Body Mass Index (BMI)',
                 style: GoogleFonts.poppins(
-                    fontSize: 11, color: DarkColors.textMuted)),
+                    fontSize: 11, color: context.colors.textMuted)),
             const SizedBox(height: 2),
             Text(bmi.toStringAsFixed(1),
                 style: GoogleFonts.poppins(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: DarkColors.textPrimary,
+                  color: context.colors.textPrimary,
                 )),
           ],
         ),
@@ -928,7 +932,7 @@ class _HealthRecordsCard extends StatelessWidget {
             onTap:     onEditTap,
           ),
           Divider(height: 1, indent: 20, endIndent: 20,
-              color: DarkColors.border, thickness: 1),
+              color: context.colors.border, thickness: 1),
           _RecordTile(
             icon:      Icons.medication_rounded,
             iconColor: DarkColors.green,
@@ -996,15 +1000,15 @@ class _RecordTile extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: DarkColors.textPrimary,
+                          color: context.colors.textPrimary,
                         )),
                     const SizedBox(height: 3),
                     Text(subtitle,
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: subtitle.contains('Not added')
-                              ? DarkColors.textMuted
-                              : DarkColors.textSec,
+                              ? context.colors.textMuted
+                              : context.colors.textSec,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis),
@@ -1012,7 +1016,7 @@ class _RecordTile extends StatelessWidget {
                 ),
               ),
               Icon(Icons.chevron_right_rounded,
-                  color: DarkColors.textMuted, size: 22),
+                  color: context.colors.textMuted, size: 22),
             ],
           ),
         ),
@@ -1133,7 +1137,7 @@ class _ContactRow extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: DarkColors.textPrimary,
+                  color: context.colors.textPrimary,
                 )),
           ],
         ),
@@ -1171,7 +1175,7 @@ class _AccountSettingsCard extends StatelessWidget {
             isFirst:   true,
           ),
           Divider(height: 1, indent: 16, endIndent: 16,
-              color: DarkColors.border, thickness: 1),
+              color: context.colors.border, thickness: 1),
           _SettingsTile(
             icon:      Icons.email_rounded,
             iconColor: DarkColors.cyan,
@@ -1179,7 +1183,7 @@ class _AccountSettingsCard extends StatelessWidget {
             onTap:     onChangeEmail,
           ),
           Divider(height: 1, indent: 16, endIndent: 16,
-              color: DarkColors.border, thickness: 1),
+              color: context.colors.border, thickness: 1),
           _SettingsTile(
             icon:      Icons.phone_rounded,
             iconColor: DarkColors.amber,
@@ -1213,6 +1217,7 @@ class _AppSettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return _DarkCard(
       accentColor: DarkColors.purpleBright,
       padding: EdgeInsets.zero,
@@ -1242,11 +1247,11 @@ class _AppSettingsCard extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: DarkColors.textPrimary,
+                            color: c.textPrimary,
                           )),
                       Text('System / Light / Dark',
                           style: GoogleFonts.poppins(
-                              fontSize: 11, color: DarkColors.textMuted)),
+                              fontSize: 11, color: c.textMuted)),
                     ],
                   ),
                 ),
@@ -1260,7 +1265,7 @@ class _AppSettingsCard extends StatelessWidget {
           ),
 
           Divider(height: 1, indent: 16, endIndent: 16,
-              color: DarkColors.border, thickness: 1),
+              color: c.border, thickness: 1),
 
           // ── Language picker ────────────────────────────────────────────────
           Padding(
@@ -1286,18 +1291,18 @@ class _AppSettingsCard extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: DarkColors.textPrimary,
+                            color: c.textPrimary,
                           )),
                       Text('English / বাংলা',
                           style: GoogleFonts.poppins(
-                              fontSize: 11, color: DarkColors.textMuted)),
+                              fontSize: 11, color: c.textMuted)),
                     ],
                   ),
                 ),
                 DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: currentLocale,
-                    dropdownColor: DarkColors.card,
+                    dropdownColor: c.card,
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       color: DarkColors.purpleBright,
@@ -1320,7 +1325,7 @@ class _AppSettingsCard extends StatelessWidget {
           ),
 
           Divider(height: 1, indent: 16, endIndent: 16,
-              color: DarkColors.border, thickness: 1),
+              color: c.border, thickness: 1),
 
           // ── Logout ─────────────────────────────────────────────────────────
           Material(
@@ -1419,6 +1424,7 @@ class _ThemeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1426,17 +1432,17 @@ class _ThemeChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? DarkColors.purpleBright.withAlpha(30)
-              : DarkColors.surface,
+              : c.surface,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: selected ? DarkColors.purpleBright : DarkColors.border,
+            color: selected ? DarkColors.purpleBright : c.border,
             width: 1,
           ),
         ),
         child: Icon(
           icon,
           size: 16,
-          color: selected ? DarkColors.purpleBright : DarkColors.textMuted,
+          color: selected ? DarkColors.purpleBright : c.textMuted,
         ),
       ),
     );
@@ -1490,11 +1496,11 @@ class _SettingsTile extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: DarkColors.textPrimary,
+                      color: context.colors.textPrimary,
                     )),
               ),
               Icon(Icons.chevron_right_rounded,
-                  color: DarkColors.textMuted, size: 22),
+                  color: context.colors.textMuted, size: 22),
             ],
           ),
         ),

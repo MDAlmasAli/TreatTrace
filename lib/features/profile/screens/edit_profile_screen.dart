@@ -18,6 +18,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/account_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/profile_service.dart';
@@ -227,7 +228,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               children: [
                 Text(
                   'Enter your new email. A confirmation link will be sent to it.',
-                  style: GoogleFonts.poppins(fontSize: 13, color: DarkColors.textSec),
+                  style: GoogleFonts.poppins(fontSize: 13, color: context.colors.textSec),
                 ),
                 const SizedBox(height: 16),
                 _DialogTextField(
@@ -380,13 +381,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    final c = context.colors;
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: c.statusBarIconBrightness,
     ));
 
     return Scaffold(
-      backgroundColor: DarkColors.bg,
+      backgroundColor: c.bg,
       body: Column(
         children: [
           _buildHeader(MediaQuery.of(context).padding.top),
@@ -420,8 +422,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // ── Header ────────────────────────────────────────────────────────────────
   Widget _buildHeader(double topPad) {
+    final c = context.colors;
     return Container(
-      color: DarkColors.card,
+      color: c.card,
       padding: EdgeInsets.only(
           top: topPad + 14, left: 20, right: 20, bottom: 20),
       child: Row(
@@ -432,12 +435,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: DarkColors.surface,
+                color: c.surface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: DarkColors.border),
+                border: Border.all(color: c.border),
               ),
-              child: const Icon(Icons.arrow_back_rounded,
-                  color: DarkColors.textSec, size: 20),
+              child: Icon(Icons.arrow_back_rounded,
+                  color: c.textSec, size: 20),
             ),
           ),
           const SizedBox(width: 14),
@@ -446,7 +449,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: DarkColors.textPrimary,
+              color: c.textPrimary,
             ),
           ),
           const Spacer(),
@@ -491,14 +494,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           },
         ),
         const SizedBox(height: 20),
-        const Divider(color: DarkColors.border, height: 1),
+        Divider(color: context.colors.border, height: 1),
         const SizedBox(height: 16),
         Text(
           'Credentials',
           style: GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: DarkColors.textSec,
+            color: context.colors.textSec,
           ),
         ),
         const SizedBox(height: 10),
@@ -729,6 +732,7 @@ class _FormSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -736,14 +740,14 @@ class _FormSection extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: DarkColors.textPrimary,
+              color: c.textPrimary,
             )),
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: DarkColors.card,
+            color: c.card,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: DarkColors.border, width: 1),
+            border: Border.all(color: c.border, width: 1),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(19),
@@ -797,6 +801,7 @@ class _FormInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -808,7 +813,7 @@ class _FormInput extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: DarkColors.textSec,
+                  color: c.textSec,
                 )),
           ],
         ),
@@ -824,28 +829,26 @@ class _FormInput extends StatelessWidget {
               : TextAlignVertical.center,
           style: GoogleFonts.poppins(
             fontSize: 14,
-            color: DarkColors.textPrimary,
+            color: c.textPrimary,
             fontWeight: FontWeight.w500,
           ),
           decoration: InputDecoration(
             hintText:  hint,
             hintStyle: GoogleFonts.poppins(
-                fontSize: 13, color: DarkColors.textMuted),
+                fontSize: 13, color: c.textMuted),
             filled:    true,
-            fillColor: DarkColors.surface,
+            fillColor: c.surface,
             contentPadding: EdgeInsets.symmetric(
               horizontal: 14,
               vertical:   maxLines > 1 ? 12 : 14,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.border, width: 1),
+              borderSide: BorderSide(color: c.border, width: 1),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.border, width: 1),
+              borderSide: BorderSide(color: c.border, width: 1),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -889,6 +892,7 @@ class _DropdownField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -900,7 +904,7 @@ class _DropdownField extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: DarkColors.textSec,
+                  color: c.textSec,
                 )),
           ],
         ),
@@ -908,28 +912,26 @@ class _DropdownField extends StatelessWidget {
         DropdownButtonFormField<String>(
           initialValue: value,
           isExpanded:   true,
-          dropdownColor: DarkColors.card,
+          dropdownColor: c.card,
           hint: Text('Select blood group',
               style: GoogleFonts.poppins(
-                  fontSize: 13, color: DarkColors.textMuted)),
+                  fontSize: 13, color: c.textMuted)),
           style: GoogleFonts.poppins(
               fontSize: 14,
-              color: DarkColors.textPrimary,
+              color: c.textPrimary,
               fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             filled:    true,
-            fillColor: DarkColors.surface,
+            fillColor: c.surface,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.border, width: 1),
+              borderSide: BorderSide(color: c.border, width: 1),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.border, width: 1),
+              borderSide: BorderSide(color: c.border, width: 1),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -944,7 +946,7 @@ class _DropdownField extends StatelessWidget {
                     child: Text(g,
                         style: GoogleFonts.poppins(
                             fontSize: 14,
-                            color: DarkColors.textPrimary)),
+                            color: c.textPrimary)),
                   ))
               .toList(),
           onChanged: onChanged,
@@ -979,12 +981,12 @@ class _BmiPreviewBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Text('BMI Preview: ',
               style: GoogleFonts.poppins(
-                  fontSize: 13, color: DarkColors.textSec)),
+                  fontSize: 13, color: context.colors.textSec)),
           Text(bmi.toStringAsFixed(1),
               style: GoogleFonts.poppins(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: DarkColors.textPrimary,
+                color: context.colors.textPrimary,
               )),
           const Spacer(),
           Container(
@@ -1024,8 +1026,9 @@ class _CredentialButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Material(
-      color: DarkColors.surface,
+      color: c.surface,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -1034,7 +1037,7 @@ class _CredentialButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: DarkColors.border),
+            border: Border.all(color: c.border),
           ),
           child: Row(
             children: [
@@ -1044,11 +1047,11 @@ class _CredentialButton extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: DarkColors.textPrimary,
+                    color: c.textPrimary,
                   )),
               const Spacer(),
-              const Icon(Icons.chevron_right_rounded,
-                  size: 18, color: DarkColors.textMuted),
+              Icon(Icons.chevron_right_rounded,
+                  size: 18, color: c.textMuted),
             ],
           ),
         ),
@@ -1075,25 +1078,26 @@ class _DialogTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return TextField(
       controller:   controller,
       keyboardType: keyboardType,
       autofocus:    autofocus,
-      style: GoogleFonts.poppins(fontSize: 14, color: DarkColors.textPrimary),
+      style: GoogleFonts.poppins(fontSize: 14, color: c.textPrimary),
       decoration: InputDecoration(
         hintText:  hint,
-        hintStyle: GoogleFonts.poppins(fontSize: 13, color: DarkColors.textMuted),
+        hintStyle: GoogleFonts.poppins(fontSize: 13, color: c.textMuted),
         filled:    true,
-        fillColor: DarkColors.surface,
+        fillColor: c.surface,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: DarkColors.border),
+          borderSide: BorderSide(color: c.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: DarkColors.border),
+          borderSide: BorderSide(color: c.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1123,15 +1127,16 @@ class _DialogPasswordField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return TextField(
       controller:  controller,
       obscureText: obscure,
-      style: GoogleFonts.poppins(fontSize: 14, color: DarkColors.textPrimary),
+      style: GoogleFonts.poppins(fontSize: 14, color: c.textPrimary),
       decoration: InputDecoration(
         hintText:  hint,
-        hintStyle: GoogleFonts.poppins(fontSize: 13, color: DarkColors.textMuted),
+        hintStyle: GoogleFonts.poppins(fontSize: 13, color: c.textMuted),
         filled:    true,
-        fillColor: DarkColors.surface,
+        fillColor: c.surface,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         suffixIcon: IconButton(
@@ -1140,17 +1145,17 @@ class _DialogPasswordField extends StatelessWidget {
                 ? Icons.visibility_outlined
                 : Icons.visibility_off_outlined,
             size:  18,
-            color: DarkColors.textMuted,
+            color: c.textMuted,
           ),
           onPressed: onToggle,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: DarkColors.border),
+          borderSide: BorderSide(color: c.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: DarkColors.border),
+          borderSide: BorderSide(color: c.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

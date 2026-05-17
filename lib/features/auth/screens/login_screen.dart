@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/preferences/app_preferences.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
 import 'forgot_password_screen.dart';
@@ -90,16 +91,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: DarkColors.bg,
+      backgroundColor: c.bg,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [DarkColors.bg, DarkColors.surface],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: c.bgGradient),
         child: SafeArea(
           child: SingleChildScrollView(
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -123,9 +119,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: DarkColors.card,
+                    color: c.card,
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: DarkColors.border, width: 1),
+                    border: Border.all(color: c.border, width: 1),
                     boxShadow: [
                       BoxShadow(
                         color: DarkColors.purpleBright.withAlpha(20),
@@ -144,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: GoogleFonts.poppins(
                             fontSize: 24,
                             fontWeight: FontWeight.w700,
-                            color: DarkColors.textPrimary,
+                            color: c.textPrimary,
                           ),
                         ).animate().fadeIn(delay: 200.ms),
 
@@ -154,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           'Enter your credentials to continue.',
                           style: GoogleFonts.poppins(
                             fontSize: 13,
-                            color: DarkColors.textSec,
+                            color: c.textSec,
                           ),
                         ).animate().fadeIn(delay: 240.ms),
 
@@ -190,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               _obscurePassword
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
-                              color: DarkColors.textMuted,
+                              color: c.textMuted,
                               size: 20,
                             ),
                             onPressed: () => setState(
@@ -238,8 +234,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   value: _keepLoggedIn,
                                   onChanged: (v) => setState(
                                       () => _keepLoggedIn = v ?? true),
-                                  side: const BorderSide(
-                                      color: DarkColors.borderLight,
+                                  side: BorderSide(
+                                      color: c.borderLight,
                                       width: 1.5),
                                   shape: RoundedRectangleBorder(
                                       borderRadius:
@@ -260,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 'Keep me logged in',
                                 style: GoogleFonts.poppins(
                                   fontSize: 13,
-                                  color: DarkColors.textSec,
+                                  color: c.textSec,
                                 ),
                               ),
                             ],
@@ -285,20 +281,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Divider
                 Row(
                   children: [
-                    Expanded(
-                        child: Divider(
-                            color: DarkColors.border, thickness: 1)),
+                    Expanded(child: Divider(color: c.border, thickness: 1)),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: Text(
                         "Don't have an account?",
                         style: GoogleFonts.poppins(
-                            fontSize: 12, color: DarkColors.textSec),
+                            fontSize: 12, color: c.textSec),
                       ),
                     ),
-                    Expanded(
-                        child: Divider(
-                            color: DarkColors.border, thickness: 1)),
+                    Expanded(child: Divider(color: c.border, thickness: 1)),
                   ],
                 ).animate().fadeIn(delay: 480.ms),
 
@@ -314,8 +306,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           builder: (_) => const SignupScreen()),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(
-                          color: DarkColors.borderLight, width: 1.5),
+                      side: BorderSide(color: c.borderLight, width: 1.5),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                     ),
@@ -344,6 +335,7 @@ class _LoginScreenState extends State<LoginScreen> {
 class _LogoBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       children: [
         Container(
@@ -369,15 +361,14 @@ class _LogoBlock extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 26,
             fontWeight: FontWeight.w700,
-            color: DarkColors.textPrimary,
+            color: c.textPrimary,
             letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           'Your health, our priority.',
-          style: GoogleFonts.poppins(
-              fontSize: 13, color: DarkColors.textSec),
+          style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
         ),
       ],
     );
@@ -407,6 +398,7 @@ class _DarkTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -414,7 +406,7 @@ class _DarkTextField extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: DarkColors.textSec,
+              color: c.textSec,
             )),
         const SizedBox(height: 6),
         TextFormField(
@@ -422,28 +414,23 @@ class _DarkTextField extends StatelessWidget {
           keyboardType: keyboardType,
           obscureText:  obscureText,
           validator:    validator,
-          style: GoogleFonts.poppins(
-              fontSize: 14, color: DarkColors.textPrimary),
+          style: GoogleFonts.poppins(fontSize: 14, color: c.textPrimary),
           decoration: InputDecoration(
-            hintText:  hint,
-            hintStyle: GoogleFonts.poppins(
-                fontSize: 13, color: DarkColors.textMuted),
-            prefixIcon: Icon(icon,
-                color: DarkColors.textMuted, size: 20),
+            hintText:   hint,
+            hintStyle:  GoogleFonts.poppins(fontSize: 13, color: c.textMuted),
+            prefixIcon: Icon(icon, color: c.textMuted, size: 20),
             suffixIcon: suffixIcon,
-            filled:    true,
-            fillColor: DarkColors.surface,
+            filled:     true,
+            fillColor:  c.surface,
             contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.border, width: 1),
+              borderSide: BorderSide(color: c.border, width: 1),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.border, width: 1),
+              borderSide: BorderSide(color: c.border, width: 1),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -452,8 +439,7 @@ class _DarkTextField extends StatelessWidget {
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.red, width: 1),
+              borderSide: const BorderSide(color: DarkColors.red, width: 1),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

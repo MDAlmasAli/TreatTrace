@@ -8,9 +8,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/auth_service.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../prescription/screens/prescriptions_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -70,6 +72,12 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  Future<void> _goToPrescriptions() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const PrescriptionsScreen()),
+    );
+  }
+
   Future<void> _goToProfile() async {
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -85,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _confirmLogout() async {
+    final c = context.colors;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -92,15 +101,15 @@ class _HomeScreenState extends State<HomeScreen> {
             style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: DarkColors.textPrimary)),
+                color: c.textPrimary)),
         content: Text('Are you sure you want to log out?',
             style: GoogleFonts.poppins(
-                fontSize: 13, color: DarkColors.textSec)),
+                fontSize: 13, color: c.textSec)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text('Cancel',
-                style: GoogleFonts.poppins(color: DarkColors.textSec)),
+                style: GoogleFonts.poppins(color: c.textSec)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -125,15 +134,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    final c = context.colors;
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: c.statusBarIconBrightness,
     ));
 
     final s = S.of(context);
 
     return Scaffold(
-      backgroundColor: DarkColors.bg,
+      backgroundColor: c.bg,
       body: Column(
         children: [
           _HomeHeader(
@@ -168,7 +178,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(
-                          child: _PrescriptionCard(label: s.prescription)
+                          child: _PrescriptionCard(
+                            label: s.prescription,
+                            onTap: _goToPrescriptions,
+                          )
                               .animate()
                               .fadeIn(delay: 150.ms)
                               .slideY(begin: 0.08),
@@ -243,17 +256,18 @@ class _HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final topPad = MediaQuery.of(context).padding.top;
 
     return Container(
       decoration: BoxDecoration(
-        color: DarkColors.card,
+        color: c.card,
         borderRadius: const BorderRadius.only(
           bottomLeft:  Radius.circular(28),
           bottomRight: Radius.circular(28),
         ),
-        border: const Border(
-          bottom: BorderSide(color: DarkColors.border, width: 1),
+        border: Border(
+          bottom: BorderSide(color: c.border, width: 1),
         ),
         boxShadow: [
           BoxShadow(
@@ -283,7 +297,7 @@ class _HomeHeader extends StatelessWidget {
                       greeting,
                       style: GoogleFonts.poppins(
                         fontSize: 13,
-                        color: DarkColors.textSec,
+                        color: c.textSec,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -293,7 +307,7 @@ class _HomeHeader extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 26,
                         fontWeight: FontWeight.w700,
-                        color: DarkColors.textPrimary,
+                        color: c.textPrimary,
                         height: 1.2,
                       ),
                     ),
@@ -337,7 +351,7 @@ class _HomeHeader extends StatelessWidget {
                     'Stay on track with your health today!',
                     style: GoogleFonts.poppins(
                       fontSize: 13,
-                      color: DarkColors.textSec,
+                      color: c.textSec,
                     ),
                   ),
                 ),
@@ -361,17 +375,18 @@ class _HeaderIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: DarkColors.surface,
+          color: c.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: DarkColors.border, width: 1),
+          border: Border.all(color: c.border, width: 1),
         ),
-        child: Icon(icon, color: DarkColors.textSec, size: 21),
+        child: Icon(icon, color: c.textSec, size: 21),
       ),
     );
   }
@@ -381,13 +396,15 @@ class _HeaderIcon extends StatelessWidget {
 // _PrescriptionCard
 // ══════════════════════════════════════════════════════════════════════════════
 class _PrescriptionCard extends StatelessWidget {
-  final String label;
-  const _PrescriptionCard({required this.label});
+  final String       label;
+  final VoidCallback onTap;
+  const _PrescriptionCard({required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return _CardShell(
       accentColor: DarkColors.cyan,
+      onTap:       onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -397,11 +414,11 @@ class _PrescriptionCard extends StatelessWidget {
               style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: DarkColors.textPrimary)),
+                  color: context.colors.textPrimary)),
           const SizedBox(height: 4),
           Text('Upload your prescription',
               style: GoogleFonts.poppins(
-                  fontSize: 11, color: DarkColors.textSec)),
+                  fontSize: 11, color: context.colors.textSec)),
           const SizedBox(height: 14),
           Row(
             children: [
@@ -436,11 +453,11 @@ class _TestReportCard extends StatelessWidget {
               style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: DarkColors.textPrimary)),
+                  color: context.colors.textPrimary)),
           const SizedBox(height: 4),
           Text('Upload your test results',
               style: GoogleFonts.poppins(
-                  fontSize: 11, color: DarkColors.textSec)),
+                  fontSize: 11, color: context.colors.textSec)),
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
@@ -484,7 +501,7 @@ class _ActionCard extends StatelessWidget {
               style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: DarkColors.textPrimary,
+                  color: context.colors.textPrimary,
                   height: 1.3)),
           const Spacer(),
           Align(
@@ -508,26 +525,32 @@ class _ActionCard extends StatelessWidget {
 
 // ── Shared dark card shell ────────────────────────────────────────────────────
 class _CardShell extends StatelessWidget {
-  final Widget child;
-  final Color  accentColor;
+  final Widget        child;
+  final Color         accentColor;
+  final VoidCallback? onTap;
 
-  const _CardShell({required this.child, required this.accentColor});
+  const _CardShell({
+    required this.child,
+    required this.accentColor,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Material(
-      color: DarkColors.card,
+      color: c.card,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () {},
+        onTap: onTap,
         splashColor: accentColor.withAlpha(15),
         highlightColor: accentColor.withAlpha(8),
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: DarkColors.border, width: 1),
+            border: Border.all(color: c.border, width: 1),
             boxShadow: [
               BoxShadow(
                 color: accentColor.withAlpha(12),
@@ -577,12 +600,13 @@ class _SubChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
       decoration: BoxDecoration(
-        color: DarkColors.surface,
+        color: c.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: DarkColors.borderLight, width: 1),
+        border: Border.all(color: c.borderLight, width: 1),
       ),
       child: Row(
         mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
@@ -595,7 +619,7 @@ class _SubChip extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: DarkColors.textSec,
+              color: c.textSec,
             ),
           ),
         ],
@@ -616,6 +640,7 @@ class _BottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final bottomPad = MediaQuery.of(context).padding.bottom;
 
     return Container(
@@ -626,13 +651,13 @@ class _BottomBar extends StatelessWidget {
         bottom: bottomPad + 14,
       ),
       decoration: BoxDecoration(
-        color: DarkColors.surface,
+        color: c.surface,
         borderRadius: const BorderRadius.only(
           topLeft:  Radius.circular(26),
           topRight: Radius.circular(26),
         ),
-        border: const Border(
-          top: BorderSide(color: DarkColors.border, width: 1),
+        border: Border(
+          top: BorderSide(color: c.border, width: 1),
         ),
         boxShadow: [
           BoxShadow(
@@ -655,18 +680,18 @@ class _BottomBar extends StatelessWidget {
             child: Container(
               height: 46,
               decoration: BoxDecoration(
-                color: DarkColors.card,
+                color: c.card,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: DarkColors.border, width: 1),
+                border: Border.all(color: c.border, width: 1),
               ),
               child: TextField(
                 controller: searchCtrl,
                 style: GoogleFonts.poppins(
-                    fontSize: 13, color: DarkColors.textPrimary),
+                    fontSize: 13, color: c.textPrimary),
                 decoration: InputDecoration(
                   hintText:  'Search doctors, medicines…',
                   hintStyle: GoogleFonts.poppins(
-                      fontSize: 12, color: DarkColors.textMuted),
+                      fontSize: 12, color: c.textMuted),
                   prefixIcon: const Icon(Icons.search_rounded,
                       color: DarkColors.purpleBright, size: 20),
                   border: InputBorder.none,
@@ -698,6 +723,7 @@ class _BarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: null,
       child: Column(
@@ -707,9 +733,9 @@ class _BarButton extends StatelessWidget {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: DarkColors.card,
+              color: c.card,
               borderRadius: BorderRadius.circular(13),
-              border: Border.all(color: DarkColors.border, width: 1),
+              border: Border.all(color: c.border, width: 1),
             ),
             child: Icon(icon, color: DarkColors.purpleBright, size: 22),
           ),
@@ -720,7 +746,7 @@ class _BarButton extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: DarkColors.textSec,
+              color: c.textSec,
               height: 1.2,
             ),
           ),
@@ -739,6 +765,7 @@ class _ProfileBarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -748,12 +775,12 @@ class _ProfileBarButton extends StatelessWidget {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: DarkColors.card,
+              color: c.card,
               borderRadius: BorderRadius.circular(13),
               border: Border.all(
                 color: avatarUrl != null
                     ? DarkColors.purpleBright.withAlpha(120)
-                    : DarkColors.border,
+                    : c.border,
                 width: avatarUrl != null ? 1.5 : 1,
               ),
             ),
@@ -783,7 +810,7 @@ class _ProfileBarButton extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: DarkColors.textSec,
+              color: c.textSec,
               height: 1.2,
             ),
           ),

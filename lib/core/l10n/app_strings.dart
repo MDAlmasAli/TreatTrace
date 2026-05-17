@@ -86,6 +86,42 @@ class S {
   String get prescription     => get('prescription');
   String get testReport       => get('test_report');
 
+  // ── Prescription ──────────────────────────────────────────────────────────
+  String get prescriptions        => get('prescriptions');
+  String get addPrescription      => get('add_prescription');
+  String get editPrescription     => get('edit_prescription');
+  String get doctorName           => get('doctor_name');
+  String get doctorSpecialty      => get('doctor_specialty');
+  String get hospitalClinic       => get('hospital_clinic');
+  String get doctorPhone          => get('doctor_phone');
+  String get diagnosis            => get('diagnosis');
+  String get prescriptionDate     => get('prescription_date');
+  String get notes                => get('notes');
+  String get medicines            => get('medicines');
+  String get addMedicine          => get('add_medicine');
+  String get medicineName         => get('medicine_name');
+  String get dose                 => get('dose');
+  String get frequency            => get('frequency');
+  String get durationDays         => get('duration_days');
+  String get instructions         => get('instructions');
+  String get morning              => get('morning');
+  String get afternoon            => get('afternoon');
+  String get evening              => get('evening');
+  String get night                => get('night');
+  String get active               => get('active');
+  String get expired              => get('expired');
+  String get all                  => get('all');
+  String get noPrescriptions      => get('no_prescriptions');
+  String get deletePrescription   => get('delete_prescription');
+  String get deleteConfirm        => get('delete_confirm');
+  String get exportPdf            => get('export_pdf');
+  String get refillSoon           => get('refill_soon');
+  String get allergyWarning       => get('allergy_warning');
+  String get uploadImage          => get('upload_image');
+  String get viewImage            => get('view_image');
+  String get searchPrescriptions  => get('search_prescriptions');
+  String get reminderSet          => get('reminder_set');
+
   // ── Welcome ───────────────────────────────────────────────────────────────
   String get welcome          => get('welcome');
   String get tagline          => get('tagline');
@@ -138,6 +174,40 @@ class S {
       'test_report':        'Test Report',
       'welcome':            'Welcome',
       'tagline':            'Your health, our priority.',
+      'prescriptions':      'Prescriptions',
+      'add_prescription':   'Add Prescription',
+      'edit_prescription':  'Edit Prescription',
+      'doctor_name':        'Doctor Name',
+      'doctor_specialty':   'Specialty',
+      'hospital_clinic':    'Hospital / Clinic',
+      'doctor_phone':       'Doctor Phone',
+      'diagnosis':          'Diagnosis',
+      'prescription_date':  'Prescription Date',
+      'notes':              'Notes',
+      'medicines':          'Medicines',
+      'add_medicine':       'Add Medicine',
+      'medicine_name':      'Medicine Name',
+      'dose':               'Dose (e.g. 500mg)',
+      'frequency':          'Frequency',
+      'duration_days':      'Duration (days)',
+      'instructions':       'Instructions (e.g. after meal)',
+      'morning':            'Morning',
+      'afternoon':          'Afternoon',
+      'evening':            'Evening',
+      'night':              'Night',
+      'active':             'Active',
+      'expired':            'Expired',
+      'all':                'All',
+      'no_prescriptions':   'No prescriptions yet — tap + to add one',
+      'delete_prescription':'Delete Prescription',
+      'delete_confirm':     'This prescription and all its medicines will be permanently deleted.',
+      'export_pdf':         'Export PDF',
+      'refill_soon':        'Refill Soon',
+      'allergy_warning':    'Allergy Warning',
+      'upload_image':       'Upload Prescription Image',
+      'view_image':         'View Image',
+      'search_prescriptions': 'Search by doctor, diagnosis…',
+      'reminder_set':       'Medicine reminders set',
     },
     'bn': {
       'login':              'লগ ইন',
@@ -183,6 +253,40 @@ class S {
       'test_report':        'পরীক্ষার রিপোর্ট',
       'welcome':            'স্বাগতম',
       'tagline':            'আপনার স্বাস্থ্য, আমাদের অগ্রাধিকার।',
+      'prescriptions':      'প্রেসক্রিপশন',
+      'add_prescription':   'প্রেসক্রিপশন যোগ করুন',
+      'edit_prescription':  'প্রেসক্রিপশন সম্পাদনা',
+      'doctor_name':        'ডাক্তারের নাম',
+      'doctor_specialty':   'বিশেষজ্ঞতা',
+      'hospital_clinic':    'হাসপাতাল / চেম্বার',
+      'doctor_phone':       'ডাক্তারের ফোন',
+      'diagnosis':          'রোগ নির্ণয়',
+      'prescription_date':  'প্রেসক্রিপশনের তারিখ',
+      'notes':              'মন্তব্য',
+      'medicines':          'ওষুধ',
+      'add_medicine':       'ওষুধ যোগ করুন',
+      'medicine_name':      'ওষুধের নাম',
+      'dose':               'ডোজ (যেমন ৫০০মিগ্রা)',
+      'frequency':          'ফ্রিকোয়েন্সি',
+      'duration_days':      'মেয়াদ (দিন)',
+      'instructions':       'নির্দেশনা (যেমন খাবার পরে)',
+      'morning':            'সকাল',
+      'afternoon':          'দুপুর',
+      'evening':            'বিকেল',
+      'night':              'রাত',
+      'active':             'চলমান',
+      'expired':            'মেয়াদোত্তীর্ণ',
+      'all':                'সব',
+      'no_prescriptions':   'এখনো কোনো প্রেসক্রিপশন নেই — + চাপুন',
+      'delete_prescription':'প্রেসক্রিপশন মুছুন',
+      'delete_confirm':     'এই প্রেসক্রিপশন এবং সকল ওষুধ স্থায়ীভাবে মুছে যাবে।',
+      'export_pdf':         'PDF রপ্তানি করুন',
+      'refill_soon':        'শীঘ্রই শেষ হবে',
+      'allergy_warning':    'অ্যালার্জি সতর্কতা',
+      'upload_image':       'প্রেসক্রিপশনের ছবি আপলোড করুন',
+      'view_image':         'ছবি দেখুন',
+      'search_prescriptions': 'ডাক্তার, রোগ দিয়ে খুঁজুন…',
+      'reminder_set':       'ওষুধের রিমাইন্ডার সেট হয়েছে',
     },
   };
 }

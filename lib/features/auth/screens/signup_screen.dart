@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
 
@@ -81,6 +82,7 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _showConfirmationDialog() async {
+    final c = context.colors;
     await showDialog(
       context: context,
       barrierDismissible: false,
@@ -94,7 +96,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 style: GoogleFonts.poppins(
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
-                    color: DarkColors.textPrimary)),
+                    color: c.textPrimary)),
           ],
         ),
         content: Text(
@@ -102,7 +104,7 @@ class _SignupScreenState extends State<SignupScreen> {
           '${_emailController.text.trim()}.\n\n'
           'Click the link to activate your account, then log in.',
           style: GoogleFonts.poppins(
-              fontSize: 13, color: DarkColors.textSec),
+              fontSize: 13, color: c.textSec),
         ),
         actions: [
           TextButton(
@@ -122,16 +124,11 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: DarkColors.bg,
+      backgroundColor: c.bg,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [DarkColors.bg, DarkColors.surface],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: c.bgGradient),
         child: SafeArea(
           child: SingleChildScrollView(
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -153,10 +150,9 @@ class _SignupScreenState extends State<SignupScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: DarkColors.card,
+                    color: c.card,
                     borderRadius: BorderRadius.circular(24),
-                    border:
-                        Border.all(color: DarkColors.border, width: 1),
+                    border: Border.all(color: c.border, width: 1),
                     boxShadow: [
                       BoxShadow(
                         color: DarkColors.purpleBright.withAlpha(20),
@@ -174,7 +170,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             style: GoogleFonts.poppins(
                               fontSize: 22,
                               fontWeight: FontWeight.w700,
-                              color: DarkColors.textPrimary,
+                              color: c.textPrimary,
                             )).animate().fadeIn(delay: 150.ms),
 
                         const SizedBox(height: 4),
@@ -182,7 +178,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         Text('Fill in the details below to get started.',
                             style: GoogleFonts.poppins(
                                 fontSize: 13,
-                                color: DarkColors.textSec))
+                                color: c.textSec))
                             .animate()
                             .fadeIn(delay: 190.ms),
 
@@ -247,7 +243,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               _obscurePassword
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
-                              color: DarkColors.textMuted,
+                              color: c.textMuted,
                               size: 20,
                             ),
                             onPressed: () => setState(
@@ -277,7 +273,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               _obscureConfirm
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
-                              color: DarkColors.textMuted,
+                              color: c.textMuted,
                               size: 20,
                             ),
                             onPressed: () => setState(
@@ -316,7 +312,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               Text('Already have an account? ',
                                   style: GoogleFonts.poppins(
                                       fontSize: 13,
-                                      color: DarkColors.textSec)),
+                                      color: c.textSec)),
                               GestureDetector(
                                 onTap: () => Navigator.of(context).pop(),
                                 child: Text('Log In',
@@ -348,6 +344,7 @@ class _SignupScreenState extends State<SignupScreen> {
 class _LogoBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       children: [
         Container(
@@ -372,7 +369,7 @@ class _LogoBlock extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: DarkColors.textPrimary,
+              color: c.textPrimary,
             )),
       ],
     );
@@ -405,6 +402,7 @@ class _DarkTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -412,7 +410,7 @@ class _DarkTextField extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: DarkColors.textSec,
+              color: c.textSec,
             )),
         const SizedBox(height: 6),
         TextFormField(
@@ -422,26 +420,24 @@ class _DarkTextField extends StatelessWidget {
           validator:    validator,
           onChanged:    onChanged,
           style: GoogleFonts.poppins(
-              fontSize: 14, color: DarkColors.textPrimary),
+              fontSize: 14, color: c.textPrimary),
           decoration: InputDecoration(
             hintText:  hint,
             hintStyle: GoogleFonts.poppins(
-                fontSize: 13, color: DarkColors.textMuted),
-            prefixIcon: Icon(icon, color: DarkColors.textMuted, size: 20),
+                fontSize: 13, color: c.textMuted),
+            prefixIcon: Icon(icon, color: c.textMuted, size: 20),
             suffixIcon: suffixIcon,
             filled:    true,
-            fillColor: DarkColors.surface,
+            fillColor: c.surface,
             contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.border, width: 1),
+              borderSide: BorderSide(color: c.border, width: 1),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.border, width: 1),
+              borderSide: BorderSide(color: c.border, width: 1),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -560,6 +556,7 @@ class _PasswordStrengthBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final s = _strength();
     return Row(
       children: [
@@ -569,7 +566,7 @@ class _PasswordStrengthBar extends StatelessWidget {
               margin: EdgeInsets.only(right: i < 3 ? 4 : 0),
               height: 4,
               decoration: BoxDecoration(
-                color: i < s ? _color(s) : DarkColors.border,
+                color: i < s ? _color(s) : c.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -581,7 +578,7 @@ class _PasswordStrengthBar extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 11,
             fontWeight: FontWeight.w500,
-            color: s > 0 ? _color(s) : DarkColors.textMuted,
+            color: s > 0 ? _color(s) : c.textMuted,
           ),
         ),
       ],
@@ -598,13 +595,14 @@ class _TermsCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Checkbox(
           value:    value,
           onChanged: onChanged,
-          side: const BorderSide(color: DarkColors.borderLight, width: 1.5),
+          side: BorderSide(color: c.borderLight, width: 1.5),
           fillColor: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.selected)
                 ? DarkColors.purpleBright
@@ -623,7 +621,7 @@ class _TermsCheckbox extends StatelessWidget {
               TextSpan(
                 text: 'I have read and agree to the ',
                 style: GoogleFonts.poppins(
-                    fontSize: 12, color: DarkColors.textSec),
+                    fontSize: 12, color: c.textSec),
                 children: [
                   TextSpan(
                     text: 'Terms & Conditions',
@@ -636,7 +634,7 @@ class _TermsCheckbox extends StatelessWidget {
                   TextSpan(
                     text: ' and ',
                     style: GoogleFonts.poppins(
-                        fontSize: 12, color: DarkColors.textSec),
+                        fontSize: 12, color: c.textSec),
                   ),
                   TextSpan(
                     text: 'Privacy Policy.',

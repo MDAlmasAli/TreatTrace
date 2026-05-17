@@ -28,6 +28,18 @@ dependencies:
   # Image picker — avatar photo selection from gallery or camera
   image_picker: ^1.1.2
 
+  # Local notifications — medicine reminder scheduling
+  flutter_local_notifications: ^18.0.1
+
+  # Timezone — required for scheduled notifications
+  timezone: ^0.9.4
+
+  # PDF generation — prescription PDF export
+  pdf: ^3.11.1
+
+  # PDF printing/sharing — share prescription PDF
+  printing: ^5.13.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

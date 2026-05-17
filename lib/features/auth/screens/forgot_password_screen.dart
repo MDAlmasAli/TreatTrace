@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
 
@@ -53,8 +54,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: DarkColors.bg,
+      backgroundColor: c.bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -65,13 +67,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [DarkColors.bg, DarkColors.surface],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: c.bgGradient),
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -112,7 +108,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             style: GoogleFonts.poppins(
               fontSize: 24,
               fontWeight: FontWeight.w700,
-              color: DarkColors.textPrimary,
+              color: context.colors.textPrimary,
             )).animate().fadeIn(delay: 300.ms),
 
         const SizedBox(height: 12),
@@ -125,7 +121,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           textAlign: TextAlign.center,
           style: GoogleFonts.poppins(
             fontSize: 13,
-            color: DarkColors.textSec,
+            color: context.colors.textSec,
             height: 1.6,
           ),
         ).animate().fadeIn(delay: 400.ms),
@@ -172,6 +168,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   // ── Form state ────────────────────────────────────────────────────────────
   Widget _buildFormState() {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -202,7 +199,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             style: GoogleFonts.poppins(
               fontSize: 24,
               fontWeight: FontWeight.w700,
-              color: DarkColors.textPrimary,
+              color: c.textPrimary,
             )).animate().fadeIn(delay: 100.ms),
 
         const SizedBox(height: 8),
@@ -212,7 +209,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           'we\'ll send you a reset link.',
           style: GoogleFonts.poppins(
             fontSize: 13,
-            color: DarkColors.textSec,
+            color: c.textSec,
             height: 1.5,
           ),
         ).animate().fadeIn(delay: 140.ms),
@@ -229,9 +226,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: DarkColors.card,
+            color: c.card,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: DarkColors.border, width: 1),
+            border: Border.all(color: c.border, width: 1),
           ),
           child: Form(
             key: _formKey,
@@ -242,7 +239,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: DarkColors.textSec,
+                      color: c.textSec,
                     )),
                 const SizedBox(height: 6),
                 TextFormField(
@@ -250,26 +247,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   keyboardType: TextInputType.emailAddress,
                   validator:    Validators.email,
                   style: GoogleFonts.poppins(
-                      fontSize: 14, color: DarkColors.textPrimary),
+                      fontSize: 14, color: c.textPrimary),
                   decoration: InputDecoration(
                     hintText:  'you@example.com',
                     hintStyle: GoogleFonts.poppins(
-                        fontSize: 13, color: DarkColors.textMuted),
-                    prefixIcon: const Icon(Icons.email_outlined,
-                        color: DarkColors.textMuted, size: 20),
+                        fontSize: 13, color: c.textMuted),
+                    prefixIcon: Icon(Icons.email_outlined,
+                        color: c.textMuted, size: 20),
                     filled:    true,
-                    fillColor: DarkColors.surface,
+                    fillColor: c.surface,
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: DarkColors.border, width: 1),
+                      borderSide: BorderSide(color: c.border, width: 1),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: DarkColors.border, width: 1),
+                      borderSide: BorderSide(color: c.border, width: 1),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
