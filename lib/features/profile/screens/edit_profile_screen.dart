@@ -15,6 +15,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/account_service.dart';
@@ -199,6 +200,183 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return t.isEmpty ? null : t;
   }
 
+  // ── Credential helpers ────────────────────────────────────────────────────
+  String _friendlyAuthError(Object e) {
+    if (e is AuthException) {
+      final msg = e.message.toLowerCase();
+      if (msg.contains('password')) return 'Incorrect password. Please try again.';
+      if (msg.contains('email'))    return 'That email is already in use.';
+      if (msg.contains('network'))  return 'No internet connection. Check your network.';
+      return e.message;
+    }
+    return 'An unexpected error occurred.';
+  }
+
+  void _showChangeEmailDialog() {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        bool loading = false;
+        return StatefulBuilder(
+          builder: (ctx, setS) => AlertDialog(
+            title: const Text('Change Email'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Enter your new email. A confirmation link will be sent to it.',
+                  style: GoogleFonts.poppins(fontSize: 13, color: DarkColors.textSec),
+                ),
+                const SizedBox(height: 16),
+                _DialogTextField(
+                  controller:   ctrl,
+                  hint:         'new@example.com',
+                  keyboardType: TextInputType.emailAddress,
+                  autofocus:    true,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              if (loading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: SizedBox(
+                    width: 20, height: 20,
+                    child: CircularProgressIndicator(
+                        color: DarkColors.purpleBright, strokeWidth: 2),
+                  ),
+                )
+              else
+                ElevatedButton(
+                  onPressed: () async {
+                    final email = ctrl.text.trim();
+                    if (email.isEmpty || !email.contains('@')) return;
+                    setS(() => loading = true);
+                    try {
+                      await _authService.updateEmail(email);
+                      if (ctx.mounted) Navigator.of(ctx).pop();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text(
+                              'Confirmation email sent. Click the link to confirm.'),
+                        ));
+                      }
+                    } catch (e) {
+                      setS(() => loading = false);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(_friendlyAuthError(e)),
+                          backgroundColor: DarkColors.red,
+                        ));
+                      }
+                    }
+                  },
+                  child: const Text('Send Link'),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showChangePasswordDialog() {
+    final newCtrl  = TextEditingController();
+    final confCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        bool loading    = false;
+        bool obscureNew = true;
+        bool obscureConf = true;
+        return StatefulBuilder(
+          builder: (ctx, setS) => AlertDialog(
+            title: const Text('Change Password'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _DialogPasswordField(
+                  controller: newCtrl,
+                  hint:       'New password (min 6 chars)',
+                  obscure:    obscureNew,
+                  onToggle:   () => setS(() => obscureNew = !obscureNew),
+                ),
+                const SizedBox(height: 12),
+                _DialogPasswordField(
+                  controller: confCtrl,
+                  hint:       'Confirm new password',
+                  obscure:    obscureConf,
+                  onToggle:   () => setS(() => obscureConf = !obscureConf),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              if (loading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: SizedBox(
+                    width: 20, height: 20,
+                    child: CircularProgressIndicator(
+                        color: DarkColors.purpleBright, strokeWidth: 2),
+                  ),
+                )
+              else
+                ElevatedButton(
+                  onPressed: () async {
+                    final np = newCtrl.text;
+                    final cp = confCtrl.text;
+                    if (np.length < 6) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Password must be at least 6 characters.'),
+                        backgroundColor: DarkColors.red,
+                      ));
+                      return;
+                    }
+                    if (np != cp) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Passwords do not match.'),
+                        backgroundColor: DarkColors.red,
+                      ));
+                      return;
+                    }
+                    setS(() => loading = true);
+                    try {
+                      await _authService.updatePassword(np);
+                      if (ctx.mounted) Navigator.of(ctx).pop();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Password updated successfully.'),
+                        ));
+                      }
+                    } catch (e) {
+                      setS(() => loading = false);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(_friendlyAuthError(e)),
+                          backgroundColor: DarkColors.red,
+                        ));
+                      }
+                    }
+                  },
+                  child: const Text('Update'),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -291,10 +469,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       accentColor: DarkColors.purpleBright,
       children: [
         _FormInput(
-          icon:       Icons.person_rounded,
-          label:      'Full Name',
-          controller: _fullNameCtrl,
-          hint:       'e.g. John Smith',
+          icon:         Icons.person_rounded,
+          label:        'Full Name',
+          controller:   _fullNameCtrl,
+          hint:         'e.g. John Smith',
           keyboardType: TextInputType.name,
         ),
         const SizedBox(height: 16),
@@ -311,6 +489,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             }
             return null;
           },
+        ),
+        const SizedBox(height: 20),
+        const Divider(color: DarkColors.border, height: 1),
+        const SizedBox(height: 16),
+        Text(
+          'Credentials',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: DarkColors.textSec,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _CredentialButton(
+          icon:  Icons.email_rounded,
+          label: 'Change Email',
+          onTap: _showChangeEmailDialog,
+        ),
+        const SizedBox(height: 8),
+        _CredentialButton(
+          icon:  Icons.lock_rounded,
+          label: 'Change Password',
+          onTap: _showChangePasswordDialog,
         ),
       ],
     );
@@ -539,20 +740,30 @@ class _FormSection extends StatelessWidget {
             )),
         const SizedBox(height: 12),
         Container(
-          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: DarkColors.card,
             borderRadius: BorderRadius.circular(20),
-            border: Border(
-              left:   BorderSide(color: accentColor, width: 3),
-              top:    const BorderSide(color: DarkColors.border, width: 1),
-              right:  const BorderSide(color: DarkColors.border, width: 1),
-              bottom: const BorderSide(color: DarkColors.border, width: 1),
-            ),
+            border: Border.all(color: DarkColors.border, width: 1),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: children,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(19),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(width: 3, color: accentColor),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: children,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ],
@@ -792,6 +1003,160 @@ class _BmiPreviewBanner extends StatelessWidget {
                 )),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// _CredentialButton
+// ══════════════════════════════════════════════════════════════════════════════
+class _CredentialButton extends StatelessWidget {
+  final IconData     icon;
+  final String       label;
+  final VoidCallback onTap;
+
+  const _CredentialButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: DarkColors.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: DarkColors.border),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: DarkColors.purpleBright),
+              const SizedBox(width: 10),
+              Text(label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: DarkColors.textPrimary,
+                  )),
+              const Spacer(),
+              const Icon(Icons.chevron_right_rounded,
+                  size: 18, color: DarkColors.textMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// _DialogTextField
+// ══════════════════════════════════════════════════════════════════════════════
+class _DialogTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String                hint;
+  final TextInputType?        keyboardType;
+  final bool                  autofocus;
+
+  const _DialogTextField({
+    required this.controller,
+    required this.hint,
+    this.keyboardType,
+    this.autofocus = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller:   controller,
+      keyboardType: keyboardType,
+      autofocus:    autofocus,
+      style: GoogleFonts.poppins(fontSize: 14, color: DarkColors.textPrimary),
+      decoration: InputDecoration(
+        hintText:  hint,
+        hintStyle: GoogleFonts.poppins(fontSize: 13, color: DarkColors.textMuted),
+        filled:    true,
+        fillColor: DarkColors.surface,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: DarkColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: DarkColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide:
+              const BorderSide(color: DarkColors.purpleBright, width: 1.5),
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// _DialogPasswordField
+// ══════════════════════════════════════════════════════════════════════════════
+class _DialogPasswordField extends StatelessWidget {
+  final TextEditingController controller;
+  final String                hint;
+  final bool                  obscure;
+  final VoidCallback          onToggle;
+
+  const _DialogPasswordField({
+    required this.controller,
+    required this.hint,
+    required this.obscure,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller:  controller,
+      obscureText: obscure,
+      style: GoogleFonts.poppins(fontSize: 14, color: DarkColors.textPrimary),
+      decoration: InputDecoration(
+        hintText:  hint,
+        hintStyle: GoogleFonts.poppins(fontSize: 13, color: DarkColors.textMuted),
+        filled:    true,
+        fillColor: DarkColors.surface,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        suffixIcon: IconButton(
+          icon: Icon(
+            obscure
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
+            size:  18,
+            color: DarkColors.textMuted,
+          ),
+          onPressed: onToggle,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: DarkColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: DarkColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide:
+              const BorderSide(color: DarkColors.purpleBright, width: 1.5),
+        ),
       ),
     );
   }

@@ -74,6 +74,10 @@ class AppTheme {
         fillColor: DarkColors.surface,
         hintStyle: GoogleFonts.poppins(color: DarkColors.textMuted, fontSize: 13),
         labelStyle:GoogleFonts.poppins(color: DarkColors.textSec,   fontSize: 13),
+        floatingLabelStyle: GoogleFonts.poppins(
+            color: DarkColors.purpleBright, fontSize: 12),
+        prefixIconColor: DarkColors.textMuted,
+        suffixIconColor: DarkColors.textMuted,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: DarkColors.border, width: 1),
@@ -255,6 +259,10 @@ class AppTheme {
         fillColor: const Color(0xFFEDF2F7),
         hintStyle: GoogleFonts.poppins(color: textHint, fontSize: 13),
         labelStyle:GoogleFonts.poppins(color: textMid,  fontSize: 13),
+        floatingLabelStyle: GoogleFonts.poppins(
+            color: primaryColor, fontSize: 12),
+        prefixIconColor: textMid,
+        suffixIconColor: textMid,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: borderColor, width: 1),
@@ -327,16 +335,20 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
 
+      // Dialogs always use DarkColors because all dialog content in the app
+      // uses DarkColors text constants. Without this, text is invisible on
+      // a white dialog background when the system is in light mode.
       dialogTheme: DialogThemeData(
-        backgroundColor: surfaceColor,
+        backgroundColor: DarkColors.card,
         elevation: 8,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titleTextStyle: GoogleFonts.poppins(
-          color:      textDark,
+          color:      DarkColors.textPrimary,
           fontSize:   18,
           fontWeight: FontWeight.w600,
         ),
-        contentTextStyle: GoogleFonts.poppins(color: textMid, fontSize: 13),
+        contentTextStyle: GoogleFonts.poppins(
+            color: DarkColors.textSec, fontSize: 13),
       ),
 
       cardTheme: CardThemeData(

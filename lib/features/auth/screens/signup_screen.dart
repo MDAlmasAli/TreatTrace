@@ -22,6 +22,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _formKey                   = GlobalKey<FormState>();
   final _nameController            = TextEditingController();
   final _emailController           = TextEditingController();
+  final _phoneController           = TextEditingController();
   final _passwordController        = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _authService               = AuthService();
@@ -36,6 +37,7 @@ class _SignupScreenState extends State<SignupScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -56,6 +58,7 @@ class _SignupScreenState extends State<SignupScreen> {
         email:    _emailController.text,
         password: _passwordController.text,
         fullName: _nameController.text,
+        phone:    _phoneController.text,
       );
       if (mounted) await _showConfirmationDialog();
     } on AuthException catch (e) {
@@ -211,6 +214,24 @@ class _SignupScreenState extends State<SignupScreen> {
                           keyboardType: TextInputType.emailAddress,
                           validator:    Validators.email,
                         ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.1),
+
+                        const SizedBox(height: 16),
+
+                        // Phone
+                        _DarkTextField(
+                          label:        'Phone Number (optional)',
+                          hint:         '+880 1XXX-XXXXXX',
+                          icon:         Icons.phone_outlined,
+                          controller:   _phoneController,
+                          keyboardType: TextInputType.phone,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return null;
+                            if (v.replaceAll(RegExp(r'\D'), '').length < 7) {
+                              return 'Enter a valid phone number';
+                            }
+                            return null;
+                          },
+                        ).animate().fadeIn(delay: 280.ms).slideY(begin: 0.1),
 
                         const SizedBox(height: 16),
 

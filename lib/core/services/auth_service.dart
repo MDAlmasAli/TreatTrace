@@ -50,13 +50,17 @@ class AuthService {
     required String email,
     required String password,
     required String fullName,
+    String? phone,
   }) async {
     final response = await _client.auth.signUp(
       email: email.trim(),
       password: password,
-      // We pass fullName inside user metadata so the database trigger can
-      // pick it up and insert it into the profiles table automatically.
-      data: {'full_name': fullName.trim()},
+      data: {
+        'full_name': fullName.trim(),
+        // phone is picked up by the handle_new_user() DB trigger and saved
+        // to the profiles table automatically on sign-up.
+        if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+      },
     );
     return response;
   }
