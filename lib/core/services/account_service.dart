@@ -39,10 +39,10 @@ class AccountService {
   Future<void> updateFullName(String name) async {
     final uid = _uid;
     if (uid == null) return;
-    await _client
-        .from('profiles')
-        .update({'full_name': name.trim()})
-        .eq('id', uid);
+    await _client.from('profiles').upsert(
+      {'id': uid, 'full_name': name.trim()},
+      onConflict: 'id',
+    );
     await _client.auth
         .updateUser(UserAttributes(data: {'full_name': name.trim()}));
   }
@@ -53,10 +53,10 @@ class AccountService {
   Future<void> updatePhone(String phone) async {
     final uid = _uid;
     if (uid == null) return;
-    await _client
-        .from('profiles')
-        .update({'phone': phone.trim()})
-        .eq('id', uid);
+    await _client.from('profiles').upsert(
+      {'id': uid, 'phone': phone.trim()},
+      onConflict: 'id',
+    );
   }
 
   // ── Update email (auth) ───────────────────────────────────────────────────
@@ -104,10 +104,10 @@ class AccountService {
     final url =
         '${_client.storage.from('avatars').getPublicUrl(storagePath)}?v=$ts';
 
-    await _client
-        .from('profiles')
-        .update({'avatar_url': url})
-        .eq('id', uid);
+    await _client.from('profiles').upsert(
+      {'id': uid, 'avatar_url': url},
+      onConflict: 'id',
+    );
 
     return url;
   }
