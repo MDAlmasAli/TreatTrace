@@ -14,6 +14,9 @@ import '../../../core/services/auth_service.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../prescription/screens/prescriptions_screen.dart';
 import '../../profile/screens/profile_screen.dart';
+import '../../test_report/screens/lab_reports_screen.dart';
+import '../../doctor/screens/doctors_screen.dart';
+import '../../appointment/screens/appointments_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // HomeScreen
@@ -75,6 +78,24 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _goToPrescriptions() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const PrescriptionsScreen()),
+    );
+  }
+
+  Future<void> _goToTestReports() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const LabReportsScreen()),
+    );
+  }
+
+  Future<void> _goToDoctors() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const DoctorsScreen()),
+    );
+  }
+
+  Future<void> _goToAppointments() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AppointmentsScreen()),
     );
   }
 
@@ -188,7 +209,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(width: 14),
                         Expanded(
-                          child: _TestReportCard(label: s.testReport)
+                          child: _TestReportCard(
+                            label: s.testReport,
+                            onTap: _goToTestReports,
+                          )
                               .animate()
                               .fadeIn(delay: 200.ms)
                               .slideY(begin: 0.08),
@@ -204,20 +228,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(
-                          child: _ActionCard(
-                            icon:       Icons.medication_rounded,
-                            accentColor:DarkColors.green,
-                            title:      s.ongoingTreatment,
-                            animDelay:  250,
+                          child: _DoctorsCard(
+                            label:    s.myDoctors,
+                            onTap:    _goToDoctors,
+                            animDelay: 250,
                           ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
-                          child: _ActionCard(
-                            icon:       Icons.monitor_heart_rounded,
-                            accentColor:DarkColors.purpleBright,
-                            title:      s.medicalIdentity,
-                            animDelay:  300,
+                          child: _AppointmentsCard(
+                            label:    s.appointments,
+                            onTap:    _goToAppointments,
+                            animDelay: 300,
                           ),
                         ),
                       ],
@@ -437,12 +459,14 @@ class _PrescriptionCard extends StatelessWidget {
 // _TestReportCard
 // ══════════════════════════════════════════════════════════════════════════════
 class _TestReportCard extends StatelessWidget {
-  final String label;
-  const _TestReportCard({required this.label});
+  final String       label;
+  final VoidCallback onTap;
+  const _TestReportCard({required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return _CardShell(
+      onTap:       onTap,
       accentColor: DarkColors.purpleBright,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -473,53 +497,110 @@ class _TestReportCard extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _ActionCard
+// _DoctorsCard
 // ══════════════════════════════════════════════════════════════════════════════
-class _ActionCard extends StatelessWidget {
-  final IconData icon;
-  final Color    accentColor;
-  final String   title;
-  final int      animDelay;
+class _DoctorsCard extends StatelessWidget {
+  final String       label;
+  final VoidCallback onTap;
+  final int          animDelay;
 
-  const _ActionCard({
-    required this.icon,
-    required this.accentColor,
-    required this.title,
+  const _DoctorsCard({
+    required this.label,
+    required this.onTap,
     required this.animDelay,
   });
 
   @override
   Widget build(BuildContext context) {
     return _CardShell(
-      accentColor: accentColor,
+      accentColor: DarkColors.green,
+      onTap:       onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CardIcon(icon: icon, color: accentColor),
+          _CardIcon(icon: Icons.person_rounded, color: DarkColors.green),
           const SizedBox(height: 14),
-          Text(title,
+          Text(label,
               style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: context.colors.textPrimary,
-                  height: 1.3)),
+                  color: context.colors.textPrimary)),
+          const SizedBox(height: 4),
+          Text('Your doctor book',
+              style: GoogleFonts.poppins(
+                  fontSize: 11, color: context.colors.textSec)),
           const Spacer(),
           Align(
             alignment: Alignment.bottomRight,
             child: Container(
-              width: 30,
-              height: 30,
+              width: 30, height: 30,
               decoration: BoxDecoration(
-                color: accentColor.withAlpha(20),
+                color:        DarkColors.green.withAlpha(20),
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(Icons.arrow_forward_rounded,
-                  size: 16, color: accentColor),
+              child: const Icon(Icons.arrow_forward_rounded,
+                  size: 16, color: DarkColors.green),
             ),
           ),
         ],
       ),
-    ).animate().fadeIn(delay: Duration(milliseconds: animDelay)).slideY(begin: 0.08);
+    ).animate()
+        .fadeIn(delay: Duration(milliseconds: animDelay))
+        .slideY(begin: 0.08);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// _AppointmentsCard
+// ══════════════════════════════════════════════════════════════════════════════
+class _AppointmentsCard extends StatelessWidget {
+  final String       label;
+  final VoidCallback onTap;
+  final int          animDelay;
+
+  const _AppointmentsCard({
+    required this.label,
+    required this.onTap,
+    required this.animDelay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _CardShell(
+      accentColor: DarkColors.amber,
+      onTap:       onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CardIcon(icon: Icons.event_rounded, color: DarkColors.amber),
+          const SizedBox(height: 14),
+          Text(label,
+              style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: context.colors.textPrimary)),
+          const SizedBox(height: 4),
+          Text('Track your visits',
+              style: GoogleFonts.poppins(
+                  fontSize: 11, color: context.colors.textSec)),
+          const Spacer(),
+          Align(
+            alignment: Alignment.bottomRight,
+            child: Container(
+              width: 30, height: 30,
+              decoration: BoxDecoration(
+                color:        DarkColors.amber.withAlpha(20),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: const Icon(Icons.arrow_forward_rounded,
+                  size: 16, color: DarkColors.amber),
+            ),
+          ),
+        ],
+      ),
+    ).animate()
+        .fadeIn(delay: Duration(milliseconds: animDelay))
+        .slideY(begin: 0.08);
   }
 }
 

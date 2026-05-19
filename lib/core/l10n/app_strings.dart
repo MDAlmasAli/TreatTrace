@@ -122,6 +122,56 @@ class S {
   String get searchPrescriptions  => get('search_prescriptions');
   String get reminderSet          => get('reminder_set');
 
+  // ── Doctors ───────────────────────────────────────────────────────────────
+  String get myDoctors            => get('my_doctors');
+  String get addDoctor            => get('add_doctor');
+  String get editDoctor           => get('edit_doctor');
+  String get specialty            => get('specialty');
+  String get chamberAddress       => get('chamber_address');
+  String get consultationFee      => get('consultation_fee');
+  String get noDoctors            => get('no_doctors');
+  String get searchDoctors        => get('search_doctors');
+  String get deleteDoctor         => get('delete_doctor');
+  String get deleteDoctorConfirm  => get('delete_doctor_confirm');
+
+  // ── Appointments ──────────────────────────────────────────────────────────
+  String get appointments         => get('appointments');
+  String get addAppointment       => get('add_appointment');
+  String get editAppointment      => get('edit_appointment');
+  String get appointmentDate      => get('appointment_date');
+  String get appointmentTime      => get('appointment_time');
+  String get visitReason          => get('visit_reason');
+  String get statusScheduled      => get('status_scheduled');
+  String get statusCompleted      => get('status_completed');
+  String get statusCancelled      => get('status_cancelled');
+  String get upcoming             => get('upcoming');
+  String get past                 => get('past');
+  String get noAppointments       => get('no_appointments');
+  String get searchAppointments   => get('search_appointments');
+  String get deleteAppointment    => get('delete_appointment');
+  String get deleteApptConfirm    => get('delete_appt_confirm');
+  String get markCompleted        => get('mark_completed');
+  String get cancelAppointment    => get('cancel_appointment');
+  String get selectDoctor         => get('select_doctor');
+  String get noLinkedDoctor       => get('no_linked_doctor');
+
+  // ── Test Report ──────────────────────────────────────────────────────────
+  String get testReports          => get('test_reports');
+  String get addTestReport        => get('add_test_report');
+  String get editTestReport       => get('edit_test_report');
+  String get testName             => get('test_name');
+  String get category             => get('category');
+  String get testDate             => get('test_date');
+  String get labHospital          => get('lab_hospital');
+  String get noTestReports        => get('no_test_reports');
+  String get searchTestReports    => get('search_test_reports');
+  String get deleteTestReport     => get('delete_test_report');
+  String get deleteReportConfirm  => get('delete_report_confirm');
+  String get linkedPrescription   => get('linked_prescription');
+  String get noLinkedPrescription => get('no_linked_prescription');
+  String get customCategory       => get('custom_category');
+  String get enterCustomCategory  => get('enter_custom_category');
+
   // ── Welcome ───────────────────────────────────────────────────────────────
   String get welcome          => get('welcome');
   String get tagline          => get('tagline');
@@ -208,6 +258,50 @@ class S {
       'view_image':         'View Image',
       'search_prescriptions': 'Search by doctor, diagnosis…',
       'reminder_set':       'Medicine reminders set',
+      'my_doctors':             'My Doctors',
+      'add_doctor':             'Add Doctor',
+      'edit_doctor':            'Edit Doctor',
+      'specialty':              'Specialty',
+      'chamber_address':        'Chamber Address',
+      'consultation_fee':       'Consultation Fee',
+      'no_doctors':             'No doctors saved yet — tap + to add one',
+      'search_doctors':         'Search by name, specialty…',
+      'delete_doctor':          'Delete Doctor',
+      'delete_doctor_confirm':  'This doctor will be permanently deleted.',
+      'appointments':           'Appointments',
+      'add_appointment':        'Add Appointment',
+      'edit_appointment':       'Edit Appointment',
+      'appointment_date':       'Appointment Date',
+      'appointment_time':       'Time (optional)',
+      'visit_reason':           'Visit Reason',
+      'status_scheduled':       'Scheduled',
+      'status_completed':       'Completed',
+      'status_cancelled':       'Cancelled',
+      'upcoming':               'Upcoming',
+      'past':                   'Past',
+      'no_appointments':        'No appointments here',
+      'search_appointments':    'Search by doctor, reason…',
+      'delete_appointment':     'Delete Appointment',
+      'delete_appt_confirm':    'This appointment will be permanently deleted.',
+      'mark_completed':         'Mark as Completed',
+      'cancel_appointment':     'Cancel Appointment',
+      'select_doctor':          'Select Doctor',
+      'no_linked_doctor':       'No Doctor Linked',
+      'test_reports':           'Test Reports',
+      'add_test_report':        'Add Test Report',
+      'edit_test_report':       'Edit Test Report',
+      'test_name':              'Test Name',
+      'category':               'Category',
+      'test_date':              'Test Date',
+      'lab_hospital':           'Lab / Hospital',
+      'no_test_reports':        'No test reports yet — tap + to add one',
+      'search_test_reports':    'Search by test, doctor…',
+      'delete_test_report':     'Delete Test Report',
+      'delete_report_confirm':  'This report and all its images will be permanently deleted.',
+      'linked_prescription':    'Linked Prescription',
+      'no_linked_prescription': 'None',
+      'custom_category':        'Custom',
+      'enter_custom_category':  'Enter category name',
     },
     'bn': {
       'login':              'লগ ইন',
@@ -287,6 +381,50 @@ class S {
       'view_image':         'ছবি দেখুন',
       'search_prescriptions': 'ডাক্তার, রোগ দিয়ে খুঁজুন…',
       'reminder_set':       'ওষুধের রিমাইন্ডার সেট হয়েছে',
+      'my_doctors':             'আমার ডাক্তার',
+      'add_doctor':             'ডাক্তার যোগ করুন',
+      'edit_doctor':            'ডাক্তার সম্পাদনা',
+      'specialty':              'বিশেষজ্ঞতা',
+      'chamber_address':        'চেম্বারের ঠিকানা',
+      'consultation_fee':       'ভিজিট ফি',
+      'no_doctors':             'এখনো কোনো ডাক্তার নেই — + চাপুন',
+      'search_doctors':         'নাম, বিশেষজ্ঞতা দিয়ে খুঁজুন…',
+      'delete_doctor':          'ডাক্তার মুছুন',
+      'delete_doctor_confirm':  'এই ডাক্তারের তথ্য স্থায়ীভাবে মুছে যাবে।',
+      'appointments':           'অ্যাপয়েন্টমেন্ট',
+      'add_appointment':        'অ্যাপয়েন্টমেন্ট যোগ করুন',
+      'edit_appointment':       'অ্যাপয়েন্টমেন্ট সম্পাদনা',
+      'appointment_date':       'অ্যাপয়েন্টমেন্টের তারিখ',
+      'appointment_time':       'সময় (ঐচ্ছিক)',
+      'visit_reason':           'পরিদর্শনের কারণ',
+      'status_scheduled':       'নির্ধারিত',
+      'status_completed':       'সম্পন্ন',
+      'status_cancelled':       'বাতিল',
+      'upcoming':               'আসন্ন',
+      'past':                   'অতীত',
+      'no_appointments':        'এখানে কোনো অ্যাপয়েন্টমেন্ট নেই',
+      'search_appointments':    'ডাক্তার, কারণ দিয়ে খুঁজুন…',
+      'delete_appointment':     'অ্যাপয়েন্টমেন্ট মুছুন',
+      'delete_appt_confirm':    'এই অ্যাপয়েন্টমেন্ট স্থায়ীভাবে মুছে যাবে।',
+      'mark_completed':         'সম্পন্ন হিসেবে চিহ্নিত করুন',
+      'cancel_appointment':     'অ্যাপয়েন্টমেন্ট বাতিল করুন',
+      'select_doctor':          'ডাক্তার বেছে নিন',
+      'no_linked_doctor':       'কোনো ডাক্তার লিঙ্ক নেই',
+      'test_reports':           'টেস্ট রিপোর্ট',
+      'add_test_report':        'টেস্ট রিপোর্ট যোগ করুন',
+      'edit_test_report':       'টেস্ট রিপোর্ট সম্পাদনা',
+      'test_name':              'পরীক্ষার নাম',
+      'category':               'ধরন',
+      'test_date':              'পরীক্ষার তারিখ',
+      'lab_hospital':           'ল্যাব / হাসপাতাল',
+      'no_test_reports':        'এখনো কোনো রিপোর্ট নেই — + চাপুন',
+      'search_test_reports':    'পরীক্ষা, ডাক্তার দিয়ে খুঁজুন…',
+      'delete_test_report':     'রিপোর্ট মুছুন',
+      'delete_report_confirm':  'এই রিপোর্ট এবং সকল ছবি স্থায়ীভাবে মুছে যাবে।',
+      'linked_prescription':    'সংযুক্ত প্রেসক্রিপশন',
+      'no_linked_prescription': 'নেই',
+      'custom_category':        'কাস্টম',
+      'enter_custom_category':  'ধরনের নাম লিখুন',
     },
   };
 }

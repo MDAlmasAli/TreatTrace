@@ -226,19 +226,131 @@ CREATE TABLE IF NOT EXISTS public.health_profiles (
 -- SECTION 5 — RELATIONSHIP / JUNCTION TABLES
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- No junction tables exist yet.
---
 -- PLANNED (add here when implementing):
 --
 --   user_saved_doctors   — users ↔ doctors (M:N bookmark/follow)
 --   appointment_records  — users ↔ doctors with date + status
 --   prescription_items   — prescriptions linked to an appointment
---   test_report_files    — file references for uploaded lab reports
 --
--- See SECTION 11 (Future Table Template) for the boilerplate to use.
 -- ─────────────────────────────────────────────────────────────────────────
 
--- (empty — reserved for future junction tables)
+-- =========================================================
+-- TABLE: lab_reports
+-- =========================================================
+--
+-- Purpose     : Stores each user's lab/test report metadata and uploaded
+--               image references. category is free TEXT so users can supply
+--               their own names in addition to the app's preset list.
+--               prescription_id is an optional FK — deleting the linked
+--               prescription sets it to NULL (ON DELETE SET NULL).
+--
+-- Key columns :
+--   test_name       → Name of the test (required)
+--   category        → E.g. "Blood Test", "X-Ray", or any custom string
+--   test_date       → DATE when the test was taken (optional)
+--   doctor_name     → Referring/ordering doctor (optional)
+--   hospital        → Lab or hospital name (optional)
+--   image_urls      → Array of Supabase Storage signed URLs
+--   notes           → Free text result notes (optional)
+--   prescription_id → FK → prescriptions.id (nullable)
+--
+-- Storage bucket : lab_reports (private)
+--   Files stored at: <uid>/<timestamp>.<ext>
+--   Create the bucket in Supabase Dashboard before running this file.
+--
+-- RLS note    : User can SELECT / INSERT / UPDATE / DELETE only their own rows.
+-- ─────────────────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS public.lab_reports (
+  id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id         UUID          NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  test_name       TEXT          NOT NULL,
+  category        TEXT,
+  test_date       DATE,
+  doctor_name     TEXT,
+  hospital        TEXT,
+  image_urls      TEXT[]        NOT NULL DEFAULT '{}',
+  notes           TEXT,
+  prescription_id UUID          REFERENCES public.prescriptions(id) ON DELETE SET NULL,
+  created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+
+-- =========================================================
+-- TABLE: doctors
+-- =========================================================
+--
+-- Purpose     : Personal doctor address book per user. Stores contact and
+--               chamber details for each doctor the user has visited.
+--               is_favorite allows users to pin their most-used doctors.
+--
+-- Key columns :
+--   name            → Doctor's name (required, stored without "Dr." prefix)
+--   specialty       → e.g. "Cardiologist", free text
+--   hospital        → Primary hospital / clinic name
+--   chamber_address → Physical address of the chamber
+--   phone           → Contact number
+--   fee             → Consultation fee (stored as free text, e.g. "৳ 800")
+--   notes           → Additional free-text info
+--   is_favorite     → User-defined bookmark flag
+--
+-- RLS note    : User can SELECT / INSERT / UPDATE / DELETE only their own rows.
+-- ─────────────────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS public.doctors (
+  id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id         UUID          NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name            TEXT          NOT NULL,
+  specialty       TEXT,
+  hospital        TEXT,
+  chamber_address TEXT,
+  phone           TEXT,
+  fee             TEXT,
+  notes           TEXT,
+  is_favorite     BOOLEAN       NOT NULL DEFAULT false,
+  created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+
+-- =========================================================
+-- TABLE: appointments
+-- =========================================================
+--
+-- Purpose     : Log of all patient appointments. doctor_id is nullable so
+--               an appointment row survives if the user deletes the doctor
+--               record. doctor_name_snapshot preserves the name at booking
+--               time as a fallback display value.
+--
+-- Key columns :
+--   doctor_id           → FK → doctors.id (SET NULL on doctor deletion)
+--   doctor_name_snapshot→ Doctor's name frozen at booking time
+--   appointment_date    → DATE of the appointment (required)
+--   appointment_time    → Free-text time string, e.g. "10:30 AM" (optional)
+--   visit_reason        → Why the patient visited (optional)
+--   status              → 'scheduled' | 'completed' | 'cancelled'
+--   notes               → Post-visit notes (optional)
+--   prescription_id     → FK → prescriptions.id (SET NULL on deletion)
+--
+-- RLS note    : User can SELECT / INSERT / UPDATE / DELETE only their own rows.
+-- ─────────────────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS public.appointments (
+  id                    UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id               UUID          NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  doctor_id             UUID          REFERENCES public.doctors(id) ON DELETE SET NULL,
+  doctor_name_snapshot  TEXT          NOT NULL,
+  appointment_date      DATE          NOT NULL,
+  appointment_time      TEXT,
+  visit_reason          TEXT,
+  status                TEXT          NOT NULL DEFAULT 'scheduled'
+                                      CHECK (status IN ('scheduled','completed','cancelled')),
+  notes                 TEXT,
+  prescription_id       UUID          REFERENCES public.prescriptions(id) ON DELETE SET NULL,
+  created_at            TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at            TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -250,6 +362,36 @@ CREATE TABLE IF NOT EXISTS public.health_profiles (
 --   • Foreign key columns used in JOIN / WHERE clauses
 --   • Columns frequently searched (e.g. email lookups by admin)
 -- ─────────────────────────────────────────────────────────────────────────
+
+-- doctors: lookup by user + favorite flag
+CREATE INDEX IF NOT EXISTS idx_doctors_user_id
+  ON public.doctors (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_doctors_is_favorite
+  ON public.doctors (user_id, is_favorite DESC);
+
+-- appointments: lookup by user, doctor, date, status
+CREATE INDEX IF NOT EXISTS idx_appointments_user_id
+  ON public.appointments (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_appointments_doctor_id
+  ON public.appointments (doctor_id);
+
+CREATE INDEX IF NOT EXISTS idx_appointments_date
+  ON public.appointments (appointment_date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_appointments_status
+  ON public.appointments (user_id, status);
+
+-- lab_reports: fast lookup by user + date
+CREATE INDEX IF NOT EXISTS idx_lab_reports_user_id
+  ON public.lab_reports (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_lab_reports_test_date
+  ON public.lab_reports (test_date DESC NULLS LAST);
+
+CREATE INDEX IF NOT EXISTS idx_lab_reports_category
+  ON public.lab_reports (category);
 
 -- profiles: fast lookup by email (admin queries, duplicate-check)
 CREATE INDEX IF NOT EXISTS idx_profiles_email
@@ -302,6 +444,19 @@ CREATE TRIGGER set_profiles_updated_at
   EXECUTE PROCEDURE public.set_updated_at();
 
 
+-- Trigger: set_lab_reports_updated_at
+-- Fires   : BEFORE UPDATE on public.lab_reports
+-- Action  : Stamps updated_at to NOW() automatically.
+
+DROP TRIGGER IF EXISTS set_lab_reports_updated_at
+  ON public.lab_reports;
+
+CREATE TRIGGER set_lab_reports_updated_at
+  BEFORE UPDATE ON public.lab_reports
+  FOR EACH ROW
+  EXECUTE PROCEDURE public.set_updated_at();
+
+
 -- Trigger: set_health_profiles_updated_at
 -- Fires   : BEFORE UPDATE on public.health_profiles
 -- Action  : Stamps updated_at to NOW() automatically.
@@ -311,6 +466,26 @@ DROP TRIGGER IF EXISTS set_health_profiles_updated_at
 
 CREATE TRIGGER set_health_profiles_updated_at
   BEFORE UPDATE ON public.health_profiles
+  FOR EACH ROW
+  EXECUTE PROCEDURE public.set_updated_at();
+
+
+-- Trigger: set_doctors_updated_at
+
+DROP TRIGGER IF EXISTS set_doctors_updated_at ON public.doctors;
+
+CREATE TRIGGER set_doctors_updated_at
+  BEFORE UPDATE ON public.doctors
+  FOR EACH ROW
+  EXECUTE PROCEDURE public.set_updated_at();
+
+
+-- Trigger: set_appointments_updated_at
+
+DROP TRIGGER IF EXISTS set_appointments_updated_at ON public.appointments;
+
+CREATE TRIGGER set_appointments_updated_at
+  BEFORE UPDATE ON public.appointments
   FOR EACH ROW
   EXECUTE PROCEDURE public.set_updated_at();
 
@@ -404,6 +579,111 @@ CREATE POLICY "Users can update own health profile"
 -- Health data deletion is a sensitive action that should only happen
 -- as part of a full account-deletion flow (future feature). Direct row
 -- deletion by the client is disabled by default-deny RLS.
+
+
+-- ── public.lab_reports ───────────────────────────────────────────────────
+
+ALTER TABLE public.lab_reports ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own lab_reports"   ON public.lab_reports;
+DROP POLICY IF EXISTS "Users can insert own lab_reports" ON public.lab_reports;
+DROP POLICY IF EXISTS "Users can update own lab_reports" ON public.lab_reports;
+DROP POLICY IF EXISTS "Users can delete own lab_reports" ON public.lab_reports;
+
+CREATE POLICY "Users can view own lab_reports"
+  ON public.lab_reports FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own lab_reports"
+  ON public.lab_reports FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own lab_reports"
+  ON public.lab_reports FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own lab_reports"
+  ON public.lab_reports FOR DELETE USING (auth.uid() = user_id);
+
+
+-- ── public.doctors ───────────────────────────────────────────────────────
+
+ALTER TABLE public.doctors ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own doctors"   ON public.doctors;
+DROP POLICY IF EXISTS "Users can insert own doctors" ON public.doctors;
+DROP POLICY IF EXISTS "Users can update own doctors" ON public.doctors;
+DROP POLICY IF EXISTS "Users can delete own doctors" ON public.doctors;
+
+CREATE POLICY "Users can view own doctors"
+  ON public.doctors FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own doctors"
+  ON public.doctors FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own doctors"
+  ON public.doctors FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own doctors"
+  ON public.doctors FOR DELETE USING (auth.uid() = user_id);
+
+
+-- ── public.appointments ───────────────────────────────────────────────────
+
+ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own appointments"   ON public.appointments;
+DROP POLICY IF EXISTS "Users can insert own appointments" ON public.appointments;
+DROP POLICY IF EXISTS "Users can update own appointments" ON public.appointments;
+DROP POLICY IF EXISTS "Users can delete own appointments" ON public.appointments;
+
+CREATE POLICY "Users can view own appointments"
+  ON public.appointments FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own appointments"
+  ON public.appointments FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own appointments"
+  ON public.appointments FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own appointments"
+  ON public.appointments FOR DELETE USING (auth.uid() = user_id);
+
+
+-- ── storage.objects (lab_reports bucket) ─────────────────────────────────
+--
+-- Prerequisites: create the `lab_reports` bucket in the Supabase dashboard:
+--   Storage → New bucket → Name: "lab_reports" → Public: OFF → Save
+
+DROP POLICY IF EXISTS "Lab report upload — own folder only"  ON storage.objects;
+DROP POLICY IF EXISTS "Lab report read  — own folder only"   ON storage.objects;
+DROP POLICY IF EXISTS "Lab report update — own folder only"  ON storage.objects;
+DROP POLICY IF EXISTS "Lab report delete — own folder only"  ON storage.objects;
+
+CREATE POLICY "Lab report upload — own folder only"
+  ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'lab_reports'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "Lab report read  — own folder only"
+  ON storage.objects FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'lab_reports'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "Lab report update — own folder only"
+  ON storage.objects FOR UPDATE TO authenticated
+  USING (
+    bucket_id = 'lab_reports'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "Lab report delete — own folder only"
+  ON storage.objects FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'lab_reports'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
 
 
 -- ── storage.objects (avatars bucket) ─────────────────────────────────────
@@ -561,6 +841,25 @@ CREATE POLICY "Users can update own <table_name>"
 --   --   • Detail
 -- ─────────────────────────────────────────────────────────────────────────
 
+-- [2026-05-19] v0.7 — doctors + appointments tables added
+--   • doctors: id, user_id, name, specialty, hospital, chamber_address,
+--     phone, fee, notes, is_favorite, timestamps
+--   • appointments: id, user_id, doctor_id (SET NULL), doctor_name_snapshot,
+--     appointment_date, appointment_time, visit_reason, status CHECK, notes,
+--     prescription_id (SET NULL), timestamps
+--   • Indexes: doctors (user_id, is_favorite), appointments (user_id, doctor_id, date, status)
+--   • Triggers: set_doctors_updated_at, set_appointments_updated_at
+--   • RLS: SELECT / INSERT / UPDATE / DELETE for own rows on both tables
+--   • Home screen: My Doctors + Appointments cards replace placeholder ActionCards
+
+-- [2026-05-19] v0.6 — lab_reports table added
+--   • lab_reports: id, user_id, test_name, category, test_date, doctor_name,
+--     hospital, image_urls[], notes, prescription_id (nullable FK), timestamps
+--   • Indexes: idx_lab_reports_user_id, _test_date, _category
+--   • Trigger: set_lab_reports_updated_at
+--   • RLS: SELECT / INSERT / UPDATE / DELETE for own rows
+--   • Storage RLS: lab_reports bucket (own folder only)
+
 -- [2026-05-03] v0.4 — Profile account settings added
 --   • profiles: phone TEXT column
 --   • Index: idx_profiles_phone
@@ -595,5 +894,5 @@ CREATE POLICY "Users can update own <table_name>"
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- END OF FILE
--- treattrace_schema.sql — TreatTrace v0.4
+-- treattrace_schema.sql — TreatTrace v0.7
 -- ═══════════════════════════════════════════════════════════════════════════
