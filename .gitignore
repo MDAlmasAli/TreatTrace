@@ -43,3 +43,15 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+android/build/
+
+# Claude Code internals
+.agents/
+skills-lock.json
+
+# Supabase temp
+supabase/.temp/
+
+# APK/XAPK binaries
+*.apk
+*.xapk
