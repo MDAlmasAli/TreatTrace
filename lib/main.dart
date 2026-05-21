@@ -13,6 +13,11 @@
 //        • Otherwise → stream-based auth routing (home vs login).
 // ─────────────────────────────────────────────────────────────────────────────
 
+//Authors:
+//  • @ Almas
+//  • @ Sharon
+//  • @ Tasmina
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
