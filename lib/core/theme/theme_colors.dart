@@ -42,16 +42,24 @@ class ThemeColors {
   Color get textSec     => isDark ? DarkColors.textSec     : AppColors.textSecondary;
   Color get textMuted   => isDark ? DarkColors.textMuted   : AppColors.textHint;
 
-  // ── Accent colors — identical in both themes ──────────────────────────────
-  Color get purpleBright => DarkColors.purpleBright;
-  Color get purple       => DarkColors.purple;
-  Color get cyan         => DarkColors.cyan;
-  Color get amber        => DarkColors.amber;
-  Color get green        => DarkColors.green;
-  Color get red          => DarkColors.red;
+  // ── Accent / brand color ──────────────────────────────────────────────────
+  // Single brand color: DocTime-style blue in light, purple in dark.
+  static const Color _brandBlue = Color(0xFF136AFB);
+
+  Color get accent       => isDark ? DarkColors.purpleBright : _brandBlue;
+  Color get purpleBright => isDark ? DarkColors.purpleBright : _brandBlue;
+  Color get purple       => isDark ? DarkColors.purple       : _brandBlue;
+  Color get cyan         => isDark ? DarkColors.cyan         : _brandBlue;
+
+  // ── Semantic status colors — same in both themes ──────────────────────────
+  Color get amber => DarkColors.amber;
+  Color get green => DarkColors.green;
+  Color get red   => DarkColors.red;
 
   // ── Gradients ─────────────────────────────────────────────────────────────
-  LinearGradient get accentGradient => DarkColors.accentGradient;
+  LinearGradient get accentGradient => isDark
+      ? DarkColors.accentGradient
+      : const LinearGradient(colors: [_brandBlue, _brandBlue]);
 
   // Background gradient (login/splash full-screen wash).
   LinearGradient get bgGradient => LinearGradient(

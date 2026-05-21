@@ -17,7 +17,6 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/account_service.dart';
 import '../../../core/services/auth_service.dart';
@@ -28,11 +27,11 @@ const List<String> _bloodGroupOptions = [
   'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-',
 ];
 
-Color _bmiColor(double bmi) {
-  if (bmi < 18.5) return DarkColors.cyan;
-  if (bmi < 25.0) return DarkColors.green;
-  if (bmi < 30.0) return DarkColors.amber;
-  return DarkColors.red;
+Color _bmiColor(double bmi, ThemeColors c) {
+  if (bmi < 18.5) return c.cyan;
+  if (bmi < 25.0) return c.green;
+  if (bmi < 30.0) return c.amber;
+  return c.red;
 }
 
 String _bmiLabel(double bmi) {
@@ -187,7 +186,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Could not save: $e'),
-            backgroundColor: DarkColors.red,
+            backgroundColor: context.colors.red,
           ),
         );
       }
@@ -245,12 +244,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: const Text('Cancel'),
               ),
               if (loading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: SizedBox(
                     width: 20, height: 20,
                     child: CircularProgressIndicator(
-                        color: DarkColors.purpleBright, strokeWidth: 2),
+                        color: context.colors.purpleBright, strokeWidth: 2),
                   ),
                 )
               else
@@ -273,7 +272,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                           content: Text(_friendlyAuthError(e)),
-                          backgroundColor: DarkColors.red,
+                          backgroundColor: context.colors.red,
                         ));
                       }
                     }
@@ -323,12 +322,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: const Text('Cancel'),
               ),
               if (loading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: SizedBox(
                     width: 20, height: 20,
                     child: CircularProgressIndicator(
-                        color: DarkColors.purpleBright, strokeWidth: 2),
+                        color: context.colors.purpleBright, strokeWidth: 2),
                   ),
                 )
               else
@@ -337,16 +336,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     final np = newCtrl.text;
                     final cp = confCtrl.text;
                     if (np.length < 6) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('Password must be at least 6 characters.'),
-                        backgroundColor: DarkColors.red,
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: const Text('Password must be at least 6 characters.'),
+                        backgroundColor: context.colors.red,
                       ));
                       return;
                     }
                     if (np != cp) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('Passwords do not match.'),
-                        backgroundColor: DarkColors.red,
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: const Text('Passwords do not match.'),
+                        backgroundColor: context.colors.red,
                       ));
                       return;
                     }
@@ -364,7 +363,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                           content: Text(_friendlyAuthError(e)),
-                          backgroundColor: DarkColors.red,
+                          backgroundColor: context.colors.red,
                         ));
                       }
                     }
@@ -454,11 +453,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
           const Spacer(),
           if (_isSaving)
-            const SizedBox(
+            SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(
-                  color: DarkColors.purpleBright, strokeWidth: 2.5),
+                  color: c.purpleBright, strokeWidth: 2.5),
             ),
         ],
       ),
@@ -467,9 +466,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // ── Account section ───────────────────────────────────────────────────────
   Widget _buildAccountSection() {
+    final c = context.colors;
     return _FormSection(
       title: 'Account Info',
-      accentColor: DarkColors.purpleBright,
+      accentColor: c.purpleBright,
       children: [
         _FormInput(
           icon:         Icons.person_rounded,
@@ -522,9 +522,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // ── Medical section ───────────────────────────────────────────────────────
   Widget _buildMedicalSection() {
+    final c = context.colors;
     return _FormSection(
       title: 'Medical Identity',
-      accentColor: DarkColors.cyan,
+      accentColor: c.cyan,
       children: [
         _DropdownField(
           icon:      Icons.bloodtype_rounded,
@@ -614,9 +615,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // ── Health section ────────────────────────────────────────────────────────
   Widget _buildHealthSection() {
+    final c = context.colors;
     return _FormSection(
       title: 'Health Records',
-      accentColor: DarkColors.amber,
+      accentColor: c.amber,
       children: [
         _FormInput(
           icon:     Icons.warning_amber_rounded,
@@ -639,9 +641,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // ── Emergency section ─────────────────────────────────────────────────────
   Widget _buildEmergencySection() {
+    final c = context.colors;
     return _FormSection(
       title: 'Emergency Contact (ICE)',
-      accentColor: DarkColors.red,
+      accentColor: c.red,
       children: [
         _FormInput(
           icon:       Icons.person_rounded,
@@ -670,16 +673,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // ── Save button ───────────────────────────────────────────────────────────
   Widget _buildSaveButton() {
+    final c = context.colors;
     return SizedBox(
       width: double.infinity,
       height: 54,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: DarkColors.accentGradient,
+          gradient: c.accentGradient,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: DarkColors.purpleBright.withAlpha(60),
+              color: Colors.black.withAlpha(8),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -807,7 +811,7 @@ class _FormInput extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, size: 14, color: DarkColors.purpleBright),
+            Icon(icon, size: 14, color: c.purpleBright),
             const SizedBox(width: 6),
             Text(label,
                 style: GoogleFonts.poppins(
@@ -852,18 +856,15 @@ class _FormInput extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: DarkColors.purpleBright, width: 1.5),
+              borderSide: BorderSide(color: c.purpleBright, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.red, width: 1),
+              borderSide: BorderSide(color: c.red, width: 1),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.red, width: 1.5),
+              borderSide: BorderSide(color: c.red, width: 1.5),
             ),
           ),
         ),
@@ -898,7 +899,7 @@ class _DropdownField extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, size: 14, color: DarkColors.purpleBright),
+            Icon(icon, size: 14, color: c.purpleBright),
             const SizedBox(width: 6),
             Text(label,
                 style: GoogleFonts.poppins(
@@ -935,8 +936,7 @@ class _DropdownField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: DarkColors.purpleBright, width: 1.5),
+              borderSide: BorderSide(color: c.purpleBright, width: 1.5),
             ),
           ),
           borderRadius: BorderRadius.circular(12),
@@ -965,7 +965,8 @@ class _BmiPreviewBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _bmiColor(bmi);
+    final c = context.colors;
+    final color = _bmiColor(bmi, c);
     final label = _bmiLabel(bmi);
 
     return Container(
@@ -1041,7 +1042,7 @@ class _CredentialButton extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, size: 18, color: DarkColors.purpleBright),
+              Icon(icon, size: 18, color: c.purpleBright),
               const SizedBox(width: 10),
               Text(label,
                   style: GoogleFonts.poppins(
@@ -1101,8 +1102,7 @@ class _DialogTextField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: DarkColors.purpleBright, width: 1.5),
+          borderSide: BorderSide(color: c.purpleBright, width: 1.5),
         ),
       ),
     );
@@ -1159,8 +1159,7 @@ class _DialogPasswordField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: DarkColors.purpleBright, width: 1.5),
+          borderSide: BorderSide(color: c.purpleBright, width: 1.5),
         ),
       ),
     );

@@ -16,12 +16,10 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config/supabase_config.dart';
 import 'core/services/reminder_service.dart';
-import 'core/constants/app_colors.dart';
 import 'core/l10n/app_strings.dart';
 import 'core/preferences/app_preferences.dart';
 import 'core/services/auth_service.dart';
@@ -196,78 +194,74 @@ class _AppScrollBehavior extends MaterialScrollBehavior {
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
 
+  static const _blue = Color(0xFF136AFB);
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: DarkColors.bg,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [DarkColors.bg, DarkColors.surface],
-          ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // App icon with gradient glow
-              Container(
+    return const Scaffold(
+      backgroundColor: Color(0xFFF0F4F8),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: _blue,
+                borderRadius: BorderRadius.all(Radius.circular(24)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x1A136AFB),
+                    blurRadius: 24,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: SizedBox(
                 width: 84,
                 height: 84,
-                decoration: BoxDecoration(
-                  gradient: DarkColors.accentGradient,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: DarkColors.purpleBright.withAlpha(80),
-                      blurRadius: 32,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: const Icon(
+                child: Icon(
                   Icons.local_hospital_rounded,
                   color: Colors.white,
                   size: 46,
                 ),
               ),
+            ),
 
-              const SizedBox(height: 24),
+            SizedBox(height: 24),
 
-              Text(
-                'TreatTrace',
-                style: GoogleFonts.poppins(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w700,
-                  color: DarkColors.textPrimary,
-                  letterSpacing: -0.5,
-                ),
+            Text(
+              'TreatTrace',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 30,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E293B),
+                letterSpacing: -0.5,
               ),
+            ),
 
-              const SizedBox(height: 8),
+            SizedBox(height: 8),
 
-              Text(
-                'Your health, our priority.',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: DarkColors.textSec,
-                ),
+            Text(
+              'Your health, our priority.',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                color: Color(0xFF64748B),
               ),
+            ),
 
-              const SizedBox(height: 48),
+            SizedBox(height: 48),
 
-              SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(
-                  color: DarkColors.purpleBright,
-                  strokeWidth: 2.5,
-                ),
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                color: _blue,
+                strokeWidth: 2.5,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

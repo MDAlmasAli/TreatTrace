@@ -5,12 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../models/doctor.dart';
 import '../services/doctor_service.dart';
 import 'add_edit_doctor_screen.dart';
+import 'discover_doctors_screen.dart';
 import 'doctor_detail_screen.dart';
 
 class DoctorsScreen extends StatefulWidget {
@@ -81,6 +81,13 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
 
   // ── Navigation ────────────────────────────────────────────────────────────
 
+  Future<void> _openDiscover() async {
+    final added = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const DiscoverDoctorsScreen()),
+    );
+    if (added == true) _load();
+  }
+
   Future<void> _openAdd() async {
     final added = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => const AddEditDoctorScreen()),
@@ -125,7 +132,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
             child: _loading
                 ? Center(
                     child: CircularProgressIndicator(
-                        color: DarkColors.green))
+                        color: c.accent))
                 : items.isEmpty
                     ? _EmptyState(
                         message: _query.isNotEmpty || _selectedSpecialty != null
@@ -133,7 +140,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                             : s.noDoctors,
                       )
                     : RefreshIndicator(
-                        color: DarkColors.green,
+                        color: c.accent,
                         onRefresh: _load,
                         child: ListView.separated(
                           padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
@@ -153,7 +160,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed:       _openAdd,
-        backgroundColor: DarkColors.green,
+        backgroundColor: c.accent,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
@@ -175,9 +182,9 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
         border: Border(bottom: BorderSide(color: c.border, width: 1)),
         boxShadow: [
           BoxShadow(
-            color:      DarkColors.green.withAlpha(18),
-            blurRadius: 20,
-            offset:     const Offset(0, 4),
+            color:      Colors.black.withAlpha(8),
+            blurRadius: 12,
+            offset:     const Offset(0, 2),
           ),
         ],
       ),
@@ -200,19 +207,46 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
               ),
             ),
           ),
+          GestureDetector(
+            onTap: _openDiscover,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color:        c.accent.withAlpha(20),
+                borderRadius: BorderRadius.circular(12),
+                border:       Border.all(color: c.accent.withAlpha(60)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.explore_rounded, color: c.accent, size: 16),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Discover',
+                    style: GoogleFonts.poppins(
+                      fontSize:   12,
+                      fontWeight: FontWeight.w700,
+                      color:      c.accent,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color:        DarkColors.green.withAlpha(20),
+              color:        c.accent.withAlpha(20),
               borderRadius: BorderRadius.circular(20),
-              border:       Border.all(color: DarkColors.green.withAlpha(60)),
+              border:       Border.all(color: c.accent.withAlpha(60)),
             ),
             child: Text(
               '${_all.length}',
               style: GoogleFonts.poppins(
                 fontSize:   12,
                 fontWeight: FontWeight.w700,
-                color:      DarkColors.green,
+                color:      c.accent,
               ),
             ),
           ),
@@ -238,8 +272,8 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
           decoration: InputDecoration(
             hintText:  s.searchDoctors,
             hintStyle: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
-            prefixIcon: const Icon(Icons.search_rounded,
-                color: DarkColors.green, size: 20),
+            prefixIcon: Icon(Icons.search_rounded,
+                color: c.accent, size: 20),
             suffixIcon: _query.isNotEmpty
                 ? GestureDetector(
                     onTap: () {
@@ -315,16 +349,16 @@ class _DoctorCard extends StatelessWidget {
       child: InkWell(
         onTap:        onTap,
         borderRadius: BorderRadius.circular(20),
-        splashColor:  DarkColors.green.withAlpha(12),
+        splashColor:  c.accent.withAlpha(12),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border:       Border.all(color: c.border, width: 1),
             boxShadow: [
               BoxShadow(
-                color:      DarkColors.green.withAlpha(8),
-                blurRadius: 12,
-                offset:     const Offset(0, 3),
+                color:      Colors.black.withAlpha(6),
+                blurRadius: 8,
+                offset:     const Offset(0, 2),
               ),
             ],
           ),
@@ -334,7 +368,21 @@ class _DoctorCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(width: 4, color: DarkColors.green),
+                  Container(width: 4, color: c.accent),
+                  // Avatar when doctor has a photo
+                  if (d.imageUrl?.isNotEmpty == true)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 0, 12),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          d.imageUrl!,
+                          width: 52, height: 52,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                        ),
+                      ),
+                    ),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -383,13 +431,13 @@ class _DoctorCard extends StatelessWidget {
                               const Spacer(),
                               if (d.fee?.isNotEmpty == true) ...[
                                 Icon(Icons.payments_outlined,
-                                    size: 12, color: DarkColors.green),
+                                    size: 12, color: c.accent),
                                 const SizedBox(width: 3),
                                 Text(
                                   d.fee!,
                                   style: GoogleFonts.poppins(
                                       fontSize: 11,
-                                      color: DarkColors.green,
+                                      color: c.accent,
                                       fontWeight: FontWeight.w600),
                                 ),
                               ],
@@ -411,7 +459,7 @@ class _DoctorCard extends StatelessWidget {
                                 ? Icons.favorite_rounded
                                 : Icons.favorite_border_rounded,
                             color: d.isFavorite
-                                ? DarkColors.red
+                                ? c.red
                                 : c.textMuted,
                             size: 22,
                           ),
@@ -445,18 +493,19 @@ class _SpecialtyBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       margin: const EdgeInsets.only(left: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color:        DarkColors.green.withAlpha(20),
+        color:        c.accent.withAlpha(20),
         borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: DarkColors.green.withAlpha(60)),
+        border:       Border.all(color: c.accent.withAlpha(60)),
       ),
       child: Text(
         label,
         style: GoogleFonts.poppins(
-            fontSize: 10, fontWeight: FontWeight.w700, color: DarkColors.green),
+            fontSize: 10, fontWeight: FontWeight.w700, color: c.accent),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -484,10 +533,10 @@ class _FilterChip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? DarkColors.green.withAlpha(25) : c.card,
+          color: selected ? c.accent.withAlpha(25) : c.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? DarkColors.green : c.border,
+            color: selected ? c.accent : c.border,
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -496,7 +545,7 @@ class _FilterChip extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize:   12,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-            color:      selected ? DarkColors.green : c.textMuted,
+            color:      selected ? c.accent : c.textMuted,
           ),
         ),
       ),
@@ -518,11 +567,11 @@ class _EmptyState extends StatelessWidget {
           Container(
             width: 72, height: 72,
             decoration: BoxDecoration(
-              color:        DarkColors.green.withAlpha(15),
+              color:        c.accent.withAlpha(15),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(Icons.person_rounded,
-                color: DarkColors.green, size: 36),
+            child: Icon(Icons.person_rounded,
+                color: c.accent, size: 36),
           ),
           const SizedBox(height: 16),
           Text(

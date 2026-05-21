@@ -10,6 +10,8 @@ class Doctor {
   final String? phone;
   final String? fee;
   final String? notes;
+  final String? imageUrl;
+  final String? sourceId;
   final bool    isFavorite;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -24,6 +26,8 @@ class Doctor {
     this.phone,
     this.fee,
     this.notes,
+    this.imageUrl,
+    this.sourceId,
     this.isFavorite  = false,
     required this.createdAt,
     required this.updatedAt,
@@ -39,6 +43,8 @@ class Doctor {
         phone:          m['phone']           as String?,
         fee:            m['fee']             as String?,
         notes:          m['notes']           as String?,
+        imageUrl:       m['image_url']       as String?,
+        sourceId:       m['source_id']       as String?,
         isFavorite:     (m['is_favorite'] as bool?) ?? false,
         createdAt: DateTime.parse(m['created_at'] as String),
         updatedAt: DateTime.parse(m['updated_at'] as String),
@@ -53,6 +59,8 @@ class Doctor {
         'phone':           phone,
         'fee':             fee,
         'notes':           notes,
+        'image_url':       imageUrl,
+        'source_id':       sourceId,
         'is_favorite':     isFavorite,
       };
 
@@ -66,6 +74,8 @@ class Doctor {
     String?   phone,
     String?   fee,
     String?   notes,
+    String?   imageUrl,
+    String?   sourceId,
     bool?     isFavorite,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -80,6 +90,8 @@ class Doctor {
         phone:          phone          ?? this.phone,
         fee:            fee            ?? this.fee,
         notes:          notes          ?? this.notes,
+        imageUrl:       imageUrl       ?? this.imageUrl,
+        sourceId:       sourceId       ?? this.sourceId,
         isFavorite:     isFavorite     ?? this.isFavorite,
         createdAt:      createdAt      ?? this.createdAt,
         updatedAt:      updatedAt      ?? this.updatedAt,

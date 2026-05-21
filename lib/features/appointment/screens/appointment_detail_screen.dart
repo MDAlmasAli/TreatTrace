@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../models/appointment.dart';
@@ -66,8 +65,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                 s.confirm,
                 style: GoogleFonts.poppins(
                   color: status == AppointmentStatus.completed
-                      ? DarkColors.green
-                      : DarkColors.red,
+                      ? c.green
+                      : c.red,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -121,7 +120,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text('Delete',
                   style: GoogleFonts.poppins(
-                      color: DarkColors.red, fontWeight: FontWeight.w700)),
+                      color: c.red, fontWeight: FontWeight.w700)),
             ),
           ],
         );
@@ -172,7 +171,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
               child: _loading
                   ? Center(
                       child: CircularProgressIndicator(
-                          color: DarkColors.amber))
+                          color: c.amber))
                   : SingleChildScrollView(
                       padding:
                           const EdgeInsets.fromLTRB(20, 24, 20, 40),
@@ -219,7 +218,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                   icon:  Icons.link_rounded,
                                   label: s.linkedPrescription,
                                   value: 'Linked',
-                                  valueColor: DarkColors.purpleBright,
+                                  valueColor: c.purpleBright,
                                   isLast: true,
                                 ),
                             ],
@@ -232,7 +231,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                             _ActionBtn(
                               label:   s.markCompleted,
                               icon:    Icons.check_circle_outline_rounded,
-                              color:   DarkColors.green,
+                              color:   c.green,
                               onTap:   () => _updateStatus(
                                   AppointmentStatus.completed),
                             ),
@@ -240,7 +239,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                             _ActionBtn(
                               label:   s.cancelAppointment,
                               icon:    Icons.cancel_outlined,
-                              color:   DarkColors.red,
+                              color:   c.red,
                               onTap:   () => _updateStatus(
                                   AppointmentStatus.cancelled),
                               outlined: true,
@@ -255,7 +254,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                 child: _ActionBtn(
                                   label:    'Edit',
                                   icon:     Icons.edit_rounded,
-                                  color:    DarkColors.amber,
+                                  color:    c.amber,
                                   onTap:    _edit,
                                   outlined: true,
                                 ),
@@ -265,7 +264,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                 child: _ActionBtn(
                                   label:    'Delete',
                                   icon:     Icons.delete_outline_rounded,
-                                  color:    DarkColors.red,
+                                  color:    c.red,
                                   onTap:    _delete,
                                   outlined: true,
                                 ),
@@ -294,7 +293,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         border: Border(bottom: BorderSide(color: c.border, width: 1)),
         boxShadow: [
           BoxShadow(
-            color:      DarkColors.amber.withAlpha(18),
+            color:      Colors.black.withAlpha(8),
             blurRadius: 20,
             offset:     const Offset(0, 4),
           ),
@@ -324,7 +323,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                 Text(
                   _fmtDate(_appt.appointmentDate),
                   style: GoogleFonts.poppins(
-                      fontSize: 12, color: DarkColors.amber),
+                      fontSize: 12, color: c.amber),
                 ),
               ],
             ),
@@ -348,12 +347,13 @@ class _StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c   = context.colors;
     final s   = S.of(context);
     final col = status == AppointmentStatus.scheduled
-        ? DarkColors.amber
+        ? c.amber
         : status == AppointmentStatus.completed
-            ? DarkColors.green
-            : DarkColors.red;
+            ? c.green
+            : c.red;
     final label = status == AppointmentStatus.scheduled
         ? s.statusScheduled
         : status == AppointmentStatus.completed
@@ -409,7 +409,7 @@ class _InfoCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(width: 4, color: DarkColors.amber),
+              Container(width: 4, color: c.amber),
               Expanded(
                 child: Column(children: children),
               ),
@@ -449,10 +449,10 @@ class _InfoRow extends StatelessWidget {
               Container(
                 width: 32, height: 32,
                 decoration: BoxDecoration(
-                  color:        DarkColors.amber.withAlpha(15),
+                  color:        c.amber.withAlpha(15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, size: 16, color: DarkColors.amber),
+                child: Icon(icon, size: 16, color: c.amber),
               ),
               const SizedBox(width: 12),
               Expanded(

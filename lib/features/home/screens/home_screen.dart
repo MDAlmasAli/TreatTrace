@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/auth_service.dart';
@@ -17,6 +16,7 @@ import '../../profile/screens/profile_screen.dart';
 import '../../test_report/screens/lab_reports_screen.dart';
 import '../../doctor/screens/doctors_screen.dart';
 import '../../appointment/screens/appointments_screen.dart';
+import '../../search/screens/global_search_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // HomeScreen
@@ -93,6 +93,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _goToSearch() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const GlobalSearchScreen()),
+    );
+  }
+
   Future<void> _goToAppointments() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const AppointmentsScreen()),
@@ -136,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text('Log Out',
                 style: GoogleFonts.poppins(
-                    color: DarkColors.red, fontWeight: FontWeight.w700)),
+                    color: c.red, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -179,16 +185,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Section heading
-                  ShaderMask(
-                    shaderCallback: (bounds) =>
-                        DarkColors.accentGradient.createShader(bounds),
-                    child: Text(
-                      s.quickActions,
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
+                  Text(
+                    s.quickActions,
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: c.textPrimary,
                     ),
                   ).animate().fadeIn(delay: 100.ms),
 
@@ -255,6 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: _BottomBar(
         searchCtrl:   _searchCtrl,
+        onSearchTap:  _goToSearch,
         onProfileTap: _goToProfile,
         avatarUrl:    _avatarUrl,
       ),
@@ -293,9 +296,9 @@ class _HomeHeader extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: DarkColors.purpleBright.withAlpha(20),
-            blurRadius: 24,
-            offset: const Offset(0, 4),
+            color: Colors.black.withAlpha(10),
+            blurRadius: 16,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -350,10 +353,9 @@ class _HomeHeader extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: DarkColors.purpleBright.withAlpha(15),
+              color: c.accent.withAlpha(12),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: DarkColors.purpleBright.withAlpha(60), width: 1),
+              border: Border.all(color: c.accent.withAlpha(50), width: 1),
             ),
             child: Row(
               children: [
@@ -361,11 +363,11 @@ class _HomeHeader extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: DarkColors.amber.withAlpha(20),
+                    color: c.amber.withAlpha(20),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.tips_and_updates_rounded,
-                      color: DarkColors.amber, size: 18),
+                  child: Icon(Icons.tips_and_updates_rounded,
+                      color: c.amber, size: 18),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -424,13 +426,14 @@ class _PrescriptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.colors.accent;
     return _CardShell(
-      accentColor: DarkColors.cyan,
+      accentColor: accent,
       onTap:       onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CardIcon(icon: Icons.upload_file_rounded, color: DarkColors.cyan),
+          _CardIcon(icon: Icons.upload_file_rounded, color: accent),
           const SizedBox(height: 14),
           Text(label,
               style: GoogleFonts.poppins(
@@ -465,13 +468,14 @@ class _TestReportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.colors.accent;
     return _CardShell(
       onTap:       onTap,
-      accentColor: DarkColors.purpleBright,
+      accentColor: accent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CardIcon(icon: Icons.science_rounded, color: DarkColors.purpleBright),
+          _CardIcon(icon: Icons.science_rounded, color: accent),
           const SizedBox(height: 14),
           Text(label,
               style: GoogleFonts.poppins(
@@ -512,13 +516,14 @@ class _DoctorsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.colors.accent;
     return _CardShell(
-      accentColor: DarkColors.green,
+      accentColor: accent,
       onTap:       onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CardIcon(icon: Icons.person_rounded, color: DarkColors.green),
+          _CardIcon(icon: Icons.person_rounded, color: accent),
           const SizedBox(height: 14),
           Text(label,
               style: GoogleFonts.poppins(
@@ -535,11 +540,11 @@ class _DoctorsCard extends StatelessWidget {
             child: Container(
               width: 30, height: 30,
               decoration: BoxDecoration(
-                color:        DarkColors.green.withAlpha(20),
+                color:        accent.withAlpha(20),
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: const Icon(Icons.arrow_forward_rounded,
-                  size: 16, color: DarkColors.green),
+              child: Icon(Icons.arrow_forward_rounded,
+                  size: 16, color: accent),
             ),
           ),
         ],
@@ -566,13 +571,14 @@ class _AppointmentsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.colors.accent;
     return _CardShell(
-      accentColor: DarkColors.amber,
+      accentColor: accent,
       onTap:       onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CardIcon(icon: Icons.event_rounded, color: DarkColors.amber),
+          _CardIcon(icon: Icons.event_rounded, color: accent),
           const SizedBox(height: 14),
           Text(label,
               style: GoogleFonts.poppins(
@@ -589,11 +595,11 @@ class _AppointmentsCard extends StatelessWidget {
             child: Container(
               width: 30, height: 30,
               decoration: BoxDecoration(
-                color:        DarkColors.amber.withAlpha(20),
+                color:        accent.withAlpha(20),
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: const Icon(Icons.arrow_forward_rounded,
-                  size: 16, color: DarkColors.amber),
+              child: Icon(Icons.arrow_forward_rounded,
+                  size: 16, color: accent),
             ),
           ),
         ],
@@ -634,9 +640,9 @@ class _CardShell extends StatelessWidget {
             border: Border.all(color: c.border, width: 1),
             boxShadow: [
               BoxShadow(
-                color: accentColor.withAlpha(12),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
+                color: Colors.black.withAlpha(8),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -693,7 +699,7 @@ class _SubChip extends StatelessWidget {
         mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 12, color: DarkColors.purpleBright),
+          Icon(icon, size: 12, color: c.accent),
           const SizedBox(width: 5),
           Text(
             label,
@@ -714,10 +720,16 @@ class _SubChip extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 class _BottomBar extends StatelessWidget {
   final TextEditingController searchCtrl;
-  final VoidCallback? onProfileTap;
-  final String?       avatarUrl;
+  final VoidCallback?         onSearchTap;
+  final VoidCallback?         onProfileTap;
+  final String?               avatarUrl;
 
-  const _BottomBar({required this.searchCtrl, this.onProfileTap, this.avatarUrl});
+  const _BottomBar({
+    required this.searchCtrl,
+    this.onSearchTap,
+    this.onProfileTap,
+    this.avatarUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -742,9 +754,9 @@ class _BottomBar extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(60),
-            blurRadius: 28,
-            offset: const Offset(0, -6),
+            color: Colors.black.withAlpha(12),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
           ),
         ],
       ),
@@ -765,19 +777,25 @@ class _BottomBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: c.border, width: 1),
               ),
-              child: TextField(
-                controller: searchCtrl,
-                style: GoogleFonts.poppins(
-                    fontSize: 13, color: c.textPrimary),
-                decoration: InputDecoration(
-                  hintText:  'Search doctors, medicines…',
-                  hintStyle: GoogleFonts.poppins(
-                      fontSize: 12, color: c.textMuted),
-                  prefixIcon: const Icon(Icons.search_rounded,
-                      color: DarkColors.purpleBright, size: 20),
-                  border: InputBorder.none,
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 14),
+              child: GestureDetector(
+                onTap: onSearchTap,
+                child: AbsorbPointer(
+                  child: TextField(
+                    controller: searchCtrl,
+                    readOnly:   true,
+                    style: GoogleFonts.poppins(
+                        fontSize: 13, color: c.textPrimary),
+                    decoration: InputDecoration(
+                      hintText:  'Search doctors, medicines…',
+                      hintStyle: GoogleFonts.poppins(
+                          fontSize: 12, color: c.textMuted),
+                      prefixIcon: Icon(Icons.search_rounded,
+                          color: c.accent, size: 20),
+                      border: InputBorder.none,
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -818,7 +836,7 @@ class _BarButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(13),
               border: Border.all(color: c.border, width: 1),
             ),
-            child: Icon(icon, color: DarkColors.purpleBright, size: 22),
+            child: Icon(icon, color: c.accent, size: 22),
           ),
           const SizedBox(height: 5),
           Text(
@@ -860,7 +878,7 @@ class _ProfileBarButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(13),
               border: Border.all(
                 color: avatarUrl != null
-                    ? DarkColors.purpleBright.withAlpha(120)
+                    ? c.accent.withAlpha(120)
                     : c.border,
                 width: avatarUrl != null ? 1.5 : 1,
               ),
@@ -871,15 +889,15 @@ class _ProfileBarButton extends StatelessWidget {
                   ? Image.network(
                       avatarUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const Icon(
+                      errorBuilder: (_, e, s) => Icon(
                         Icons.person_rounded,
-                        color: DarkColors.purpleBright,
+                        color: c.accent,
                         size: 22,
                       ),
                     )
-                  : const Icon(
+                  : Icon(
                       Icons.person_rounded,
-                      color: DarkColors.purpleBright,
+                      color: c.accent,
                       size: 22,
                     ),
             ),

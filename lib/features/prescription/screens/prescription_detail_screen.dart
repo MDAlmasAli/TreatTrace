@@ -10,7 +10,6 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/profile_service.dart';
@@ -101,7 +100,7 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text('Delete',
                 style: GoogleFonts.poppins(
-                    color: DarkColors.red, fontWeight: FontWeight.w700)),
+                    color: c.red, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -326,9 +325,9 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
           _buildHeader(c, s),
           Expanded(
             child: _loading
-                ? const Center(
+                ? Center(
                     child: CircularProgressIndicator(
-                        color: DarkColors.purpleBright))
+                        color: c.purpleBright))
                 : SingleChildScrollView(
                     padding:
                         const EdgeInsets.fromLTRB(20, 20, 20, 40),
@@ -459,7 +458,7 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
           ),
           _SmallIconBtn(
             icon:  Icons.share_rounded,
-            color: DarkColors.cyan,
+            color: c.cyan,
             onTap: _exportPdf,
           ),
         ],
@@ -496,13 +495,14 @@ class _DoctorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return _InfoCard(
-      accentColor: DarkColors.cyan,
+      accentColor: c.cyan,
       child: Column(
         children: [
           _InfoRow(
             icon:       Icons.person_rounded,
-            iconColor:  DarkColors.cyan,
+            iconColor:  c.cyan,
             label:      'Doctor',
             value:      p.doctorName?.isNotEmpty == true
                 ? 'Dr. ${p.doctorName!}'
@@ -511,21 +511,21 @@ class _DoctorCard extends StatelessWidget {
           if (p.doctorSpecialty?.isNotEmpty == true)
             _InfoRow(
               icon:      Icons.medical_services_rounded,
-              iconColor: DarkColors.purpleBright,
+              iconColor: c.purpleBright,
               label:     'Specialty',
               value:     p.doctorSpecialty!,
             ),
           if (p.doctorHospital?.isNotEmpty == true)
             _InfoRow(
               icon:      Icons.local_hospital_rounded,
-              iconColor: DarkColors.green,
+              iconColor: c.green,
               label:     'Hospital',
               value:     p.doctorHospital!,
             ),
           if (p.doctorPhone?.isNotEmpty == true)
             _InfoRow(
               icon:      Icons.phone_rounded,
-              iconColor: DarkColors.amber,
+              iconColor: c.amber,
               label:     'Phone',
               value:     p.doctorPhone!,
               isLast:    true,
@@ -544,14 +544,15 @@ class _DetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return _InfoCard(
-      accentColor: DarkColors.purpleBright,
+      accentColor: c.purpleBright,
       child: Column(
         children: [
           if (p.diagnosis?.isNotEmpty == true)
             _InfoRow(
               icon:      Icons.sick_rounded,
-              iconColor: DarkColors.red,
+              iconColor: c.red,
               label:     'Diagnosis',
               value:     p.diagnosis!,
               isLast:    p.notes?.isEmpty != false,
@@ -559,7 +560,7 @@ class _DetailsCard extends StatelessWidget {
           if (p.notes?.isNotEmpty == true)
             _InfoRow(
               icon:      Icons.notes_rounded,
-              iconColor: DarkColors.amber,
+              iconColor: c.amber,
               label:     'Notes',
               value:     p.notes!,
               isLast:    true,
@@ -682,8 +683,8 @@ class _MedicineTile extends StatelessWidget {
     final c      = context.colors;
     final m      = medicine;
     final accent = isConflict
-        ? DarkColors.red
-        : (m.isActive ? DarkColors.green : c.textMuted);
+        ? c.red
+        : (m.isActive ? c.green : c.textMuted);
 
     return Container(
       decoration: BoxDecoration(
@@ -713,27 +714,27 @@ class _MedicineTile extends StatelessWidget {
                                 fontSize:   14,
                                 fontWeight: FontWeight.w700,
                                 color: isConflict
-                                    ? DarkColors.red
+                                    ? c.red
                                     : c.textPrimary,
                               ),
                             ),
                           ),
                           if (isConflict)
-                            const Icon(Icons.warning_rounded,
-                                size: 16, color: DarkColors.red),
+                            Icon(Icons.warning_rounded,
+                                size: 16, color: c.red),
                           if (m.needsRefillSoon && !isConflict)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color:        DarkColors.amber.withAlpha(20),
+                                color:        c.amber.withAlpha(20),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text('Refill soon',
                                   style: GoogleFonts.poppins(
                                     fontSize:   9,
                                     fontWeight: FontWeight.w700,
-                                    color:      DarkColors.amber,
+                                    color:      c.amber,
                                   )),
                             ),
                         ],
@@ -747,18 +748,18 @@ class _MedicineTile extends StatelessWidget {
                             _Chip(
                               label: m.dose!,
                               icon:  Icons.scale_rounded,
-                              color: DarkColors.cyan,
+                              color: c.cyan,
                             ),
                           _Chip(
                             label: m.frequencyDisplay,
                             icon:  Icons.access_time_rounded,
-                            color: DarkColors.purpleBright,
+                            color: c.purpleBright,
                           ),
                           if (m.durationDays != null)
                             _Chip(
                               label: '${m.durationDays} days',
                               icon:  Icons.timer_rounded,
-                              color: DarkColors.green,
+                              color: c.green,
                             ),
                         ],
                       ),
@@ -779,7 +780,7 @@ class _MedicineTile extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 10,
                             color:    m.isActive
-                                ? DarkColors.green
+                                ? c.green
                                 : c.textMuted,
                           ),
                         ),
@@ -870,9 +871,9 @@ class _PrescriptionGalleryState extends State<_PrescriptionGallery> {
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => Container(
                     color: c.card,
-                    child: const Center(
+                    child: Center(
                       child: Icon(Icons.broken_image_rounded,
-                          color: DarkColors.purpleBright, size: 36),
+                          color: c.purpleBright, size: 36),
                     ),
                   ),
                 ),
@@ -893,7 +894,7 @@ class _PrescriptionGalleryState extends State<_PrescriptionGallery> {
                 height:   6,
                 decoration: BoxDecoration(
                   color: active
-                      ? DarkColors.purpleBright
+                      ? c.purpleBright
                       : c.border,
                   borderRadius: BorderRadius.circular(3),
                 ),
@@ -973,18 +974,19 @@ class _AllergyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       margin:  const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color:        DarkColors.red.withAlpha(15),
+        color:        c.red.withAlpha(15),
         borderRadius: BorderRadius.circular(14),
-        border:       Border.all(color: DarkColors.red.withAlpha(80)),
+        border:       Border.all(color: c.red.withAlpha(80)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_rounded,
-              color: DarkColors.red, size: 22),
+          Icon(Icons.warning_rounded,
+              color: c.red, size: 22),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -995,13 +997,13 @@ class _AllergyCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize:   13,
                     fontWeight: FontWeight.w700,
-                    color:      DarkColors.red,
+                    color:      c.red,
                   ),
                 ),
                 Text(
                   'Conflict: ${medicines.join(', ')}',
                   style: GoogleFonts.poppins(
-                      fontSize: 11, color: DarkColors.red),
+                      fontSize: 11, color: c.red),
                 ),
               ],
             ),
@@ -1018,18 +1020,19 @@ class _RefillCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       margin:  const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color:        DarkColors.amber.withAlpha(15),
+        color:        c.amber.withAlpha(15),
         borderRadius: BorderRadius.circular(14),
-        border:       Border.all(color: DarkColors.amber.withAlpha(80)),
+        border:       Border.all(color: c.amber.withAlpha(80)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.refresh_rounded,
-              color: DarkColors.amber, size: 20),
+          Icon(Icons.refresh_rounded,
+              color: c.amber, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -1037,7 +1040,7 @@ class _RefillCard extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize:   13,
                 fontWeight: FontWeight.w600,
-                color:      DarkColors.amber,
+                color:      c.amber,
               ),
             ),
           ),
@@ -1060,6 +1063,7 @@ class _ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final s = S.of(context);
     return Row(
       children: [
@@ -1067,7 +1071,7 @@ class _ActionRow extends StatelessWidget {
           child: _ActionBtn(
             label: 'Edit',
             icon:  Icons.edit_rounded,
-            color: DarkColors.purpleBright,
+            color: c.purpleBright,
             onTap: onEdit,
           ),
         ),
@@ -1076,7 +1080,7 @@ class _ActionRow extends StatelessWidget {
           child: _ActionBtn(
             label: s.exportPdf,
             icon:  Icons.picture_as_pdf_rounded,
-            color: DarkColors.cyan,
+            color: c.cyan,
             onTap: onPdf,
           ),
         ),
@@ -1084,7 +1088,7 @@ class _ActionRow extends StatelessWidget {
         _ActionBtn(
           label: 'Delete',
           icon:  Icons.delete_rounded,
-          color: DarkColors.red,
+          color: c.red,
           onTap: onDelete,
           square: true,
         ),
@@ -1154,8 +1158,8 @@ class _EmptyMeds extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.medication_outlined,
-              color: DarkColors.purpleBright, size: 20),
+          Icon(Icons.medication_outlined,
+              color: c.purpleBright, size: 20),
           const SizedBox(width: 10),
           Text('No medicines recorded',
               style: GoogleFonts.poppins(

@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../models/lab_report.dart';
@@ -121,7 +120,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
             child: _loading
                 ? Center(
                     child: CircularProgressIndicator(
-                        color: DarkColors.cyan))
+                        color: c.cyan))
                 : items.isEmpty
                     ? _EmptyState(
                         message: _query.isNotEmpty || _selectedCategory != null
@@ -129,7 +128,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                             : s.noTestReports,
                       )
                     : RefreshIndicator(
-                        color: DarkColors.cyan,
+                        color: c.cyan,
                         onRefresh: _load,
                         child: ListView.separated(
                           padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
@@ -148,7 +147,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed:       _openAdd,
-        backgroundColor: DarkColors.cyan,
+        backgroundColor: c.cyan,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
@@ -170,9 +169,9 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
         border: Border(bottom: BorderSide(color: c.border, width: 1)),
         boxShadow: [
           BoxShadow(
-            color:      DarkColors.cyan.withAlpha(18),
-            blurRadius: 20,
-            offset:     const Offset(0, 4),
+            color:      Colors.black.withAlpha(8),
+            blurRadius: 12,
+            offset:     const Offset(0, 2),
           ),
         ],
       ),
@@ -198,16 +197,16 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color:        DarkColors.cyan.withAlpha(20),
+              color:        c.cyan.withAlpha(20),
               borderRadius: BorderRadius.circular(20),
-              border:       Border.all(color: DarkColors.cyan.withAlpha(60)),
+              border:       Border.all(color: c.cyan.withAlpha(60)),
             ),
             child: Text(
               '${_all.length}',
               style: GoogleFonts.poppins(
                 fontSize:   12,
                 fontWeight: FontWeight.w700,
-                color:      DarkColors.cyan,
+                color:      c.cyan,
               ),
             ),
           ),
@@ -233,8 +232,8 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
           decoration: InputDecoration(
             hintText:  s.searchTestReports,
             hintStyle: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
-            prefixIcon: const Icon(Icons.search_rounded,
-                color: DarkColors.cyan, size: 20),
+            prefixIcon: Icon(Icons.search_rounded,
+                color: c.cyan, size: 20),
             suffixIcon: _query.isNotEmpty
                 ? GestureDetector(
                     onTap: () {
@@ -310,16 +309,16 @@ class _LabReportCard extends StatelessWidget {
       child: InkWell(
         onTap:        onTap,
         borderRadius: BorderRadius.circular(20),
-        splashColor:  DarkColors.cyan.withAlpha(12),
+        splashColor:  c.cyan.withAlpha(12),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border:       Border.all(color: c.border, width: 1),
             boxShadow: [
               BoxShadow(
-                color:      DarkColors.cyan.withAlpha(8),
-                blurRadius: 12,
-                offset:     const Offset(0, 3),
+                color:      Colors.black.withAlpha(6),
+                blurRadius: 8,
+                offset:     const Offset(0, 2),
               ),
             ],
           ),
@@ -329,7 +328,7 @@ class _LabReportCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(width: 4, color: DarkColors.cyan),
+                  Container(width: 4, color: c.cyan),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -357,7 +356,7 @@ class _LabReportCard extends StatelessWidget {
                             Text(
                               'Dr. ${r.doctorName}',
                               style: GoogleFonts.poppins(
-                                  fontSize: 12, color: DarkColors.cyan),
+                                  fontSize: 12, color: c.textSec),
                             ),
                           ],
                           if (r.hospital?.isNotEmpty == true) ...[
@@ -397,7 +396,7 @@ class _LabReportCard extends StatelessWidget {
                               if (r.prescriptionId != null) ...[
                                 const SizedBox(width: 8),
                                 Icon(Icons.link_rounded,
-                                    size: 12, color: DarkColors.purpleBright),
+                                    size: 12, color: c.purpleBright),
                               ],
                             ],
                           ),
@@ -433,18 +432,19 @@ class _CategoryBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       margin: const EdgeInsets.only(left: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color:        DarkColors.cyan.withAlpha(20),
+        color:        c.cyan.withAlpha(20),
         borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: DarkColors.cyan.withAlpha(60)),
+        border:       Border.all(color: c.cyan.withAlpha(60)),
       ),
       child: Text(
         label,
         style: GoogleFonts.poppins(
-            fontSize: 10, fontWeight: FontWeight.w700, color: DarkColors.cyan),
+            fontSize: 10, fontWeight: FontWeight.w700, color: c.cyan),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -472,12 +472,10 @@ class _FilterChip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected
-              ? DarkColors.cyan.withAlpha(25)
-              : c.card,
+          color: selected ? c.cyan.withAlpha(25) : c.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? DarkColors.cyan : c.border,
+            color: selected ? c.cyan : c.border,
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -486,7 +484,7 @@ class _FilterChip extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize:   12,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-            color:      selected ? DarkColors.cyan : c.textMuted,
+            color:      selected ? c.cyan : c.textMuted,
           ),
         ),
       ),
@@ -508,11 +506,11 @@ class _EmptyState extends StatelessWidget {
           Container(
             width: 72, height: 72,
             decoration: BoxDecoration(
-              color:        DarkColors.cyan.withAlpha(15),
+              color:        c.cyan.withAlpha(15),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(Icons.science_rounded,
-                color: DarkColors.cyan, size: 36),
+            child: Icon(Icons.science_rounded,
+                color: c.cyan, size: 36),
           ),
           const SizedBox(height: 16),
           Text(

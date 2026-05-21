@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../models/doctor.dart';
@@ -304,7 +303,7 @@ class _Field extends StatelessWidget {
               labelStyle: GoogleFonts.poppins(
                   fontSize: 12, color: c.textMuted),
               prefixIcon: Icon(icon,
-                  size: 18, color: DarkColors.green),
+                  size: 18, color: c.green),
               border:         InputBorder.none,
               contentPadding:
                   const EdgeInsets.symmetric(vertical: 12),
@@ -328,17 +327,18 @@ class _SaveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: saving ? null : onTap,
       child: Container(
         width:  double.infinity,
         height: 52,
         decoration: BoxDecoration(
-          color:        DarkColors.green,
+          color:        c.green,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color:      DarkColors.green.withAlpha(60),
+              color:      Colors.black.withAlpha(8),
               blurRadius: 16,
               offset:     const Offset(0, 4),
             ),

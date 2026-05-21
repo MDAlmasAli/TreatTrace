@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../models/prescription.dart';
@@ -105,7 +104,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen>
             child: _loading
                 ? Center(
                     child: CircularProgressIndicator(
-                        color: DarkColors.purpleBright))
+                        color: c.purpleBright))
                 : TabBarView(
                     controller: _tabCtrl,
                     children: [
@@ -131,7 +130,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed:       _openAdd,
-        backgroundColor: DarkColors.purpleBright,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
@@ -153,9 +152,9 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen>
         border: Border(bottom: BorderSide(color: c.border, width: 1)),
         boxShadow: [
           BoxShadow(
-            color:      DarkColors.purpleBright.withAlpha(18),
-            blurRadius: 20,
-            offset:     const Offset(0, 4),
+            color:      Colors.black.withAlpha(8),
+            blurRadius: 12,
+            offset:     const Offset(0, 2),
           ),
         ],
       ),
@@ -201,8 +200,8 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen>
           decoration: InputDecoration(
             hintText:       s.searchPrescriptions,
             hintStyle:      GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
-            prefixIcon:     const Icon(Icons.search_rounded,
-                                color: DarkColors.purpleBright, size: 20),
+            prefixIcon:     Icon(Icons.search_rounded,
+                                color: c.purpleBright, size: 20),
             suffixIcon: _query.isNotEmpty
                 ? GestureDetector(
                     onTap: () {
@@ -226,9 +225,9 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen>
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: TabBar(
         controller:         _tabCtrl,
-        labelColor:         DarkColors.purpleBright,
+        labelColor:         c.purpleBright,
         unselectedLabelColor: c.textMuted,
-        indicatorColor:     DarkColors.purpleBright,
+        indicatorColor:     c.purpleBright,
         indicatorWeight:    2.5,
         labelStyle:         GoogleFonts.poppins(
             fontSize: 13, fontWeight: FontWeight.w600),
@@ -263,7 +262,7 @@ class _PrescriptionList extends StatelessWidget {
       return _EmptyState(message: emptyMsg);
     }
     return RefreshIndicator(
-      color: DarkColors.purpleBright,
+      color: context.colors.purpleBright,
       onRefresh: () async {},
       child: ListView.separated(
         padding:           const EdgeInsets.fromLTRB(20, 16, 20, 100),
@@ -297,7 +296,7 @@ class _PrescriptionCard extends StatelessWidget {
     final c       = context.colors;
     final p       = prescription;
     final isActive = p.isActive;
-    final accent   = isActive ? DarkColors.cyan : c.textMuted;
+    final accent   = isActive ? c.cyan : c.textMuted;
 
     return Material(
       color:        c.card,
@@ -305,16 +304,16 @@ class _PrescriptionCard extends StatelessWidget {
       child: InkWell(
         onTap:        onTap,
         borderRadius: BorderRadius.circular(20),
-        splashColor:  DarkColors.purpleBright.withAlpha(12),
+        splashColor:  c.purpleBright.withAlpha(12),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border:       Border.all(color: c.border, width: 1),
             boxShadow: [
               BoxShadow(
-                color:      accent.withAlpha(10),
-                blurRadius: 12,
-                offset:     const Offset(0, 3),
+                color:      Colors.black.withAlpha(6),
+                blurRadius: 8,
+                offset:     const Offset(0, 2),
               ),
             ],
           ),
@@ -350,7 +349,7 @@ class _PrescriptionCard extends StatelessWidget {
                               if (p.needsRefillSoon)
                                 _Badge(
                                     label: 'Refill',
-                                    color: DarkColors.amber),
+                                    color: c.amber),
                               if (!isActive)
                                 _Badge(
                                     label: 'Expired',
@@ -358,7 +357,7 @@ class _PrescriptionCard extends StatelessWidget {
                               if (isActive && !p.needsRefillSoon)
                                 _Badge(
                                     label: 'Active',
-                                    color: DarkColors.green),
+                                    color: c.green),
                             ],
                           ),
                           if (p.doctorSpecialty?.isNotEmpty == true) ...[
@@ -366,7 +365,7 @@ class _PrescriptionCard extends StatelessWidget {
                             Text(
                               p.doctorSpecialty!,
                               style: GoogleFonts.poppins(
-                                  fontSize: 11, color: DarkColors.cyan),
+                                  fontSize: 11, color: c.textSec),
                             ),
                           ],
                           if (p.diagnosis?.isNotEmpty == true) ...[
@@ -405,14 +404,14 @@ class _PrescriptionCard extends StatelessWidget {
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                const Icon(Icons.warning_rounded,
-                                    size: 13, color: DarkColors.red),
+                                Icon(Icons.warning_rounded,
+                                    size: 13, color: c.red),
                                 const SizedBox(width: 4),
                                 Text(
                                   'Allergy conflict',
                                   style: GoogleFonts.poppins(
                                     fontSize:   11,
-                                    color:      DarkColors.red,
+                                    color:      c.red,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -458,11 +457,11 @@ class _EmptyState extends StatelessWidget {
           Container(
             width: 72, height: 72,
             decoration: BoxDecoration(
-              color:        DarkColors.purpleBright.withAlpha(15),
+              color:        c.purpleBright.withAlpha(15),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(Icons.receipt_long_rounded,
-                color: DarkColors.purpleBright, size: 36),
+            child: Icon(Icons.receipt_long_rounded,
+                color: c.purpleBright, size: 36),
           ),
           const SizedBox(height: 16),
           Text(
@@ -528,25 +527,25 @@ class _RefillBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (count == 0) return const SizedBox.shrink();
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color:        DarkColors.amber.withAlpha(20),
+        color:        c.amber.withAlpha(20),
         borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: DarkColors.amber.withAlpha(60)),
+        border:       Border.all(color: c.amber.withAlpha(60)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.refresh_rounded,
-              size: 13, color: DarkColors.amber),
+          Icon(Icons.refresh_rounded, size: 13, color: c.amber),
           const SizedBox(width: 4),
           Text(
             '$count refill${count > 1 ? 's' : ''} soon',
             style: GoogleFonts.poppins(
               fontSize:   11,
               fontWeight: FontWeight.w700,
-              color:      DarkColors.amber,
+              color:      c.amber,
             ),
           ),
         ],

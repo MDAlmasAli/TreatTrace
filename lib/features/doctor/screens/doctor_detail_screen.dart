@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../appointment/models/appointment.dart';
@@ -88,7 +87,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text('Delete',
                   style: GoogleFonts.poppins(
-                      color: DarkColors.red, fontWeight: FontWeight.w700)),
+                      color: c.red, fontWeight: FontWeight.w700)),
             ),
           ],
         );
@@ -166,7 +165,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                           child: _SmallActionBtn(
                             label:   'Edit',
                             icon:    Icons.edit_rounded,
-                            color:   DarkColors.green,
+                            color:   c.green,
                             onTap:   _edit,
                             outlined: true,
                           ),
@@ -176,7 +175,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                           child: _SmallActionBtn(
                             label:   'Delete',
                             icon:    Icons.delete_outline_rounded,
-                            color:   DarkColors.red,
+                            color:   c.red,
                             onTap:   _delete,
                             outlined: true,
                           ),
@@ -204,23 +203,23 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color:        DarkColors.amber.withAlpha(20),
+                              color:        c.amber.withAlpha(20),
                               borderRadius: BorderRadius.circular(12),
                               border:       Border.all(
-                                  color: DarkColors.amber.withAlpha(60)),
+                                  color: c.amber.withAlpha(60)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.add_rounded,
-                                    size: 14, color: DarkColors.amber),
+                                Icon(Icons.add_rounded,
+                                    size: 14, color: c.amber),
                                 const SizedBox(width: 4),
                                 Text(
                                   'Add',
                                   style: GoogleFonts.poppins(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
-                                      color: DarkColors.amber),
+                                      color: c.amber),
                                 ),
                               ],
                             ),
@@ -234,7 +233,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                     if (_loading)
                       Center(
                         child: CircularProgressIndicator(
-                            color: DarkColors.amber),
+                            color: c.amber),
                       )
                     else if (_appointments.isEmpty)
                       Container(
@@ -286,7 +285,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
         border: Border(bottom: BorderSide(color: c.border, width: 1)),
         boxShadow: [
           BoxShadow(
-            color:      DarkColors.green.withAlpha(18),
+            color:      Colors.black.withAlpha(8),
             blurRadius: 20,
             offset:     const Offset(0, 4),
           ),
@@ -317,7 +316,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                   Text(
                     _doctor.specialty!,
                     style: GoogleFonts.poppins(
-                        fontSize: 12, color: DarkColors.green),
+                        fontSize: 12, color: c.green),
                   ),
               ],
             ),
@@ -328,7 +327,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
               _doctor.isFavorite
                   ? Icons.favorite_rounded
                   : Icons.favorite_border_rounded,
-              color: _doctor.isFavorite ? DarkColors.red : c.textMuted,
+              color: _doctor.isFavorite ? c.red : c.textMuted,
               size: 26,
             ),
           ),
@@ -395,7 +394,7 @@ class _InfoCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(width: 4, color: DarkColors.green),
+              Container(width: 4, color: c.green),
               Expanded(
                 child: Column(
                   children: rows.asMap().entries.map((e) {
@@ -412,11 +411,11 @@ class _InfoCard extends StatelessWidget {
                               Container(
                                 width: 32, height: 32,
                                 decoration: BoxDecoration(
-                                  color:        DarkColors.green.withAlpha(15),
+                                  color:        c.green.withAlpha(15),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(icon,
-                                    size: 16, color: DarkColors.green),
+                                    size: 16, color: c.green),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -471,11 +470,11 @@ class _ApptRow extends StatelessWidget {
 
   const _ApptRow({required this.appt, required this.onTap});
 
-  Color get _color {
+  Color _color(ThemeColors c) {
     switch (appt.status) {
-      case AppointmentStatus.scheduled: return DarkColors.amber;
-      case AppointmentStatus.completed: return DarkColors.green;
-      case AppointmentStatus.cancelled: return DarkColors.red;
+      case AppointmentStatus.scheduled: return c.amber;
+      case AppointmentStatus.completed: return c.green;
+      case AppointmentStatus.cancelled: return c.red;
     }
   }
 
@@ -501,7 +500,7 @@ class _ApptRow extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(width: 3, color: _color),
+                  Container(width: 3, color: _color(c)),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -560,6 +559,7 @@ class _StatusDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final s = S.of(context);
     final label = status == AppointmentStatus.scheduled
         ? s.statusScheduled
@@ -567,10 +567,10 @@ class _StatusDot extends StatelessWidget {
             ? s.statusCompleted
             : s.statusCancelled;
     final color = status == AppointmentStatus.scheduled
-        ? DarkColors.amber
+        ? c.amber
         : status == AppointmentStatus.completed
-            ? DarkColors.green
-            : DarkColors.red;
+            ? c.green
+            : c.red;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

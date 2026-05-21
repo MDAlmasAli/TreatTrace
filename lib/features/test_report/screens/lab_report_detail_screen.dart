@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../models/lab_report.dart';
@@ -83,7 +82,7 @@ class _LabReportDetailScreenState extends State<LabReportDetailScreen> {
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text('Delete',
                 style: GoogleFonts.poppins(
-                    color: DarkColors.red,
+                    color: c.red,
                     fontWeight: FontWeight.w700)),
           ),
         ],
@@ -125,7 +124,7 @@ class _LabReportDetailScreenState extends State<LabReportDetailScreen> {
             child: _loading
                 ? Center(
                     child: CircularProgressIndicator(
-                        color: DarkColors.cyan))
+                        color: c.cyan))
                 : SingleChildScrollView(
                     padding:
                         const EdgeInsets.fromLTRB(20, 20, 20, 40),
@@ -142,32 +141,32 @@ class _LabReportDetailScreenState extends State<LabReportDetailScreen> {
                         _SectionLabel(text: 'Test Information'),
                         const SizedBox(height: 10),
                         _InfoCard(
-                          accentColor: DarkColors.cyan,
+                          accentColor: c.cyan,
                           child: Column(children: [
                             _InfoRow(
                               icon:      Icons.science_rounded,
-                              iconColor: DarkColors.cyan,
+                              iconColor: c.cyan,
                               label:     s.testName,
                               value:     _r.testName,
                             ),
                             if (_r.testDate != null)
                               _InfoRow(
                                 icon:      Icons.calendar_today_rounded,
-                                iconColor: DarkColors.purpleBright,
+                                iconColor: c.purpleBright,
                                 label:     s.testDate,
                                 value:     _fmtDate(_r.testDate!),
                               ),
                             if (_r.doctorName?.isNotEmpty == true)
                               _InfoRow(
                                 icon:      Icons.person_rounded,
-                                iconColor: DarkColors.green,
+                                iconColor: c.green,
                                 label:     s.doctorName,
                                 value:     'Dr. ${_r.doctorName!}',
                               ),
                             if (_r.hospital?.isNotEmpty == true)
                               _InfoRow(
                                 icon:      Icons.local_hospital_rounded,
-                                iconColor: DarkColors.amber,
+                                iconColor: c.amber,
                                 label:     s.labHospital,
                                 value:     _r.hospital!,
                                 isLast:    true,
@@ -183,10 +182,10 @@ class _LabReportDetailScreenState extends State<LabReportDetailScreen> {
                           _SectionLabel(text: s.notes),
                           const SizedBox(height: 10),
                           _InfoCard(
-                            accentColor: DarkColors.purpleBright,
+                            accentColor: c.purpleBright,
                             child: _InfoRow(
                               icon:      Icons.notes_rounded,
-                              iconColor: DarkColors.purpleBright,
+                              iconColor: c.purpleBright,
                               label:     s.notes,
                               value:     _r.notes!,
                               isLast:    true,
@@ -200,10 +199,10 @@ class _LabReportDetailScreenState extends State<LabReportDetailScreen> {
                           _SectionLabel(text: s.linkedPrescription),
                           const SizedBox(height: 10),
                           _InfoCard(
-                            accentColor: DarkColors.purpleBright,
+                            accentColor: c.purpleBright,
                             child: _InfoRow(
                               icon:      Icons.link_rounded,
-                              iconColor: DarkColors.purpleBright,
+                              iconColor: c.purpleBright,
                               label:     s.linkedPrescription,
                               value:     _r.prescriptionDisplay ??
                                   _r.prescriptionId!.substring(0, 8),
@@ -312,25 +311,26 @@ class _CategoryBadgeLarge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color:        DarkColors.cyan.withAlpha(20),
+        color:        c.cyan.withAlpha(20),
         borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: DarkColors.cyan.withAlpha(80)),
+        border:       Border.all(color: c.cyan.withAlpha(80)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.label_rounded,
-              size: 14, color: DarkColors.cyan),
+          Icon(Icons.label_rounded,
+              size: 14, color: c.cyan),
           const SizedBox(width: 6),
           Text(
             label,
             style: GoogleFonts.poppins(
               fontSize:   13,
               fontWeight: FontWeight.w600,
-              color:      DarkColors.cyan,
+              color:      c.cyan,
             ),
           ),
         ],
@@ -478,9 +478,9 @@ class _ReportGalleryState extends State<_ReportGallery> {
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => Container(
                     color: c.card,
-                    child: const Center(
+                    child: Center(
                       child: Icon(Icons.broken_image_rounded,
-                          color: DarkColors.cyan, size: 36),
+                          color: c.cyan, size: 36),
                     ),
                   ),
                 ),
@@ -500,7 +500,7 @@ class _ReportGalleryState extends State<_ReportGallery> {
                 width:    active ? 18 : 6,
                 height:   6,
                 decoration: BoxDecoration(
-                  color: active ? DarkColors.cyan : c.border,
+                  color: active ? c.cyan : c.border,
                   borderRadius: BorderRadius.circular(3),
                 ),
               );
@@ -585,13 +585,14 @@ class _ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         Expanded(
           child: _ActionBtn(
             label: 'Edit',
             icon:  Icons.edit_rounded,
-            color: DarkColors.cyan,
+            color: c.cyan,
             onTap: onEdit,
           ),
         ),
@@ -599,7 +600,7 @@ class _ActionRow extends StatelessWidget {
         _ActionBtn(
           label:  'Delete',
           icon:   Icons.delete_rounded,
-          color:  DarkColors.red,
+          color:  c.red,
           onTap:  onDelete,
           square: true,
         ),

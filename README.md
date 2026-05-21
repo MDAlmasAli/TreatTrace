@@ -19,15 +19,28 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.7 — Active Development |
+| **Stage** | v0.8 — Active Development |
 | **UI Status** | Auth · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments |
 | **Backend Status** | Auth · Profile · Prescriptions + Medicines · Lab Reports · Doctors · Appointments |
 | **Platform** | Android · iOS · Web |
-| **Last Updated** | 2026-05-19 |
+| **Last Updated** | 2026-05-21 |
 
 ---
 
-## Latest Updates (2026-05-19)
+## Latest Updates (2026-05-21)
+
+**v0.8 — DocTime-Style UI Overhaul**
+
+- Entire app visual language redesigned to match DocTime (professional Bangladeshi healthcare app)
+- **Single brand blue `#136AFB`** replaces the previous multi-colour feature accent system (purple / cyan / green / amber per module)
+- **Light theme is now the default** — was previously `system` (often dark on most devices)
+- `ThemeColors` centralised: `c.accent` = `#136AFB` in light mode, purple in dark mode; `c.purpleBright` / `c.cyan` alias to brand blue in light
+- Removed `ShaderMask` gradient text ("Quick Actions" header was purple→cyan gradient)
+- All coloured glow box-shadows (`DarkColors.X.withAlpha(N)`) replaced with neutral `Colors.black.withAlpha(small)`
+- Splash screen rewritten to white/blue light theme (removed dark gradient)
+- Fixed light-mode dialogs that were incorrectly rendering with dark card background
+- All 22 Dart files updated; zero `DarkColors` hardcodes remain in feature screens
+- `flutter analyze` passes clean (exit code 0)
 
 **v0.7 — Doctor Book + Appointment Log**
 
@@ -50,6 +63,9 @@
 
 ## Update History
 
+- `[2026-05-21]` DocTime-style UI overhaul — single `#136AFB` brand blue, light theme default, no gradient text, neutral shadows
+- `[2026-05-21]` ThemeColors centralised — `c.accent` is the single brand colour entry point for all feature screens
+- `[2026-05-21]` Splash screen rewritten to light theme; dialog backgrounds fixed for light mode
 - `[2026-05-19]` My Doctors — personal doctor book with favorites, search, specialty filter
 - `[2026-05-19]` Appointments — log with Upcoming / Past / Cancelled tabs; status change flow
 - `[2026-05-19]` Doctor detail screen — full profile + linked appointments list + add appointment shortcut
@@ -161,7 +177,8 @@ Built as a portfolio project demonstrating real-world Flutter + Supabase integra
 - Search across all tabs
 
 ### Theme & Localisation
-- Full dark + light theme via `ThemeColors` extension on `BuildContext`
+- Full dark + light theme via `ThemeColors` extension on `BuildContext`; **light is the default**
+- Single brand blue `#136AFB` in light mode; purple `#8B5CF6` in dark mode — both via `c.accent`
 - All UI strings in English + Bangla via `S.of(context)` — switchable at runtime
 
 ---
@@ -464,23 +481,23 @@ Auto-created for every new user via a Supabase trigger.
 
 ## Design System
 
-| Token | Value |
-|---|---|
-| Purple Bright | `#8B5CF6` |
-| Cyan | `#0EA5E9` |
-| Green | `#10B981` |
-| Amber | `#F59E0B` |
-| Red | `#EF4444` |
-| Dark Background | `#050508` |
-| Light Background | `#F0F4F8` |
-| Card Radius | 16 – 24 px |
-| Body Font | Poppins (via `google_fonts`) |
+| Token | Light mode | Dark mode |
+|---|---|---|
+| **Brand / Accent** | `#136AFB` (DocTime blue) | `#8B5CF6` (purple) |
+| **Success / Active** | `#10B981` (green) | `#10B981` |
+| **Warning / Refill** | `#F59E0B` (amber) | `#F59E0B` |
+| **Error / Danger** | `#EF4444` (red) | `#EF4444` |
+| **Background** | `#F0F4F8` | `#050508` |
+| **Card** | `#FFFFFF` | `#0F0F18` |
+| **Border** | `#CBD5E1` | `#1E1E2E` |
+| **Card Radius** | 16 – 24 px | 16 – 24 px |
+| **Body Font** | Poppins (via `google_fonts`) | Poppins |
 
-**Accent colour convention per feature:**
-- Prescriptions → Cyan (`#0EA5E9`)
-- Test Reports → Purple (`#8B5CF6`)
-- Doctors → Green (`#10B981`)
-- Appointments → Amber (`#F59E0B`)
+**Colour usage rules:**
+- `c.accent` — single brand colour for all interactive elements (FAB, tab indicator, search icon, card bar, badges, chips)
+- `c.green` — semantic only: Active status, success states
+- `c.amber` — semantic only: Refill Soon alerts, warning states
+- `c.red` — semantic only: Error, Cancelled, Allergy warnings, Delete actions
 
 ---
 

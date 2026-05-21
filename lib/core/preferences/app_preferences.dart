@@ -31,7 +31,7 @@ class AppPreferences {
 
   // ── Theme ─────────────────────────────────────────────────────────────────
   /// One of: 'system', 'light', 'dark'
-  static String get themeMode => _prefs.getString(_keyTheme) ?? 'system';
+  static String get themeMode => _prefs.getString(_keyTheme) ?? 'light';
   static Future<void> setThemeMode(String v) => _prefs.setString(_keyTheme, v);
 
   // ── Locale ────────────────────────────────────────────────────────────────

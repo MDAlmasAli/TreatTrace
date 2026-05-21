@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../doctor/models/doctor.dart';
@@ -130,7 +129,7 @@ class _AddEditAppointmentScreenState
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
           colorScheme: ColorScheme.dark(
-            primary:   DarkColors.amber,
+            primary:   context.colors.amber,
             onPrimary: Colors.white,
             surface:   context.colors.card,
             onSurface: context.colors.textPrimary,
@@ -366,13 +365,13 @@ class _DoctorPicker extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: loading
-          ? const Padding(
-              padding: EdgeInsets.symmetric(vertical: 14),
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
               child: Center(
                 child: SizedBox(
                   width: 18, height: 18,
                   child: CircularProgressIndicator(
-                      color: DarkColors.amber, strokeWidth: 2),
+                      color: c.amber, strokeWidth: 2),
                 ),
               ),
             )
@@ -431,10 +430,11 @@ class _StatusPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
+    final c = context.colors;
     final options = [
-      (AppointmentStatus.scheduled, s.statusScheduled, DarkColors.amber),
-      (AppointmentStatus.completed, s.statusCompleted, DarkColors.green),
-      (AppointmentStatus.cancelled, s.statusCancelled, DarkColors.red),
+      (AppointmentStatus.scheduled, s.statusScheduled, c.amber),
+      (AppointmentStatus.completed, s.statusCompleted, c.green),
+      (AppointmentStatus.cancelled, s.statusCancelled, c.red),
     ];
 
     return Wrap(
@@ -508,13 +508,13 @@ class _PrescriptionPicker extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: loading
-          ? const Padding(
-              padding: EdgeInsets.symmetric(vertical: 14),
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
               child: Center(
                 child: SizedBox(
                   width: 18, height: 18,
                   child: CircularProgressIndicator(
-                      color: DarkColors.amber, strokeWidth: 2),
+                      color: c.amber, strokeWidth: 2),
                 ),
               ),
             )
@@ -629,7 +629,7 @@ class _Field extends StatelessWidget {
                   ? GoogleFonts.poppins(fontSize: 12, color: c.textMuted)
                   : null,
               prefixIcon: Icon(icon,
-                  size: 18, color: DarkColors.amber),
+                  size: 18, color: c.amber),
               border:         InputBorder.none,
               contentPadding:
                   const EdgeInsets.symmetric(vertical: 12),
@@ -670,8 +670,8 @@ class _DateRow extends StatelessWidget {
                 horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today_rounded,
-                    size: 18, color: DarkColors.amber),
+                Icon(Icons.calendar_today_rounded,
+                    size: 18, color: c.amber),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -725,17 +725,18 @@ class _SaveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: saving ? null : onTap,
       child: Container(
         width:  double.infinity,
         height: 52,
         decoration: BoxDecoration(
-          color:        DarkColors.amber,
+          color:        c.amber,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color:      DarkColors.amber.withAlpha(60),
+              color:      Colors.black.withAlpha(8),
               blurRadius: 16,
               offset:     const Offset(0, 4),
             ),

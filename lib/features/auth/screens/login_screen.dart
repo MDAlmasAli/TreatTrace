@@ -7,7 +7,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/preferences/app_preferences.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/auth_service.dart';
@@ -124,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     border: Border.all(color: c.border, width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: DarkColors.purpleBright.withAlpha(20),
+                        color: Colors.black.withAlpha(8),
                         blurRadius: 40,
                         offset: const Offset(0, 8),
                       ),
@@ -215,7 +214,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
-                                color: DarkColors.purpleBright,
+                                color: c.purpleBright,
                               ),
                             ),
                           ),
@@ -242,7 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           BorderRadius.circular(4)),
                                   fillColor: WidgetStateProperty.resolveWith(
                                     (s) => s.contains(WidgetState.selected)
-                                        ? DarkColors.purpleBright
+                                        ? c.purpleBright
                                         : Colors.transparent,
                                   ),
                                   checkColor: Colors.white,
@@ -315,7 +314,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: GoogleFonts.poppins(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: DarkColors.purpleBright,
+                        color: c.purpleBright,
                       ),
                     ),
                   ),
@@ -342,11 +341,11 @@ class _LogoBlock extends StatelessWidget {
           width: 72,
           height: 72,
           decoration: BoxDecoration(
-            gradient: DarkColors.accentGradient,
+            gradient: c.accentGradient,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: DarkColors.purpleBright.withAlpha(80),
+                color: Colors.black.withAlpha(8),
                 blurRadius: 28,
                 offset: const Offset(0, 6),
               ),
@@ -434,17 +433,16 @@ class _DarkTextField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: DarkColors.purpleBright, width: 1.5),
+              borderSide: BorderSide(
+                  color: c.purpleBright, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: DarkColors.red, width: 1),
+              borderSide: BorderSide(color: c.red, width: 1),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.red, width: 1.5),
+              borderSide: BorderSide(color: c.red, width: 1.5),
             ),
           ),
         ),
@@ -467,16 +465,17 @@ class _GradientButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: DarkColors.accentGradient,
+          gradient: c.accentGradient,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: DarkColors.purpleBright.withAlpha(60),
+              color: Colors.black.withAlpha(8),
               blurRadius: 14,
               offset: const Offset(0, 4),
             ),
@@ -520,22 +519,23 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: DarkColors.red.withAlpha(20),
+        color: c.red.withAlpha(20),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: DarkColors.red.withAlpha(80)),
+        border: Border.all(color: c.red.withAlpha(80)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded,
-              color: DarkColors.red, size: 18),
+          Icon(Icons.error_outline_rounded,
+              color: c.red, size: 18),
           const SizedBox(width: 10),
           Expanded(
             child: Text(message,
                 style: GoogleFonts.poppins(
-                    fontSize: 12, color: DarkColors.red)),
+                    fontSize: 12, color: c.red)),
           ),
         ],
       ),

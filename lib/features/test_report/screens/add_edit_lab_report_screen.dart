@@ -9,7 +9,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../prescription/models/prescription.dart';
@@ -135,8 +134,8 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                  color: DarkColors.cyan, width: 1.5),
+              borderSide: BorderSide(
+                  color: c.cyan, width: 1.5),
             ),
           ),
         ),
@@ -153,7 +152,7 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
             },
             child: Text(s.confirm,
                 style: GoogleFonts.poppins(
-                    color: DarkColors.cyan,
+                    color: c.cyan,
                     fontWeight: FontWeight.w700)),
           ),
         ],
@@ -173,7 +172,7 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
           colorScheme: ColorScheme.dark(
-            primary:   DarkColors.cyan,
+            primary:   context.colors.cyan,
             onPrimary: Colors.white,
             surface:   context.colors.card,
             onSurface: context.colors.textPrimary,
@@ -219,18 +218,18 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
                 color: c.textPrimary, fontWeight: FontWeight.w600)),
         actions: [
           TextButton.icon(
-            icon:  const Icon(Icons.photo_library_rounded,
-                color: DarkColors.cyan),
+            icon:  Icon(Icons.photo_library_rounded,
+                color: c.cyan),
             label: Text('Gallery',
-                style: GoogleFonts.poppins(color: DarkColors.cyan)),
+                style: GoogleFonts.poppins(color: c.cyan)),
             onPressed: () => Navigator.of(ctx).pop(ImageSource.gallery),
           ),
           TextButton.icon(
-            icon:  const Icon(Icons.camera_alt_rounded,
-                color: DarkColors.purpleBright),
+            icon:  Icon(Icons.camera_alt_rounded,
+                color: c.purpleBright),
             label: Text('Camera',
                 style: GoogleFonts.poppins(
-                    color: DarkColors.purpleBright)),
+                    color: c.purpleBright)),
             onPressed: () =>
                 Navigator.of(ctx).pop(ImageSource.camera),
           ),
@@ -365,10 +364,10 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
                         _SectionLabel(text: s.uploadImage),
                         const Spacer(),
                         if (_uploadingImage)
-                          const SizedBox(
+                          SizedBox(
                             width: 16, height: 16,
                             child: CircularProgressIndicator(
-                                color: DarkColors.cyan,
+                                color: c.cyan,
                                 strokeWidth: 2),
                           ),
                       ],
@@ -471,6 +470,7 @@ class _CategoryPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final s = S.of(context);
 
     // If current category is custom (not in presets), show it as an extra chip
@@ -488,21 +488,21 @@ class _CategoryPicker extends StatelessWidget {
           _Chip(
             label:    customCat,
             selected: true,
-            color:    DarkColors.purpleBright,
+            color:    c.purpleBright,
             onTap:    () => onSelect(null),
           ),
         // Preset chips
         ..._kPresetCategories.map((cat) => _Chip(
               label:    cat,
               selected: selected == cat,
-              color:    DarkColors.cyan,
+              color:    c.cyan,
               onTap:    () => onSelect(selected == cat ? null : cat),
             )),
         // "+ Custom" chip
         _Chip(
           label:    '+ ${s.customCategory}',
           selected: false,
-          color:    DarkColors.purpleBright,
+          color:    c.purpleBright,
           onTap:    onPickCustom,
           dashed:   true,
         ),
@@ -604,13 +604,13 @@ class _PrescriptionLinkPicker extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: loading
-          ? const Padding(
-              padding: EdgeInsets.symmetric(vertical: 14),
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
               child: Center(
                 child: SizedBox(
                   width: 18, height: 18,
                   child: CircularProgressIndicator(
-                      color: DarkColors.cyan, strokeWidth: 2),
+                      color: c.cyan, strokeWidth: 2),
                 ),
               ),
             )
@@ -728,7 +728,7 @@ class _Field extends StatelessWidget {
               labelStyle: GoogleFonts.poppins(
                   fontSize: 12, color: c.textMuted),
               prefixIcon: Icon(icon,
-                  size: 18, color: DarkColors.cyan),
+                  size: 18, color: c.cyan),
               border:         InputBorder.none,
               contentPadding:
                   const EdgeInsets.symmetric(vertical: 12),
@@ -774,8 +774,8 @@ class _DateRow extends StatelessWidget {
                 horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today_rounded,
-                    size: 18, color: DarkColors.cyan),
+                Icon(Icons.calendar_today_rounded,
+                    size: 18, color: c.cyan),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -855,8 +855,8 @@ class _MultiImageUploadCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     border:       Border.all(color: c.border),
                   ),
-                  child: const Icon(Icons.broken_image_rounded,
-                      color: DarkColors.cyan),
+                  child: Icon(Icons.broken_image_rounded,
+                      color: c.cyan),
                 ),
               ),
             ),
@@ -883,7 +883,7 @@ class _MultiImageUploadCard extends StatelessWidget {
                 child: Container(
                   width: 22, height: 22,
                   decoration: BoxDecoration(
-                    color:  DarkColors.red,
+                    color:  c.red,
                     shape:  BoxShape.circle,
                     border: Border.all(
                         color: Colors.white, width: 1.5),
@@ -904,27 +904,27 @@ class _MultiImageUploadCard extends StatelessWidget {
             color:        c.card,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: DarkColors.cyan.withAlpha(100), width: 1.5),
+                color: c.cyan.withAlpha(100), width: 1.5),
           ),
           child: uploading
-              ? const Center(
+              ? Center(
                   child: SizedBox(
                     width: 20, height: 20,
                     child: CircularProgressIndicator(
-                        color: DarkColors.cyan, strokeWidth: 2),
+                        color: c.cyan, strokeWidth: 2),
                   ),
                 )
               : Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.add_photo_alternate_rounded,
-                        color: DarkColors.cyan, size: 26),
+                    Icon(Icons.add_photo_alternate_rounded,
+                        color: c.cyan, size: 26),
                     const SizedBox(height: 4),
                     Text(
                       imageUrls.isEmpty ? 'Add\nImage' : 'Add\nMore',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.poppins(
-                          fontSize: 10, color: DarkColors.cyan),
+                          fontSize: 10, color: c.cyan),
                     ),
                   ],
                 ),
@@ -944,17 +944,18 @@ class _SaveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: saving ? null : onTap,
       child: Container(
         width:  double.infinity,
         height: 52,
         decoration: BoxDecoration(
-          gradient:     DarkColors.accentGradient,
+          gradient:     c.accentGradient,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color:      DarkColors.cyan.withAlpha(60),
+              color:      Colors.black.withAlpha(8),
               blurRadius: 16,
               offset:     const Offset(0, 4),
             ),

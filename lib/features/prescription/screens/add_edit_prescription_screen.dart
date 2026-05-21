@@ -7,7 +7,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/profile_service.dart';
@@ -114,7 +113,7 @@ class _AddEditPrescriptionScreenState
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
           colorScheme: ColorScheme.dark(
-            primary:    DarkColors.purpleBright,
+            primary:    context.colors.purpleBright,
             onPrimary:  Colors.white,
             surface:    context.colors.card,
             onSurface:  context.colors.textPrimary,
@@ -160,18 +159,18 @@ class _AddEditPrescriptionScreenState
                 color: c.textPrimary, fontWeight: FontWeight.w600)),
         actions: [
           TextButton.icon(
-            icon:     const Icon(Icons.photo_library_rounded,
-                          color: DarkColors.purpleBright),
+            icon:     Icon(Icons.photo_library_rounded,
+                          color: c.purpleBright),
             label:    Text('Gallery',
                           style: GoogleFonts.poppins(
-                              color: DarkColors.purpleBright)),
+                              color: c.purpleBright)),
             onPressed: () => Navigator.of(ctx).pop(ImageSource.gallery),
           ),
           TextButton.icon(
-            icon:     const Icon(Icons.camera_alt_rounded,
-                          color: DarkColors.cyan),
+            icon:     Icon(Icons.camera_alt_rounded,
+                          color: c.cyan),
             label:    Text('Camera',
-                          style: GoogleFonts.poppins(color: DarkColors.cyan)),
+                          style: GoogleFonts.poppins(color: c.cyan)),
             onPressed: () => Navigator.of(ctx).pop(ImageSource.camera),
           ),
         ],
@@ -341,10 +340,10 @@ class _AddEditPrescriptionScreenState
                         _SectionLabel(text: s.uploadImage),
                         const Spacer(),
                         if (_uploadingImage)
-                          const SizedBox(
+                          SizedBox(
                             width: 16, height: 16,
                             child: CircularProgressIndicator(
-                                color: DarkColors.purpleBright,
+                                color: c.purpleBright,
                                 strokeWidth: 2),
                           ),
                       ],
@@ -370,22 +369,22 @@ class _AddEditPrescriptionScreenState
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color:        DarkColors.purpleBright.withAlpha(15),
+                              color:        c.purpleBright.withAlpha(15),
                               borderRadius: BorderRadius.circular(10),
                               border:       Border.all(
-                                  color: DarkColors.purpleBright.withAlpha(60)),
+                                  color: c.purpleBright.withAlpha(60)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.add_rounded,
-                                    size: 14, color: DarkColors.purpleBright),
+                                Icon(Icons.add_rounded,
+                                    size: 14, color: c.purpleBright),
                                 const SizedBox(width: 4),
                                 Text(s.addMedicine,
                                     style: GoogleFonts.poppins(
                                       fontSize:   12,
                                       fontWeight: FontWeight.w600,
-                                      color:      DarkColors.purpleBright,
+                                      color:      c.purpleBright,
                                     )),
                               ],
                             ),
@@ -582,7 +581,7 @@ class _Field extends StatelessWidget {
               labelText:      label,
               labelStyle:     GoogleFonts.poppins(
                   fontSize: 12, color: c.textMuted),
-              prefixIcon:     Icon(icon, size: 18, color: DarkColors.purpleBright),
+              prefixIcon:     Icon(icon, size: 18, color: c.purpleBright),
               border:         InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
             ),
@@ -619,8 +618,8 @@ class _DateRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today_rounded,
-                    size: 18, color: DarkColors.purpleBright),
+                Icon(Icons.calendar_today_rounded,
+                    size: 18, color: c.purpleBright),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -692,8 +691,8 @@ class _MultiImageUploadCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     border:       Border.all(color: c.border),
                   ),
-                  child: const Icon(Icons.broken_image_rounded,
-                      color: DarkColors.purpleBright),
+                  child: Icon(Icons.broken_image_rounded,
+                      color: c.purpleBright),
                 ),
               ),
             ),
@@ -721,7 +720,7 @@ class _MultiImageUploadCard extends StatelessWidget {
                 child: Container(
                   width: 22, height: 22,
                   decoration: BoxDecoration(
-                    color:  DarkColors.red,
+                    color:  c.red,
                     shape:  BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 1.5),
                   ),
@@ -743,28 +742,28 @@ class _MultiImageUploadCard extends StatelessWidget {
             color:        c.card,
             borderRadius: BorderRadius.circular(12),
             border:       Border.all(
-                color: DarkColors.purpleBright.withAlpha(100),
+                color: c.purpleBright.withAlpha(100),
                 width: 1.5),
           ),
           child: uploading
-              ? const Center(
+              ? Center(
                   child: SizedBox(
                     width: 20, height: 20,
                     child: CircularProgressIndicator(
-                        color: DarkColors.purpleBright, strokeWidth: 2),
+                        color: c.purpleBright, strokeWidth: 2),
                   ),
                 )
               : Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.add_photo_alternate_rounded,
-                        color: DarkColors.purpleBright, size: 26),
+                    Icon(Icons.add_photo_alternate_rounded,
+                        color: c.purpleBright, size: 26),
                     const SizedBox(height: 4),
                     Text(
                       imageUrls.isEmpty ? 'Add\nImage' : 'Add\nPage',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.poppins(
-                          fontSize: 10, color: DarkColors.purpleBright),
+                          fontSize: 10, color: c.purpleBright),
                     ),
                   ],
                 ),
@@ -810,7 +809,7 @@ class _MedicineCardState extends State<_MedicineCard> {
         border:       Border.all(color: c.border, width: 1),
         boxShadow: [
           BoxShadow(
-            color:      DarkColors.cyan.withAlpha(8),
+            color:      Colors.black.withAlpha(8),
             blurRadius: 10,
             offset:     const Offset(0, 3),
           ),
@@ -822,7 +821,7 @@ class _MedicineCardState extends State<_MedicineCard> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(width: 4, color: DarkColors.cyan),
+              Container(width: 4, color: c.cyan),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(14),
@@ -836,14 +835,14 @@ class _MedicineCardState extends State<_MedicineCard> {
                             style: GoogleFonts.poppins(
                               fontSize:   13,
                               fontWeight: FontWeight.w700,
-                              color:      DarkColors.cyan,
+                              color:      c.cyan,
                             ),
                           ),
                           const Spacer(),
                           GestureDetector(
                             onTap: widget.onRemove,
-                            child: const Icon(Icons.remove_circle_rounded,
-                                color: DarkColors.red, size: 20),
+                            child: Icon(Icons.remove_circle_rounded,
+                                color: c.red, size: 20),
                           ),
                         ],
                       ),
@@ -967,7 +966,7 @@ class _MedField extends StatelessWidget {
       decoration: InputDecoration(
         labelText:      label,
         labelStyle:     GoogleFonts.poppins(fontSize: 11, color: c.textMuted),
-        prefixIcon:     Icon(icon, size: 16, color: DarkColors.cyan),
+        prefixIcon:     Icon(icon, size: 16, color: c.cyan),
         filled:         true,
         fillColor:      c.surface,
         border:         OutlineInputBorder(
@@ -980,11 +979,11 @@ class _MedField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide:   const BorderSide(color: DarkColors.cyan, width: 1.5),
+          borderSide:   BorderSide(color: c.cyan, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide:   const BorderSide(color: DarkColors.red),
+          borderSide:   BorderSide(color: c.red),
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         isDense:        true,
@@ -1014,11 +1013,11 @@ class _FreqChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
           decoration: BoxDecoration(
             color: selected
-                ? DarkColors.cyan.withAlpha(25)
+                ? c.cyan.withAlpha(25)
                 : c.surface,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: selected ? DarkColors.cyan : c.border,
+              color: selected ? c.cyan : c.border,
               width: 1,
             ),
           ),
@@ -1029,7 +1028,7 @@ class _FreqChip extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize:   10,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-              color:      selected ? DarkColors.cyan : c.textMuted,
+              color:      selected ? c.cyan : c.textMuted,
             ),
           ),
         ),
@@ -1044,17 +1043,18 @@ class _AllergyBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       margin:  const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color:        DarkColors.red.withAlpha(15),
+        color:        c.red.withAlpha(15),
         borderRadius: BorderRadius.circular(14),
-        border:       Border.all(color: DarkColors.red.withAlpha(80)),
+        border:       Border.all(color: c.red.withAlpha(80)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_rounded, color: DarkColors.red, size: 20),
+          Icon(Icons.warning_rounded, color: c.red, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -1065,13 +1065,13 @@ class _AllergyBanner extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize:   13,
                     fontWeight: FontWeight.w700,
-                    color:      DarkColors.red,
+                    color:      c.red,
                   ),
                 ),
                 Text(
                   medicines.join(', '),
                   style: GoogleFonts.poppins(
-                      fontSize: 11, color: DarkColors.red),
+                      fontSize: 11, color: c.red),
                 ),
               ],
             ),
@@ -1096,8 +1096,8 @@ class _EmptyMedicineHint extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.medication_outlined,
-              color: DarkColors.purpleBright, size: 22),
+          Icon(Icons.medication_outlined,
+              color: c.purpleBright, size: 22),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -1119,17 +1119,18 @@ class _SaveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: saving ? null : onTap,
       child: Container(
         width:   double.infinity,
         height:  52,
         decoration: BoxDecoration(
-          gradient:     DarkColors.accentGradient,
+          gradient:     c.accentGradient,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color:      DarkColors.purpleBright.withAlpha(60),
+              color:      Colors.black.withAlpha(8),
               blurRadius: 16,
               offset:     const Offset(0, 4),
             ),

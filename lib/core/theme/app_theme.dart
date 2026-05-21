@@ -335,20 +335,16 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
 
-      // Dialogs always use DarkColors because all dialog content in the app
-      // uses DarkColors text constants. Without this, text is invisible on
-      // a white dialog background when the system is in light mode.
       dialogTheme: DialogThemeData(
-        backgroundColor: DarkColors.card,
-        elevation: 8,
+        backgroundColor: surfaceColor,
+        elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titleTextStyle: GoogleFonts.poppins(
-          color:      DarkColors.textPrimary,
+          color:      textDark,
           fontSize:   18,
           fontWeight: FontWeight.w600,
         ),
-        contentTextStyle: GoogleFonts.poppins(
-            color: DarkColors.textSec, fontSize: 13),
+        contentTextStyle: GoogleFonts.poppins(color: textMid, fontSize: 13),
       ),
 
       cardTheme: CardThemeData(

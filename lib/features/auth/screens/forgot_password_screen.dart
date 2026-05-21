@@ -7,7 +7,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
@@ -61,8 +60,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: DarkColors.purpleBright, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: c.purpleBright, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -80,6 +79,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   // ── Success state ─────────────────────────────────────────────────────────
   Widget _buildSuccessState() {
+    final c = context.colors;
     return Column(
       children: [
         const SizedBox(height: 48),
@@ -88,13 +88,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           width: 100,
           height: 100,
           decoration: BoxDecoration(
-            color: DarkColors.green.withAlpha(20),
+            color: c.green.withAlpha(20),
             shape: BoxShape.circle,
             border: Border.all(
-                color: DarkColors.green.withAlpha(60), width: 2),
+                color: c.green.withAlpha(60), width: 2),
           ),
-          child: const Icon(Icons.mark_email_read_outlined,
-              color: DarkColors.green, size: 52),
+          child: Icon(Icons.mark_email_read_outlined,
+              color: c.green, size: 52),
         )
             .animate()
             .scale(
@@ -134,11 +134,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           height: 52,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              gradient: DarkColors.accentGradient,
+              gradient: c.accentGradient,
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: DarkColors.purpleBright.withAlpha(60),
+                  color: Colors.black.withAlpha(8),
                   blurRadius: 14,
                   offset: const Offset(0, 4),
                 ),
@@ -179,11 +179,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           width: 72,
           height: 72,
           decoration: BoxDecoration(
-            gradient: DarkColors.accentGradient,
+            gradient: c.accentGradient,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: DarkColors.purpleBright.withAlpha(60),
+                color: Colors.black.withAlpha(8),
                 blurRadius: 20,
                 offset: const Offset(0, 4),
               ),
@@ -268,18 +268,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: DarkColors.purpleBright, width: 1.5),
+                      borderSide: BorderSide(
+                          color: c.purpleBright, width: 1.5),
                     ),
                     errorBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: DarkColors.red, width: 1),
+                      borderSide: BorderSide(
+                          color: c.red, width: 1),
                     ),
                     focusedErrorBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: DarkColors.red, width: 1.5),
+                      borderSide: BorderSide(
+                          color: c.red, width: 1.5),
                     ),
                   ),
                 ),
@@ -296,11 +296,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           height: 52,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              gradient: DarkColors.accentGradient,
+              gradient: c.accentGradient,
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: DarkColors.purpleBright.withAlpha(60),
+                  color: Colors.black.withAlpha(8),
                   blurRadius: 14,
                   offset: const Offset(0, 4),
                 ),
@@ -343,7 +343,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               style: GoogleFonts.poppins(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: DarkColors.purpleBright,
+                color: c.purpleBright,
               ),
             ),
           ),
@@ -362,22 +362,23 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: DarkColors.red.withAlpha(20),
+        color: c.red.withAlpha(20),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: DarkColors.red.withAlpha(80)),
+        border: Border.all(color: c.red.withAlpha(80)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded,
-              color: DarkColors.red, size: 18),
+          Icon(Icons.error_outline_rounded,
+              color: c.red, size: 18),
           const SizedBox(width: 10),
           Expanded(
             child: Text(message,
                 style: GoogleFonts.poppins(
-                    fontSize: 12, color: DarkColors.red)),
+                    fontSize: 12, color: c.red)),
           ),
         ],
       ),

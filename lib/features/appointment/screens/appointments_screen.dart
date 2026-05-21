@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../models/appointment.dart';
@@ -116,7 +115,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
               children: [0, 1, 2].map((tab) {
                 if (_loading) {
                   return Center(
-                    child: CircularProgressIndicator(color: DarkColors.amber),
+                    child: CircularProgressIndicator(color: c.accent),
                   );
                 }
                 final items = _forTab(tab);
@@ -129,7 +128,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
                   );
                 }
                 return RefreshIndicator(
-                  color: DarkColors.amber,
+                  color: c.accent,
                   onRefresh: _load,
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
@@ -150,7 +149,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed:       _openAdd,
-        backgroundColor: DarkColors.amber,
+        backgroundColor: c.accent,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
@@ -172,9 +171,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
         border: Border(bottom: BorderSide(color: c.border, width: 1)),
         boxShadow: [
           BoxShadow(
-            color:      DarkColors.amber.withAlpha(18),
-            blurRadius: 20,
-            offset:     const Offset(0, 4),
+            color:      Colors.black.withAlpha(8),
+            blurRadius: 12,
+            offset:     const Offset(0, 2),
           ),
         ],
       ),
@@ -200,16 +199,16 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color:        DarkColors.amber.withAlpha(20),
+              color:        c.accent.withAlpha(20),
               borderRadius: BorderRadius.circular(20),
-              border:       Border.all(color: DarkColors.amber.withAlpha(60)),
+              border:       Border.all(color: c.accent.withAlpha(60)),
             ),
             child: Text(
               '${_all.length}',
               style: GoogleFonts.poppins(
                 fontSize:   12,
                 fontWeight: FontWeight.w700,
-                color:      DarkColors.amber,
+                color:      c.accent,
               ),
             ),
           ),
@@ -235,8 +234,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
           decoration: InputDecoration(
             hintText:  s.searchAppointments,
             hintStyle: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
-            prefixIcon: const Icon(Icons.search_rounded,
-                color: DarkColors.amber, size: 20),
+            prefixIcon: Icon(Icons.search_rounded,
+                color: c.accent, size: 20),
             suffixIcon: _query.isNotEmpty
                 ? GestureDetector(
                     onTap: () {
@@ -273,7 +272,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
               fontSize: 12, fontWeight: FontWeight.w700),
           unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
           indicator: BoxDecoration(
-            color:        DarkColors.amber,
+            color:        c.accent,
             borderRadius: BorderRadius.circular(10),
           ),
           indicatorSize:  TabBarIndicatorSize.tab,
@@ -303,18 +302,13 @@ class _AppointmentCard extends StatelessWidget {
     required this.delay,
   });
 
-  Color get _accentColor {
-    switch (appt.status) {
-      case AppointmentStatus.scheduled: return DarkColors.amber;
-      case AppointmentStatus.completed: return DarkColors.green;
-      case AppointmentStatus.cancelled: return DarkColors.red;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final a = appt;
+    final barColor = appt.status == AppointmentStatus.scheduled ? c.accent
+        : appt.status == AppointmentStatus.completed ? c.green
+        : c.red;
 
     return Material(
       color:        c.card,
@@ -322,16 +316,16 @@ class _AppointmentCard extends StatelessWidget {
       child: InkWell(
         onTap:        onTap,
         borderRadius: BorderRadius.circular(20),
-        splashColor:  _accentColor.withAlpha(12),
+        splashColor:  barColor.withAlpha(12),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border:       Border.all(color: c.border, width: 1),
             boxShadow: [
               BoxShadow(
-                color:      _accentColor.withAlpha(8),
-                blurRadius: 12,
-                offset:     const Offset(0, 3),
+                color:      Colors.black.withAlpha(6),
+                blurRadius: 8,
+                offset:     const Offset(0, 2),
               ),
             ],
           ),
@@ -341,7 +335,7 @@ class _AppointmentCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(width: 4, color: _accentColor),
+                  Container(width: 4, color: barColor),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -399,7 +393,7 @@ class _AppointmentCard extends StatelessWidget {
                                 const Spacer(),
                                 Icon(Icons.link_rounded,
                                     size: 12,
-                                    color: DarkColors.purpleBright),
+                                    color: c.purpleBright),
                               ],
                             ],
                           ),
@@ -441,11 +435,12 @@ class _StatusBadge extends StatelessWidget {
         : status == AppointmentStatus.completed
             ? s.statusCompleted
             : s.statusCancelled;
+    final c = context.colors;
     final color = status == AppointmentStatus.scheduled
-        ? DarkColors.amber
+        ? c.accent
         : status == AppointmentStatus.completed
-            ? DarkColors.green
-            : DarkColors.red;
+            ? c.green
+            : c.red;
 
     return Container(
       margin: const EdgeInsets.only(left: 6),
@@ -484,11 +479,11 @@ class _EmptyState extends StatelessWidget {
           Container(
             width: 72, height: 72,
             decoration: BoxDecoration(
-              color:        DarkColors.amber.withAlpha(15),
+              color:        c.accent.withAlpha(15),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(icons[tab],
-                color: DarkColors.amber, size: 36),
+                color: c.accent, size: 36),
           ),
           const SizedBox(height: 16),
           Text(

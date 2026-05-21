@@ -7,7 +7,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
@@ -89,8 +88,8 @@ class _SignupScreenState extends State<SignupScreen> {
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.mark_email_read_outlined,
-                color: DarkColors.green, size: 26),
+            Icon(Icons.mark_email_read_outlined,
+                color: c.green, size: 26),
             const SizedBox(width: 10),
             Text('Check Your Email',
                 style: GoogleFonts.poppins(
@@ -114,7 +113,7 @@ class _SignupScreenState extends State<SignupScreen> {
             },
             child: Text('Go to Login',
                 style: GoogleFonts.poppins(
-                    color: DarkColors.purpleBright,
+                    color: c.purpleBright,
                     fontWeight: FontWeight.w600)),
           ),
         ],
@@ -155,7 +154,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     border: Border.all(color: c.border, width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: DarkColors.purpleBright.withAlpha(20),
+                        color: Colors.black.withAlpha(8),
                         blurRadius: 40,
                         offset: const Offset(0, 8),
                       ),
@@ -319,7 +318,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                     style: GoogleFonts.poppins(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: DarkColors.purpleBright,
+                                      color: c.purpleBright,
                                     )),
                               ),
                             ],
@@ -351,11 +350,11 @@ class _LogoBlock extends StatelessWidget {
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            gradient: DarkColors.accentGradient,
+            gradient: c.accentGradient,
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: DarkColors.purpleBright.withAlpha(80),
+                color: Colors.black.withAlpha(8),
                 blurRadius: 24,
                 offset: const Offset(0, 6),
               ),
@@ -441,18 +440,16 @@ class _DarkTextField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: DarkColors.purpleBright, width: 1.5),
+              borderSide: BorderSide(
+                  color: c.purpleBright, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.red, width: 1),
+              borderSide: BorderSide(color: c.red, width: 1),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: DarkColors.red, width: 1.5),
+              borderSide: BorderSide(color: c.red, width: 1.5),
             ),
           ),
         ),
@@ -475,16 +472,17 @@ class _GradientButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: DarkColors.accentGradient,
+          gradient: c.accentGradient,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: DarkColors.purpleBright.withAlpha(60),
+              color: Colors.black.withAlpha(8),
               blurRadius: 14,
               offset: const Offset(0, 4),
             ),
@@ -534,13 +532,13 @@ class _PasswordStrengthBar extends StatelessWidget {
     return score;
   }
 
-  Color _color(int s) {
+  Color _color(int s, ThemeColors c) {
     switch (s) {
-      case 1:  return DarkColors.red;
-      case 2:  return DarkColors.amber;
-      case 3:  return DarkColors.cyan;
-      case 4:  return DarkColors.green;
-      default: return DarkColors.border;
+      case 1:  return c.red;
+      case 2:  return c.amber;
+      case 3:  return c.cyan;
+      case 4:  return c.green;
+      default: return c.border;
     }
   }
 
@@ -566,7 +564,7 @@ class _PasswordStrengthBar extends StatelessWidget {
               margin: EdgeInsets.only(right: i < 3 ? 4 : 0),
               height: 4,
               decoration: BoxDecoration(
-                color: i < s ? _color(s) : c.border,
+                color: i < s ? _color(s, c) : c.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -578,7 +576,7 @@ class _PasswordStrengthBar extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 11,
             fontWeight: FontWeight.w500,
-            color: s > 0 ? _color(s) : c.textMuted,
+            color: s > 0 ? _color(s, c) : c.textMuted,
           ),
         ),
       ],
@@ -605,7 +603,7 @@ class _TermsCheckbox extends StatelessWidget {
           side: BorderSide(color: c.borderLight, width: 1.5),
           fillColor: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.selected)
-                ? DarkColors.purpleBright
+                ? c.purpleBright
                 : Colors.transparent,
           ),
           checkColor: Colors.white,
@@ -627,7 +625,7 @@ class _TermsCheckbox extends StatelessWidget {
                     text: 'Terms & Conditions',
                     style: GoogleFonts.poppins(
                       fontSize: 12,
-                      color: DarkColors.purpleBright,
+                      color: c.purpleBright,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -640,7 +638,7 @@ class _TermsCheckbox extends StatelessWidget {
                     text: 'Privacy Policy.',
                     style: GoogleFonts.poppins(
                       fontSize: 12,
-                      color: DarkColors.purpleBright,
+                      color: c.purpleBright,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -661,22 +659,23 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: DarkColors.red.withAlpha(20),
+        color: c.red.withAlpha(20),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: DarkColors.red.withAlpha(80)),
+        border: Border.all(color: c.red.withAlpha(80)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded,
-              color: DarkColors.red, size: 18),
+          Icon(Icons.error_outline_rounded,
+              color: c.red, size: 18),
           const SizedBox(width: 10),
           Expanded(
             child: Text(message,
                 style: GoogleFonts.poppins(
-                    fontSize: 12, color: DarkColors.red)),
+                    fontSize: 12, color: c.red)),
           ),
         ],
       ),
