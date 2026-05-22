@@ -19,15 +19,33 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.9 — Active Development |
-| **UI Status** | Auth · Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal |
+| **Stage** | v0.10 — Active Development |
+| **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal |
 | **Backend Status** | Auth · Profile · Prescriptions + Medicines · Lab Reports · Doctors · Appointments · Doctor–Patient Links |
 | **Platform** | Android · iOS |
-| **Last Updated** | 2026-05-22 |
+| **Last Updated** | 2026-05-23 |
 
 ---
 
-## Latest Updates (2026-05-22)
+## Latest Updates (2026-05-23)
+
+**v0.10 — Plus Jakarta Sans Font + Animated Splash Screen**
+
+- **Bundled font** — Plus Jakarta Sans variable TTF added to `assets/fonts/`; registered at weights 400/500/600/700 in `pubspec.yaml`; loads instantly offline with no network dependency
+- **App theme migrated** — `app_theme.dart` fully rewritten to use `fontFamily: 'PlusJakartaSans'`; removed all `GoogleFonts.poppins(...)` calls from the theme layer; both light and dark `ThemeData` now apply Plus Jakarta Sans as the default
+- **Animated splash screen** — replaced the static image splash with a "Clarity Reveal" sequence:
+  - Location-pin scales in from 0.6× → 1.0× with `easeOutBack` over 600 ms
+  - White ECG/heartbeat line draws itself left→right inside the pin over 700 ms
+  - "TreatTrace" wordmark revealed by an expanding `ClipRect` wipe left→right over 750 ms ("Treat" in `#136AFB`, "Trace" in `#0B3D8C`)
+  - Tagline "Your health, traced." fades in softly after the wordmark
+  - Brand-blue circular progress indicator at bottom while the app finishes initialising
+- **Minimum display guarantee** — `AuthGate` enforces a 2 500 ms floor so the full animation always plays even when the Supabase session check resolves instantly
+- Role-loading screen (`_RoleAwareRouter`) now shows a plain white + spinner rather than restarting the splash animation
+- `flutter analyze` passes clean
+
+---
+
+## v0.9 Updates (2026-05-22)
 
 **v0.9 — Doctor Portal + Role-Based Routing**
 
@@ -92,6 +110,8 @@
 
 ## Update History
 
+- `[2026-05-23]` Plus Jakarta Sans bundled font — variable TTF in `assets/fonts/`; theme fully migrated; 400/500/600/700 weights registered
+- `[2026-05-23]` Animated "Clarity Reveal" splash — pin scale-in, ECG heartbeat draw, wordmark ClipRect wipe, tagline fade, 2 500 ms minimum display
 - `[2026-05-22]` Doctor Portal — dedicated doctor dashboard, My Patients, Patient Detail, Search Patient, Doctor Write Prescription, Doctor Add Appointment
 - `[2026-05-22]` Role Selection screen — first-login role picker (Patient / Doctor); routes to correct home screen via `_RoleAwareRouter`
 - `[2026-05-22]` `doctor_patient_links` Supabase table — RLS-protected link table connecting doctors and patients
@@ -227,9 +247,15 @@ Built as a portfolio project demonstrating real-world Flutter + Supabase integra
 - Patients → `HomeScreen`; Doctors → `DoctorHomeScreen`; no role set → `RoleSelectionScreen`
 
 ### App Branding
-- Custom TreatTrace logo used on Splash screen, Login screen, and Signup screen header
+- **Animated Clarity Reveal splash** — pin scale-in → ECG heartbeat draw → wordmark wipe → tagline fade; guaranteed ≥ 2 500 ms display
+- Custom TreatTrace logo on Login screen and Signup screen header
 - Launcher icons generated for Android (standard + adaptive `#136AFB` bg), iOS (22 sizes), Web (192/512 + maskable)
 - App display name is "TreatTrace" on both Android and iOS home screens
+
+### Typography
+- **Plus Jakarta Sans** bundled at `assets/fonts/PlusJakartaSans.ttf` — weights 400, 500, 600, 700 registered in `pubspec.yaml`
+- Loads instantly offline; no network font fetch at runtime
+- Applied as the default font family across all light and dark theme text styles
 
 ### Theme & Localisation
 - Full dark + light theme via `ThemeColors` extension on `BuildContext`; **light is the default**
@@ -253,7 +279,7 @@ Built as a portfolio project demonstrating real-world Flutter + Supabase integra
 |---|---|
 | **Framework** | Flutter 3.x (Dart) |
 | **Backend & Auth** | Supabase (PostgreSQL + Auth + Storage + RLS) |
-| **Typography** | Poppins (via `google_fonts`) |
+| **Typography** | Plus Jakarta Sans (bundled TTF, `assets/fonts/`) |
 | **Animations** | `flutter_animate` |
 | **Notifications** | `flutter_local_notifications` + `timezone` |
 | **PDF** | `pdf` + `printing` |
@@ -265,7 +291,7 @@ Built as a portfolio project demonstrating real-world Flutter + Supabase integra
 
 ```yaml
 supabase_flutter: ^2.5.6              # Auth, database, storage, session
-google_fonts: ^6.2.1                  # Poppins typography
+google_fonts: ^6.2.1                  # Used by app_text_styles.dart (legacy; theme uses bundled font)
 flutter_animate: ^4.5.0               # Smooth UI animations
 image_picker: ^1.1.2                  # Camera + gallery photo selection
 flutter_local_notifications: ^18.0.1  # Medicine dose reminders
@@ -580,7 +606,7 @@ Auto-created for every new user via a Supabase trigger.
 | **Card** | `#FFFFFF` | `#0F0F18` |
 | **Border** | `#CBD5E1` | `#1E1E2E` |
 | **Card Radius** | 16 – 24 px | 16 – 24 px |
-| **Body Font** | Poppins (via `google_fonts`) | Poppins |
+| **Body Font** | Plus Jakarta Sans (bundled) | Plus Jakarta Sans (bundled) |
 
 **Colour usage rules:**
 - `c.accent` — single brand colour for all interactive elements (FAB, tab indicator, search icon, card bar, badges, chips)
