@@ -19,15 +19,44 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.8 — Active Development |
-| **UI Status** | Auth · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments |
-| **Backend Status** | Auth · Profile · Prescriptions + Medicines · Lab Reports · Doctors · Appointments |
-| **Platform** | Android · iOS · Web |
-| **Last Updated** | 2026-05-21 |
+| **Stage** | v0.9 — Active Development |
+| **UI Status** | Auth · Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal |
+| **Backend Status** | Auth · Profile · Prescriptions + Medicines · Lab Reports · Doctors · Appointments · Doctor–Patient Links |
+| **Platform** | Android · iOS |
+| **Last Updated** | 2026-05-22 |
 
 ---
 
-## Latest Updates (2026-05-21)
+## Latest Updates (2026-05-22)
+
+**v0.9 — Doctor Portal + Role-Based Routing**
+
+- **Role Selection screen** — shown on first login; user picks *Patient* or *Doctor*; role saved to `profiles.role` in Supabase; never shown again once set
+- **Doctor Home screen** — dedicated dashboard for doctor-role users with time-aware greeting, avatar, quick actions, and bottom nav
+- **My Patients** — list of patients who have linked themselves to this doctor; tap to view their full health profile
+- **Patient Detail** — doctors can view a patient's prescriptions, appointments, and health records from within the doctor portal
+- **Search Patient** — doctors search for any registered patient by name/email and send a link request
+- **Linked Doctors** — patient-side screen showing all doctors they are linked to; unlink option
+- **Doctor Write Prescription** — doctor creates a prescription directly into a patient's account
+- **Doctor Add Appointment** — doctor logs an appointment into a patient's timeline
+- `doctor_patient_links` Supabase table with RLS; patients see only their own links, doctors see only their linked patients
+- `AuthGate` → `_RoleAwareRouter`: role fetched after login; routes to `HomeScreen` (patient) or `DoctorHomeScreen` (doctor); unset role triggers `RoleSelectionScreen`
+
+**App Branding — Launcher Icons + In-App Logo**
+
+- `flutter_launcher_icons: ^0.14.4` added to dev_dependencies
+- **Android launcher icon** — standard `ic_launcher.png` generated in all density buckets (mdpi → xxxhdpi); adaptive icon (`mipmap-anydpi-v26`) with `#136AFB` solid background + transparent foreground pin
+- **iOS launcher icon** — all 22 required sizes generated in `AppIcon.appiconset`
+- **Web icons** — `Icon-192.png`, `Icon-512.png`, `Icon-maskable-192.png`, `Icon-maskable-512.png` generated; `web/manifest.json` updated with `#136AFB` background and theme colour
+- **App name corrected**: `AndroidManifest.xml` label `treat_trace` → `TreatTrace`; iOS `Info.plist` `CFBundleDisplayName` `Treat Trace` → `TreatTrace` and `CFBundleName` `treat_trace` → `TreatTrace`
+- **Splash screen** (`_SplashScreen` in `main.dart`) — `Icons.local_hospital_rounded` replaced with `Image.asset('Logo/treattrace_icon_1024.png')`; removed hard-coded `const` to allow asset image
+- **Login screen** (`_LogoBlock`) — hospital icon replaced with actual logo image
+- **Signup screen header** (`MedicalHeader`) — hospital icon replaced with actual logo image
+- `Logo/` directory registered as a Flutter asset in `pubspec.yaml`
+
+---
+
+## Previous Updates (2026-05-21)
 
 **v0.8 — DocTime-Style UI Overhaul**
 
@@ -63,6 +92,13 @@
 
 ## Update History
 
+- `[2026-05-22]` Doctor Portal — dedicated doctor dashboard, My Patients, Patient Detail, Search Patient, Doctor Write Prescription, Doctor Add Appointment
+- `[2026-05-22]` Role Selection screen — first-login role picker (Patient / Doctor); routes to correct home screen via `_RoleAwareRouter`
+- `[2026-05-22]` `doctor_patient_links` Supabase table — RLS-protected link table connecting doctors and patients
+- `[2026-05-22]` App launcher icons generated for Android (standard + adaptive), iOS (22 sizes), and Web (192/512 + maskable) using `flutter_launcher_icons`
+- `[2026-05-22]` App name fixed to "TreatTrace" in AndroidManifest and iOS Info.plist (was `treat_trace` / `Treat Trace`)
+- `[2026-05-22]` Splash screen, login screen, signup screen — `Icons.local_hospital_rounded` replaced with real TreatTrace logo image
+- `[2026-05-22]` `Logo/` registered as Flutter asset so logo PNG is accessible in all screens
 - `[2026-05-21]` DocTime-style UI overhaul — single `#136AFB` brand blue, light theme default, no gradient text, neutral shadows
 - `[2026-05-21]` ThemeColors centralised — `c.accent` is the single brand colour entry point for all feature screens
 - `[2026-05-21]` Splash screen rewritten to light theme; dialog backgrounds fixed for light mode
@@ -176,6 +212,25 @@ Built as a portfolio project demonstrating real-world Flutter + Supabase integra
 - `doctor_name_snapshot` preserves doctor name if doctor record is deleted later
 - Search across all tabs
 
+### Doctor Portal (Role: Doctor)
+- **Doctor Home** — dedicated dashboard with greeting, quick actions (My Patients), and profile nav
+- **My Patients** — list of all patients linked to this doctor; search by name
+- **Patient Detail** — view a patient's full health profile, prescriptions, and appointments
+- **Search Patient** — find any registered patient and establish a doctor–patient link
+- **Doctor Write Prescription** — create a prescription directly into a patient's medical record
+- **Doctor Add Appointment** — log an appointment into a patient's timeline
+- RLS ensures doctors only see their own linked patients; patients see only their own links
+
+### Role-Based Routing
+- **Role Selection screen** — shown once on first login; user picks Patient or Doctor
+- Role saved to `profiles.role`; `_RoleAwareRouter` in `main.dart` routes accordingly
+- Patients → `HomeScreen`; Doctors → `DoctorHomeScreen`; no role set → `RoleSelectionScreen`
+
+### App Branding
+- Custom TreatTrace logo used on Splash screen, Login screen, and Signup screen header
+- Launcher icons generated for Android (standard + adaptive `#136AFB` bg), iOS (22 sizes), Web (192/512 + maskable)
+- App display name is "TreatTrace" on both Android and iOS home screens
+
 ### Theme & Localisation
 - Full dark + light theme via `ThemeColors` extension on `BuildContext`; **light is the default**
 - Single brand blue `#136AFB` in light mode; purple `#8B5CF6` in dark mode — both via `c.accent`
@@ -204,6 +259,7 @@ Built as a portfolio project demonstrating real-world Flutter + Supabase integra
 | **PDF** | `pdf` + `printing` |
 | **State** | `StatefulWidget` + `setState` |
 | **Architecture** | Feature-first folder structure |
+| **App Icons** | `flutter_launcher_icons` |
 
 ### Key Dependencies
 
@@ -216,6 +272,9 @@ flutter_local_notifications: ^18.0.1  # Medicine dose reminders
 timezone: ^0.9.4                      # Scheduled notification time zones
 pdf: ^3.11.1                          # PDF generation
 printing: ^5.13.2                     # PDF share / print
+
+# dev
+flutter_launcher_icons: ^0.14.4       # Android / iOS / Web launcher icon generation
 ```
 
 ---
@@ -223,30 +282,50 @@ printing: ^5.13.2                     # PDF share / print
 ## Project Structure
 
 ```
+Logo/
+├── treattrace_icon_1024.png           # Full app icon (blue bg + pin) — launcher + in-app
+└── treattrace_foreground_1024.png     # Transparent foreground — Android adaptive icon
 lib/
-├── main.dart
+├── main.dart                          # Entry point + _SplashScreen + AuthGate + _RoleAwareRouter
 ├── core/
 │   ├── config/
 │   │   └── supabase_config.dart
 │   ├── constants/
-│   │   └── app_colors.dart              # DarkColors + AppColors palettes
+│   │   └── app_colors.dart
 │   ├── l10n/
-│   │   └── app_strings.dart             # English + Bangla string map
+│   │   └── app_strings.dart           # English + Bangla string map
 │   ├── services/
 │   │   ├── auth_service.dart
 │   │   ├── profile_service.dart
 │   │   └── reminder_service.dart
 │   └── theme/
-│       └── theme_colors.dart            # ThemeColors BuildContext extension
+│       └── theme_colors.dart          # ThemeColors BuildContext extension
 ├── features/
 │   ├── auth/
-│   │   └── screens/
-│   │       ├── login_screen.dart
-│   │       ├── signup_screen.dart
-│   │       └── forgot_password_screen.dart
+│   │   ├── screens/
+│   │   │   ├── login_screen.dart
+│   │   │   ├── signup_screen.dart
+│   │   │   ├── forgot_password_screen.dart
+│   │   │   └── role_selection_screen.dart   # First-login role picker
+│   │   └── widgets/
+│   │       ├── medical_header.dart
+│   │       └── auth_button.dart
 │   ├── home/
 │   │   └── screens/
-│   │       └── home_screen.dart
+│   │       └── home_screen.dart       # Patient home dashboard
+│   ├── doctor_home/                   # Doctor-role portal
+│   │   ├── models/
+│   │   │   └── doctor_patient_link.dart
+│   │   ├── screens/
+│   │   │   ├── doctor_home_screen.dart
+│   │   │   ├── my_patients_screen.dart
+│   │   │   ├── patient_detail_screen.dart
+│   │   │   ├── search_patient_screen.dart
+│   │   │   ├── linked_doctors_screen.dart
+│   │   │   ├── doctor_write_prescription_screen.dart
+│   │   │   └── doctor_add_appointment_screen.dart
+│   │   └── services/
+│   │       └── doctor_patient_link_service.dart
 │   ├── prescription/
 │   │   ├── models/
 │   │   │   ├── prescription.dart
@@ -294,9 +373,19 @@ database/
 ├── migrations/
 │   ├── 2026_05_19_v06_lab_reports.sql
 │   └── 2026_05_19_v07_doctors_and_appointments.sql
-└── treattrace_schema.sql              # Full consolidated schema (v0.7)
-android/
-└── app/src/main/AndroidManifest.xml   # Notification + boot permissions
+└── treattrace_schema.sql              # Full consolidated schema
+android/app/src/main/
+├── AndroidManifest.xml                # Label="TreatTrace", notification + boot permissions
+└── res/
+    ├── mipmap-*/ic_launcher.png       # Standard launcher icons (all densities)
+    ├── mipmap-anydpi-v26/             # Adaptive icon XML (API 26+)
+    ├── drawable-*/ic_launcher_foreground.png
+    └── values/colors.xml              # ic_launcher_background = #136AFB
+ios/Runner/Assets.xcassets/
+└── AppIcon.appiconset/                # 22 iOS icon sizes
+web/
+├── icons/                             # Icon-192, Icon-512, maskable variants
+└── manifest.json                      # background_color + theme_color = #136AFB
 ```
 
 ---

@@ -134,4 +134,16 @@ class AuthService {
   Future<void> updatePassword(String newPassword) async {
     await _client.auth.updateUser(UserAttributes(password: newPassword));
   }
+
+  // ── Update Role ───────────────────────────────────────────────────────────
+
+  /// Saves the user's role ('patient' or 'doctor') to the profiles table.
+  Future<void> updateRole(String role) async {
+    final userId = currentUser?.id;
+    if (userId == null) return;
+    await _client
+        .from('profiles')
+        .update({'role': role})
+        .eq('id', userId);
+  }
 }

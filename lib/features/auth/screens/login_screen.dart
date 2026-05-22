@@ -337,22 +337,14 @@ class _LogoBlock extends StatelessWidget {
     final c = context.colors;
     return Column(
       children: [
-        Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            gradient: c.accentGradient,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(8),
-                blurRadius: 28,
-                offset: const Offset(0, 6),
-              ),
-            ],
+        ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Image.asset(
+            'Logo/treattrace_icon_1024.png',
+            width: 72,
+            height: 72,
+            fit: BoxFit.cover,
           ),
-          child: const Icon(Icons.local_hospital_rounded,
-              color: Colors.white, size: 38),
         ),
         const SizedBox(height: 16),
         Text(

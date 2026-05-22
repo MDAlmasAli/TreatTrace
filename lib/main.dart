@@ -13,11 +13,6 @@
 //        • Otherwise → stream-based auth routing (home vs login).
 // ─────────────────────────────────────────────────────────────────────────────
 
-//Authors:
-//  • @ Almas
-//  • @ Sharon
-//  • @ Tasmina
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,7 +25,9 @@ import 'core/preferences/app_preferences.dart';
 import 'core/services/auth_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/role_selection_screen.dart';
 import 'features/home/screens/home_screen.dart';
+import 'features/doctor_home/screens/doctor_home_screen.dart';
 
 // ── App entry ──────────────────────────────────────────────────────────────
 Future<void> main() async {
@@ -167,7 +164,7 @@ class _AuthGateState extends State<AuthGate> {
         final session = snapshot.data?.session;
 
         if (session != null) {
-          return HomeScreen(
+          return _RoleAwareRouter(
             onThemeChanged:  widget.onThemeChanged,
             onLocaleChanged: widget.onLocaleChanged,
             currentTheme:    widget.currentTheme,
@@ -177,6 +174,74 @@ class _AuthGateState extends State<AuthGate> {
           return const LoginScreen();
         }
       },
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// _RoleAwareRouter — fetches the user's role and routes to the right home screen.
+// ══════════════════════════════════════════════════════════════════════════════
+class _RoleAwareRouter extends StatefulWidget {
+  final void Function(String) onThemeChanged;
+  final void Function(String) onLocaleChanged;
+  final String currentTheme;
+  final String currentLocale;
+
+  const _RoleAwareRouter({
+    required this.onThemeChanged,
+    required this.onLocaleChanged,
+    required this.currentTheme,
+    required this.currentLocale,
+  });
+
+  @override
+  State<_RoleAwareRouter> createState() => _RoleAwareRouterState();
+}
+
+class _RoleAwareRouterState extends State<_RoleAwareRouter> {
+  final _authService = AuthService();
+  String? _role;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRole();
+  }
+
+  Future<void> _loadRole() async {
+    setState(() => _loading = true);
+    final profile = await _authService.fetchProfile();
+    if (mounted) {
+      setState(() {
+        _role = profile?['role'] as String?;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return const _SplashScreen();
+
+    if (_role == null) {
+      return RoleSelectionScreen(onRoleSelected: _loadRole);
+    }
+
+    if (_role == 'doctor') {
+      return DoctorHomeScreen(
+        onThemeChanged:  widget.onThemeChanged,
+        onLocaleChanged: widget.onLocaleChanged,
+        currentTheme:    widget.currentTheme,
+        currentLocale:   widget.currentLocale,
+      );
+    }
+
+    return HomeScreen(
+      onThemeChanged:  widget.onThemeChanged,
+      onLocaleChanged: widget.onLocaleChanged,
+      currentTheme:    widget.currentTheme,
+      currentLocale:   widget.currentLocale,
     );
   }
 }
@@ -203,38 +268,25 @@ class _SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFFF0F4F8),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF0F4F8),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: _blue,
-                borderRadius: BorderRadius.all(Radius.circular(24)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x1A136AFB),
-                    blurRadius: 24,
-                    offset: Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: SizedBox(
+            ClipRRect(
+              borderRadius: const BorderRadius.all(Radius.circular(24)),
+              child: Image.asset(
+                'Logo/treattrace_icon_1024.png',
                 width: 84,
                 height: 84,
-                child: Icon(
-                  Icons.local_hospital_rounded,
-                  color: Colors.white,
-                  size: 46,
-                ),
+                fit: BoxFit.cover,
               ),
             ),
 
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-            Text(
+            const Text(
               'TreatTrace',
               style: TextStyle(
                 fontFamily: 'Poppins',
@@ -245,9 +297,9 @@ class _SplashScreen extends StatelessWidget {
               ),
             ),
 
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
 
-            Text(
+            const Text(
               'Your health, our priority.',
               style: TextStyle(
                 fontFamily: 'Poppins',
@@ -256,9 +308,9 @@ class _SplashScreen extends StatelessWidget {
               ),
             ),
 
-            SizedBox(height: 48),
+            const SizedBox(height: 48),
 
-            SizedBox(
+            const SizedBox(
               width: 28,
               height: 28,
               child: CircularProgressIndicator(

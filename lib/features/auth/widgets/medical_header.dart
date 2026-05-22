@@ -62,18 +62,14 @@ class MedicalHeader extends StatelessWidget {
                   // App logo row: medical cross + name
                   Row(
                     children: [
-                      // Medical cross in a rounded container
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(30),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.local_hospital_rounded,
-                          color: Colors.white,
-                          size: 26,
+                      // App logo
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.asset(
+                          'Logo/treattrace_icon_1024.png',
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.cover,
                         ),
                       ),
                       const SizedBox(width: 12),

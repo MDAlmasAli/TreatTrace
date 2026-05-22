@@ -63,6 +63,38 @@ class AppointmentService {
     await _client.from('appointments').delete().eq('id', id);
   }
 
+  // ── Doctor: fetch appointments for a specific patient ────────────────────
+
+  Future<List<Appointment>> fetchForPatient(String patientId) async {
+    final rows = await _client
+        .from('appointments')
+        .select()
+        .eq('user_id', patientId)
+        .order('appointment_date', ascending: false);
+    return rows.map(Appointment.fromMap).toList();
+  }
+
+  // ── Doctor: create appointment for a linked patient ───────────────────────
+
+  Future<Appointment> createForPatient({
+    required String patientId,
+    required Appointment appt,
+  }) async {
+    final doctorUserId = _uid;
+    if (doctorUserId == null) throw Exception('Not authenticated');
+
+    final inserted = await _client
+        .from('appointments')
+        .insert({
+          ...appt.toMap(),
+          'user_id':       patientId,
+          'doctor_user_id': doctorUserId,
+        })
+        .select()
+        .single();
+    return Appointment.fromMap(inserted);
+  }
+
   // Count upcoming appointments (scheduled + date >= today)
   Future<int> countUpcoming() async {
     final uid = _uid;

@@ -14,6 +14,7 @@ class Prescription {
   final List<String> imageUrls;
   final String?  notes;
   final DateTime createdAt;
+  final String?  writtenByDoctorId;
   final List<PrescriptionMedicine> medicines;
   final List<String> allergyConflicts;
 
@@ -29,6 +30,7 @@ class Prescription {
     this.imageUrls        = const [],
     this.notes,
     required this.createdAt,
+    this.writtenByDoctorId,
     this.medicines        = const [],
     this.allergyConflicts = const [],
   });
@@ -62,9 +64,10 @@ class Prescription {
         imageUrls: (m['image_urls'] as List<dynamic>?)
                 ?.cast<String>() ??
             [],
-        notes:     m['notes']    as String?,
-        createdAt: DateTime.parse(m['created_at'] as String),
-        medicines: medicines,
+        notes:             m['notes']                 as String?,
+        createdAt:         DateTime.parse(m['created_at'] as String),
+        writtenByDoctorId: m['written_by_doctor_id']   as String?,
+        medicines:         medicines,
       );
 
   Map<String, dynamic> toMap() => {
@@ -74,9 +77,10 @@ class Prescription {
         'doctor_hospital':   doctorHospital,
         'doctor_phone':      doctorPhone,
         'diagnosis':         diagnosis,
-        'prescription_date': prescriptionDate.toIso8601String().substring(0, 10),
-        'image_urls':        imageUrls,
-        'notes':             notes,
+        'prescription_date':    prescriptionDate.toIso8601String().substring(0, 10),
+        'image_urls':           imageUrls,
+        'notes':                notes,
+        'written_by_doctor_id': writtenByDoctorId,
       };
 
   Prescription copyWith({
@@ -91,6 +95,7 @@ class Prescription {
     List<String>? imageUrls,
     String?   notes,
     DateTime? createdAt,
+    String?   writtenByDoctorId,
     List<PrescriptionMedicine>? medicines,
     List<String>? allergyConflicts,
   }) =>
@@ -104,9 +109,10 @@ class Prescription {
         diagnosis:        diagnosis        ?? this.diagnosis,
         prescriptionDate: prescriptionDate ?? this.prescriptionDate,
         imageUrls:        imageUrls        ?? this.imageUrls,
-        notes:            notes            ?? this.notes,
-        createdAt:        createdAt        ?? this.createdAt,
-        medicines:        medicines        ?? this.medicines,
-        allergyConflicts: allergyConflicts ?? this.allergyConflicts,
+        notes:             notes             ?? this.notes,
+        createdAt:         createdAt         ?? this.createdAt,
+        writtenByDoctorId: writtenByDoctorId ?? this.writtenByDoctorId,
+        medicines:         medicines         ?? this.medicines,
+        allergyConflicts:  allergyConflicts  ?? this.allergyConflicts,
       );
 }

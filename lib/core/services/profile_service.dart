@@ -29,6 +29,16 @@ class ProfileService {
     return data == null ? null : HealthProfile.fromMap(data);
   }
 
+  /// Doctor: fetches a specific patient's health profile by their user ID.
+  Future<HealthProfile?> fetchForPatient(String patientId) async {
+    final data = await _client
+        .from('health_profiles')
+        .select()
+        .eq('id', patientId)
+        .maybeSingle();
+    return data == null ? null : HealthProfile.fromMap(data);
+  }
+
   /// Saves (create or update) the health profile.
   /// Uses upsert so it is safe to call for both new and returning users.
   Future<void> saveHealthProfile(HealthProfile profile) async {

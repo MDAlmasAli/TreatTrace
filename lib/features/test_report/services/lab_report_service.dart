@@ -116,6 +116,18 @@ class LabReportService {
         .createSignedUrl(path, 315360000); // 10 years
   }
 
+  // ── Doctor: fetch lab reports for a specific patient ─────────────────────
+
+  Future<List<LabReport>> fetchForPatient(String patientId) async {
+    final rows = await _client
+        .from('lab_reports')
+        .select()
+        .eq('user_id', patientId)
+        .order('test_date', ascending: false, nullsFirst: false)
+        .order('created_at', ascending: false);
+    return rows.map((r) => LabReport.fromMap(r)).toList();
+  }
+
   // ── Fetch all distinct categories used by this user ──────────────────────
 
   Future<List<String>> fetchCategories() async {

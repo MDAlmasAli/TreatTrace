@@ -185,6 +185,57 @@ class PrescriptionService {
     } catch (_) {}
   }
 
+  // ── Doctor: fetch all prescriptions for a specific patient ───────────────
+
+  Future<List<Prescription>> fetchForPatient(String patientId) async {
+    final rows = await _client
+        .from('prescriptions')
+        .select('*, prescription_medicines(*)')
+        .eq('user_id', patientId)
+        .order('prescription_date', ascending: false);
+
+    return rows.map((row) {
+      final medRows = (row['prescription_medicines'] as List? ?? [])
+          .cast<Map<String, dynamic>>();
+      return Prescription.fromMap(row, medicines: medRows.map(PrescriptionMedicine.fromMap).toList());
+    }).toList();
+  }
+
+  // ── Doctor: create prescription for a linked patient ─────────────────────
+
+  Future<Prescription> createForPatient({
+    required String patientId,
+    required Prescription prescription,
+    required List<PrescriptionMedicine> medicines,
+  }) async {
+    final doctorId = _uid;
+    if (doctorId == null) throw Exception('Not authenticated');
+
+    final inserted = await _client
+        .from('prescriptions')
+        .insert({
+          ...prescription.toMap(),
+          'user_id':              patientId,
+          'written_by_doctor_id': doctorId,
+        })
+        .select()
+        .single();
+
+    final newId = inserted['id'] as String;
+    List<PrescriptionMedicine> savedMeds = [];
+    if (medicines.isNotEmpty) {
+      final medRows = medicines
+          .map((m) => {...m.toMap(), 'prescription_id': newId})
+          .toList();
+      final insertedMeds = await _client
+          .from('prescription_medicines')
+          .insert(medRows)
+          .select();
+      savedMeds = insertedMeds.map((r) => PrescriptionMedicine.fromMap(r)).toList();
+    }
+    return Prescription.fromMap(inserted, medicines: savedMeds);
+  }
+
   // ── Allergy cross-check ───────────────────────────────────────────────────
   // Returns a list of medicine names that appear in the user's allergy string.
 

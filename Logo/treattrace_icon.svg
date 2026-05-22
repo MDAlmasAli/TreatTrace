@@ -1,0 +1,33 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="round">
+      <rect x="0" y="0" width="1024" height="1024" rx="224"/>
+    </clipPath>
+  </defs>
+
+  <!-- App-icon background (brand blue) -->
+  <g clip-path="url(#round)">
+    <rect x="0" y="0" width="1024" height="1024" fill="#136AFB"/>
+    <!-- subtle deeper-blue corner wash for depth -->
+    <circle cx="1024" cy="1024" r="520" fill="#0B4FCB" opacity="0.18"/>
+  </g>
+
+  <!-- White tracking pin -->
+  <path d="M512 196
+           C636 196 736 296 736 420
+           C736 560 560 690 512 828
+           C464 690 288 560 288 420
+           C288 296 388 196 512 196 Z"
+        fill="#FFFFFF"/>
+
+  <!-- Heartbeat / pulse line inside the pin (the health signal) -->
+  <path d="M360 426
+           h70
+           l34 -92
+           l52 196
+           l40 -150
+           l26 46
+           h92"
+        fill="none" stroke="#136AFB" stroke-width="34"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

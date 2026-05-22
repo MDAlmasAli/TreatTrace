@@ -1,0 +1,20 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Adaptive icon foreground: pin centered & scaled to safe zone (~66%) -->
+  <g transform="translate(512,512) scale(0.62) translate(-512,-512)">
+    <path d="M512 196
+             C636 196 736 296 736 420
+             C736 560 560 690 512 828
+             C464 690 288 560 288 420
+             C288 296 388 196 512 196 Z"
+          fill="#136AFB"/>
+    <path d="M360 426
+             h70
+             l34 -92
+             l52 196
+             l40 -150
+             l26 46
+             h92"
+          fill="none" stroke="#FFFFFF" stroke-width="34"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

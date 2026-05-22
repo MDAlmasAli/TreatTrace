@@ -44,9 +44,24 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "Logo/treattrace_icon_1024.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#136AFB"
+  adaptive_icon_foreground: "Logo/treattrace_foreground_1024.png"
+  web:
+    generate: true
+    image_path: "Logo/treattrace_icon_1024.png"
+    background_color: "#136AFB"
+    theme_color: "#136AFB"
 
 flutter:
   uses-material-design: true
 
   assets:
     - assets/images/
+    - Logo/

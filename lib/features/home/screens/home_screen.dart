@@ -14,9 +14,10 @@ import '../../auth/screens/login_screen.dart';
 import '../../prescription/screens/prescriptions_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../test_report/screens/lab_reports_screen.dart';
-import '../../doctor/screens/doctors_screen.dart';
 import '../../appointment/screens/appointments_screen.dart';
 import '../../search/screens/global_search_screen.dart';
+import '../../doctor_home/services/doctor_patient_link_service.dart';
+import '../../doctor_home/screens/linked_doctors_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // HomeScreen
@@ -41,18 +42,26 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _authService  = AuthService();
+  final _linkSvc      = DoctorPatientLinkService();
   final _searchCtrl   = TextEditingController();
   String? _avatarUrl;
+  int     _pendingDoctorRequests = 0;
 
   @override
   void initState() {
     super.initState();
     _loadAvatar();
+    _loadPendingCount();
   }
 
   Future<void> _loadAvatar() async {
     final profile = await _authService.fetchProfile();
     if (mounted) setState(() => _avatarUrl = profile?['avatar_url'] as String?);
+  }
+
+  Future<void> _loadPendingCount() async {
+    final count = await _linkSvc.countPendingIncoming();
+    if (mounted) setState(() => _pendingDoctorRequests = count);
   }
 
   String get _firstName {
@@ -89,8 +98,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _goToDoctors() async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const DoctorsScreen()),
+      MaterialPageRoute(builder: (_) => const LinkedDoctorsScreen()),
     );
+    _loadPendingCount();
   }
 
   Future<void> _goToSearch() async {
@@ -231,9 +241,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Expanded(
                           child: _DoctorsCard(
-                            label:    s.myDoctors,
-                            onTap:    _goToDoctors,
-                            animDelay: 250,
+                            label:        s.myDoctors,
+                            onTap:        _goToDoctors,
+                            animDelay:    250,
+                            pendingCount: _pendingDoctorRequests,
                           ),
                         ),
                         const SizedBox(width: 14),
@@ -507,33 +518,56 @@ class _DoctorsCard extends StatelessWidget {
   final String       label;
   final VoidCallback onTap;
   final int          animDelay;
+  final int          pendingCount;
 
   const _DoctorsCard({
     required this.label,
     required this.onTap,
     required this.animDelay,
+    this.pendingCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final accent = context.colors.accent;
+    final c      = context.colors;
+    final accent = c.accent;
     return _CardShell(
       accentColor: accent,
       onTap:       onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CardIcon(icon: Icons.person_rounded, color: accent),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _CardIcon(icon: Icons.link_rounded, color: accent),
+              if (pendingCount > 0) ...[
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color:        c.amber,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$pendingCount new',
+                    style: GoogleFonts.poppins(
+                        fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                ),
+              ],
+            ],
+          ),
           const SizedBox(height: 14),
           Text(label,
               style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: context.colors.textPrimary)),
+                  color: c.textPrimary)),
           const SizedBox(height: 4),
-          Text('Your doctor book',
+          Text('Linked doctors',
               style: GoogleFonts.poppins(
-                  fontSize: 11, color: context.colors.textSec)),
+                  fontSize: 11, color: c.textSec)),
           const Spacer(),
           Align(
             alignment: Alignment.bottomRight,
