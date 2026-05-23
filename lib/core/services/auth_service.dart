@@ -143,7 +143,6 @@ class AuthService {
     if (userId == null) return;
     await _client
         .from('profiles')
-        .update({'role': role})
-        .eq('id', userId);
+        .upsert({'id': userId, 'role': role}, onConflict: 'id');
   }
 }

@@ -225,12 +225,16 @@ class _RoleAwareRouterState extends State<_RoleAwareRouter> {
 
   Future<void> _loadRole() async {
     setState(() => _loading = true);
-    final profile = await _authService.fetchProfile();
-    if (mounted) {
-      setState(() {
-        _role = profile?['role'] as String?;
-        _loading = false;
-      });
+    try {
+      final profile = await _authService.fetchProfile();
+      if (mounted) {
+        setState(() {
+          _role = profile?['role'] as String?;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
