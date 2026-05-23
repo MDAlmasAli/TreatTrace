@@ -474,37 +474,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 1. Medical Identity
-                        _SectionLabel(text: s.medicalIdentity),
-                        const SizedBox(height: 12),
-                        _MedicalIdentityCard(
-                          profile:  _health,
-                          onAddTap: _goToEdit,
-                        ).animate().fadeIn(delay: 80.ms).slideY(begin: 0.06),
-
-                        const SizedBox(height: 24),
-
-                        // 2. Health Records
-                        _SectionLabel(text: s.healthRecords),
-                        const SizedBox(height: 12),
-                        _HealthRecordsCard(
-                          profile:   _health,
-                          onEditTap: _goToEdit,
-                        ).animate().fadeIn(delay: 140.ms).slideY(begin: 0.06),
-
-                        const SizedBox(height: 24),
-
-                        // 3. Emergency Contact
-                        _SectionLabel(text: s.emergencyContact),
-                        const SizedBox(height: 12),
-                        _EmergencyContactCard(
-                          profile:  _health,
-                          onAddTap: _goToEdit,
-                        ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.06),
-
-                        const SizedBox(height: 24),
-
-                        // 4. Doctor Credentials (only for doctors)
+                        // 1. Doctor Credentials (doctors only — shown first for prominence)
                         if (_account?['role'] == 'doctor') ...[
                           _SectionLabel(text: 'My Credentials'),
                           const SizedBox(height: 12),
@@ -516,9 +486,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               );
                             },
-                          ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.06),
+                          ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06),
                           const SizedBox(height: 24),
                         ],
+
+                        // 2. Medical Identity
+                        _SectionLabel(text: s.medicalIdentity),
+                        const SizedBox(height: 12),
+                        _MedicalIdentityCard(
+                          profile:  _health,
+                          onAddTap: _goToEdit,
+                        ).animate().fadeIn(delay: 80.ms).slideY(begin: 0.06),
+
+                        const SizedBox(height: 24),
+
+                        // 3. Health Records
+                        _SectionLabel(text: s.healthRecords),
+                        const SizedBox(height: 12),
+                        _HealthRecordsCard(
+                          profile:   _health,
+                          onEditTap: _goToEdit,
+                        ).animate().fadeIn(delay: 140.ms).slideY(begin: 0.06),
+
+                        const SizedBox(height: 24),
+
+                        // 4. Emergency Contact
+                        _SectionLabel(text: s.emergencyContact),
+                        const SizedBox(height: 12),
+                        _EmergencyContactCard(
+                          profile:  _health,
+                          onAddTap: _goToEdit,
+                        ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.06),
+
+                        const SizedBox(height: 24),
 
                         // 5. Account Settings
                         _SectionLabel(text: s.accountSettings),
@@ -1580,6 +1580,7 @@ class _DoctorCredentialsSummaryCardState
     extends State<_DoctorCredentialsSummaryCard> {
   final _service = DoctorVerificationService();
   Map<String, dynamic>? _data;
+  bool _loading = true;
 
   @override
   void initState() {
@@ -1589,101 +1590,158 @@ class _DoctorCredentialsSummaryCardState
 
   Future<void> _load() async {
     final data = await _service.fetchMyVerification();
-    if (mounted) setState(() => _data = data);
+    if (mounted) setState(() { _data = data; _loading = false; });
   }
 
   @override
   Widget build(BuildContext context) {
-    final c           = context.colors;
-    final editStatus  = _data?['edit_status'] as String?;
-    final hasPending  = editStatus == 'pending';
-    final wasRejected = editStatus == 'rejected';
+    final c          = context.colors;
+    final editStatus = _data?['edit_status'] as String?;
+    final status     = _data?['status'] as String? ?? 'pending';
+    final hasPendingEdit = editStatus == 'pending';
+    final editRejected   = editStatus == 'rejected';
+
+    // status badge
+    final (badgeLabel, badgeColor) = switch (status) {
+      'approved' when hasPendingEdit => ('Edit Pending', c.amber),
+      'approved' when editRejected   => ('Edit Rejected', c.red),
+      'approved'                     => ('Verified', c.green),
+      'rejected'                     => ('Rejected', c.red),
+      _                              => ('Pending Review', c.amber),
+    };
 
     return _DarkCard(
       accentColor: c.accent,
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(19),
-          onTap: widget.onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            child: Row(
-              children: [
-                Container(
-                  width: 42, height: 42,
-                  decoration: BoxDecoration(
-                    color: c.accent.withAlpha(15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(Icons.verified_user_rounded, color: c.accent, size: 22),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row
+          Row(
+            children: [
+              Container(
+                width: 38, height: 38,
+                decoration: BoxDecoration(
+                  color: c.accent.withAlpha(15),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text('Doctor Credentials',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: c.textPrimary)),
-                          if (hasPending) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: c.amber.withAlpha(20),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: c.amber.withAlpha(60)),
-                              ),
-                              child: Text('Pending',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      color: c.amber)),
-                            ),
-                          ],
-                          if (wasRejected) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: c.red.withAlpha(20),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: c.red.withAlpha(60)),
-                              ),
-                              child: Text('Edit Rejected',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      color: c.red)),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _data == null
-                            ? 'Loading...'
-                            : '${_data!['specialty'] ?? ''} · ${_data!['hospital'] ?? ''}',
-                        style: GoogleFonts.poppins(fontSize: 12, color: c.textSec),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
+                child: Icon(Icons.verified_user_rounded, color: c.accent, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text('Professional Credentials',
+                    style: GoogleFonts.poppins(
+                        fontSize: 14, fontWeight: FontWeight.w700, color: c.textPrimary)),
+              ),
+              // Status badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  color: badgeColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: badgeColor.withAlpha(60)),
                 ),
-                Icon(Icons.chevron_right_rounded, color: c.textMuted, size: 22),
-              ],
-            ),
+                child: Text(badgeLabel,
+                    style: GoogleFonts.poppins(
+                        fontSize: 10, fontWeight: FontWeight.w700, color: badgeColor)),
+              ),
+            ],
           ),
-        ),
+
+          if (_loading) ...[
+            const SizedBox(height: 16),
+            Center(child: SizedBox(width: 20, height: 20,
+                child: CircularProgressIndicator(color: c.accent, strokeWidth: 2))),
+          ] else if (_data == null) ...[
+            const SizedBox(height: 12),
+            Text('No credentials submitted yet.',
+                style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted)),
+          ] else ...[
+            const SizedBox(height: 14),
+            Divider(color: c.border, height: 1),
+            const SizedBox(height: 12),
+            _CredRow(icon: Icons.badge_rounded,            label: 'BMDC No.',   value: _data!['bmdc_number']  ?? '-'),
+            _CredRow(icon: Icons.medical_services_rounded, label: 'Specialty',  value: _data!['specialty']    ?? '-'),
+            _CredRow(icon: Icons.local_hospital_rounded,   label: 'Hospital',   value: _data!['hospital']     ?? '-'),
+            _CredRow(icon: Icons.perm_identity_rounded,    label: 'NID/Pass.',  value: _data!['nid_passport'] ?? '-'),
+            if ((_data!['additional_info'] as String?)?.isNotEmpty == true)
+              _CredRow(icon: Icons.notes_rounded, label: 'Other', value: _data!['additional_info'] as String),
+
+            if (editRejected && (_data!['edit_rejection_reason'] as String?)?.isNotEmpty == true) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: c.red.withAlpha(12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: c.red.withAlpha(40)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, color: c.red, size: 14),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text('Rejected: ${_data!['edit_rejection_reason']}',
+                          style: GoogleFonts.poppins(fontSize: 11, color: c.red, height: 1.4)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: widget.onTap,
+                icon: Icon(hasPendingEdit
+                    ? Icons.hourglass_top_rounded
+                    : Icons.edit_rounded,
+                    size: 15),
+                label: Text(hasPendingEdit ? 'View Pending Edit' : 'View / Edit Credentials',
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: c.accent,
+                  side: BorderSide(color: c.accent.withAlpha(80)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CredRow extends StatelessWidget {
+  final IconData icon;
+  final String   label;
+  final String   value;
+  const _CredRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 13, color: c.textMuted),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: 70,
+            child: Text('$label: ',
+                style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted)),
+          ),
+          Expanded(
+            child: Text(value,
+                style: GoogleFonts.poppins(
+                    fontSize: 12, fontWeight: FontWeight.w600, color: c.textPrimary)),
+          ),
+        ],
       ),
     );
   }
