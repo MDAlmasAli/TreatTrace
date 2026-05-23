@@ -138,6 +138,10 @@ class AuthService {
   // ── Update Role ───────────────────────────────────────────────────────────
 
   /// Saves the user's role ('patient' or 'doctor') to the profiles table.
+  Future<void> deleteAccount() async {
+    await _client.rpc('delete_own_account');
+  }
+
   Future<void> updateRole(String role) async {
     final userId = currentUser?.id;
     if (userId == null) return;

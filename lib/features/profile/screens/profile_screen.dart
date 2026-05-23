@@ -323,6 +323,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ctrl.dispose();
   }
 
+  // ── Delete Account ────────────────────────────────────────────────────────
+  Future<void> _confirmDeleteAccount() async {
+    final c = context.colors;
+    final ctrl = TextEditingController();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Delete Account',
+            style: GoogleFonts.poppins(
+                color: c.red, fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This will permanently delete your account and ALL your data. '
+              'This action cannot be undone.',
+              style: GoogleFonts.poppins(fontSize: 13, color: c.textSec, height: 1.5),
+            ),
+            const SizedBox(height: 16),
+            Text('Type DELETE to confirm:',
+                style: GoogleFonts.poppins(
+                    fontSize: 12, fontWeight: FontWeight.w600, color: c.textPrimary)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: ctrl,
+              style: GoogleFonts.poppins(fontSize: 14, color: c.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'DELETE',
+                hintStyle: GoogleFonts.poppins(color: c.textMuted),
+                filled: true, fillColor: c.surface,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: c.border)),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: c.border)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: c.red, width: 1.5)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: c.textSec)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: c.red, foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text('Delete', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+
+    ctrl.dispose();
+    if (ok != true) return;
+
+    try {
+      await _authService.deleteAccount();
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (_) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete account: $e')),
+        );
+      }
+    }
+  }
+
   // ── Logout ────────────────────────────────────────────────────────────────
   Future<void> _confirmLogout() async {
     final c = context.colors;
@@ -423,6 +509,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onChangePassword: _showChangePasswordDialog,
                           onChangeEmail:    _showChangeEmailDialog,
                           onChangePhone:    _showChangePhoneDialog,
+                          onDeleteAccount:  _confirmDeleteAccount,
                         ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.06),
 
                         const SizedBox(height: 24),
@@ -1157,11 +1244,13 @@ class _AccountSettingsCard extends StatelessWidget {
   final VoidCallback onChangePassword;
   final VoidCallback onChangeEmail;
   final VoidCallback onChangePhone;
+  final VoidCallback onDeleteAccount;
 
   const _AccountSettingsCard({
     required this.onChangePassword,
     required this.onChangeEmail,
     required this.onChangePhone,
+    required this.onDeleteAccount,
   });
 
   @override
@@ -1179,21 +1268,26 @@ class _AccountSettingsCard extends StatelessWidget {
             onTap:     onChangePassword,
             isFirst:   true,
           ),
-          Divider(height: 1, indent: 16, endIndent: 16,
-              color: c.border, thickness: 1),
+          Divider(height: 1, indent: 16, endIndent: 16, color: c.border, thickness: 1),
           _SettingsTile(
             icon:      Icons.email_rounded,
             iconColor: c.cyan,
             title:     'Change Email',
             onTap:     onChangeEmail,
           ),
-          Divider(height: 1, indent: 16, endIndent: 16,
-              color: c.border, thickness: 1),
+          Divider(height: 1, indent: 16, endIndent: 16, color: c.border, thickness: 1),
           _SettingsTile(
             icon:      Icons.phone_rounded,
             iconColor: c.amber,
             title:     'Change Phone Number',
             onTap:     onChangePhone,
+          ),
+          Divider(height: 1, indent: 16, endIndent: 16, color: c.border, thickness: 1),
+          _SettingsTile(
+            icon:      Icons.delete_forever_rounded,
+            iconColor: c.red,
+            title:     'Delete Account',
+            onTap:     onDeleteAccount,
             isLast:    true,
           ),
         ],
