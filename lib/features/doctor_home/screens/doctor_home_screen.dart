@@ -14,6 +14,7 @@ class DoctorHomeScreen extends StatefulWidget {
   final void Function(String) onLocaleChanged;
   final String currentTheme;
   final String currentLocale;
+  final String verificationStatus;
 
   const DoctorHomeScreen({
     super.key,
@@ -21,6 +22,7 @@ class DoctorHomeScreen extends StatefulWidget {
     required this.onLocaleChanged,
     required this.currentTheme,
     required this.currentLocale,
+    this.verificationStatus = 'approved',
   });
 
   @override
@@ -141,89 +143,91 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             greeting: _greeting,
             firstName: _firstName,
             onLogout: _confirmLogout,
+            verificationStatus: widget.verificationStatus,
           ),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Stats row
-                  _StatsRow().animate().fadeIn(delay: 100.ms),
-
-                  const SizedBox(height: 28),
-
-                  Text(
-                    'Quick Actions',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: c.textPrimary,
-                    ),
-                  ).animate().fadeIn(delay: 140.ms),
-
-                  const SizedBox(height: 16),
-
-                  IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: widget.verificationStatus == 'pending'
+                ? _PendingBody()
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: _ActionCard(
-                            icon: Icons.calendar_today_rounded,
-                            label: "Today's Schedule",
-                            subtitle: 'View appointments',
-                            accentColor: c.accent,
-                            onTap: () => _showComingSoon("Today's Schedule"),
-                          ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.08),
+                        _StatsRow().animate().fadeIn(delay: 100.ms),
+
+                        const SizedBox(height: 28),
+
+                        Text(
+                          'Quick Actions',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: c.textPrimary,
+                          ),
+                        ).animate().fadeIn(delay: 140.ms),
+
+                        const SizedBox(height: 16),
+
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _ActionCard(
+                                  icon: Icons.calendar_today_rounded,
+                                  label: "Today's Schedule",
+                                  subtitle: 'View appointments',
+                                  accentColor: c.accent,
+                                  onTap: () => _showComingSoon("Today's Schedule"),
+                                ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.08),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: _ActionCard(
+                                  icon: Icons.people_alt_rounded,
+                                  label: 'My Patients',
+                                  subtitle: 'Patient records',
+                                  accentColor: c.green,
+                                  onTap: _goMyPatients,
+                                ).animate().fadeIn(delay: 220.ms).slideY(begin: 0.08),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: _ActionCard(
-                            icon: Icons.people_alt_rounded,
-                            label: 'My Patients',
-                            subtitle: 'Patient records',
-                            accentColor: c.green,
-                            onTap: _goMyPatients,
-                          ).animate().fadeIn(delay: 220.ms).slideY(begin: 0.08),
+
+                        const SizedBox(height: 14),
+
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _ActionCard(
+                                  icon: Icons.edit_document,
+                                  label: 'Write Prescription',
+                                  subtitle: 'Select a patient',
+                                  accentColor: c.amber,
+                                  onTap: _goMyPatients,
+                                ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.08),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: _ActionCard(
+                                  icon: Icons.science_rounded,
+                                  label: 'Test Reports',
+                                  subtitle: 'Lab results',
+                                  accentColor: c.red,
+                                  onTap: () => _showComingSoon('Test Reports'),
+                                ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.08),
+                              ),
+                            ],
+                          ),
                         ),
+
+                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 14),
-
-                  IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: _ActionCard(
-                            icon: Icons.edit_document,
-                            label: 'Write Prescription',
-                            subtitle: 'Select a patient',
-                            accentColor: c.amber,
-                            onTap: _goMyPatients,
-                          ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.08),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: _ActionCard(
-                            icon: Icons.science_rounded,
-                            label: 'Test Reports',
-                            subtitle: 'Lab results',
-                            accentColor: c.red,
-                            onTap: () => _showComingSoon('Test Reports'),
-                          ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.08),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
           ),
         ],
       ),
@@ -242,11 +246,13 @@ class _DoctorHeader extends StatelessWidget {
   final String greeting;
   final String firstName;
   final VoidCallback onLogout;
+  final String verificationStatus;
 
   const _DoctorHeader({
     required this.greeting,
     required this.firstName,
     required this.onLogout,
+    required this.verificationStatus,
   });
 
   @override
@@ -314,63 +320,100 @@ class _DoctorHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          // Doctor role badge
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF16A34A).withAlpha(12),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: const Color(0xFF16A34A).withAlpha(50), width: 1),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF16A34A).withAlpha(20),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.verified_rounded,
-                      color: Color(0xFF16A34A), size: 18),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Verified Healthcare Professional',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      color: c.textSec,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF16A34A).withAlpha(20),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Doctor',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF16A34A),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Verification status badge
+          _VerificationBadge(status: verificationStatus),
         ],
       ),
     )
         .animate()
         .fadeIn(duration: 500.ms)
         .slideY(begin: -0.06, end: 0, duration: 500.ms);
+  }
+}
+
+class _VerificationBadge extends StatelessWidget {
+  final String status;
+  const _VerificationBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final isPending  = status == 'pending';
+    final badgeColor = isPending ? c.amber : c.green;
+    final icon       = isPending ? Icons.hourglass_top_rounded : Icons.verified_rounded;
+    final label      = isPending ? 'Pending Verification' : 'Verified Healthcare Professional';
+    final badge      = isPending ? 'Pending' : 'Doctor';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: badgeColor.withAlpha(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: badgeColor.withAlpha(50)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(color: badgeColor.withAlpha(20), shape: BoxShape.circle),
+            child: Icon(icon, color: badgeColor, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(label,
+                style: GoogleFonts.poppins(fontSize: 13, color: c.textSec)),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: badgeColor.withAlpha(20),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(badge,
+                style: GoogleFonts.poppins(
+                    fontSize: 11, fontWeight: FontWeight.w600, color: badgeColor)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingBody extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80, height: 80,
+              decoration: BoxDecoration(
+                color: c.amber.withAlpha(15),
+                shape: BoxShape.circle,
+                border: Border.all(color: c.amber.withAlpha(50)),
+              ),
+              child: Icon(Icons.hourglass_top_rounded, color: c.amber, size: 38),
+            ),
+            const SizedBox(height: 24),
+            Text('Verification Pending',
+                style: GoogleFonts.poppins(
+                    fontSize: 20, fontWeight: FontWeight.w700, color: c.textPrimary)),
+            const SizedBox(height: 10),
+            Text(
+              'Your medical credentials are under review by our admin team. '
+              'You will get full access once approved.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(fontSize: 13, color: c.textSec, height: 1.6),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

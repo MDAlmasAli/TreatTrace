@@ -28,8 +28,11 @@ import 'core/l10n/app_strings.dart';
 import 'core/preferences/app_preferences.dart';
 import 'core/services/auth_service.dart';
 import 'core/theme/app_theme.dart';
+import 'core/services/doctor_verification_service.dart';
+import 'features/admin/screens/admin_home_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/role_selection_screen.dart';
+import 'features/doctor/screens/doctor_verification_submit_screen.dart';
 import 'features/home/screens/home_screen.dart';
 import 'features/doctor_home/screens/doctor_home_screen.dart';
 
@@ -213,9 +216,12 @@ class _RoleAwareRouter extends StatefulWidget {
 }
 
 class _RoleAwareRouterState extends State<_RoleAwareRouter> {
-  final _authService = AuthService();
-  String? _role;
-  bool _loading = true;
+  final _authService    = AuthService();
+  final _verifyService  = DoctorVerificationService();
+
+  String?               _role;
+  Map<String, dynamic>? _verification;
+  bool                  _loading = true;
 
   @override
   void initState() {
@@ -227,10 +233,18 @@ class _RoleAwareRouterState extends State<_RoleAwareRouter> {
     setState(() => _loading = true);
     try {
       final profile = await _authService.fetchProfile();
+      final role    = profile?['role'] as String?;
+
+      Map<String, dynamic>? verification;
+      if (role == 'doctor') {
+        verification = await _verifyService.fetchMyVerification();
+      }
+
       if (mounted) {
         setState(() {
-          _role = profile?['role'] as String?;
-          _loading = false;
+          _role         = role;
+          _verification = verification;
+          _loading      = false;
         });
       }
     } catch (_) {
@@ -260,12 +274,25 @@ class _RoleAwareRouterState extends State<_RoleAwareRouter> {
       return RoleSelectionScreen(onRoleSelected: _loadRole);
     }
 
+    if (_role == 'admin') {
+      return const AdminHomeScreen();
+    }
+
     if (_role == 'doctor') {
+      final status = _verification?['status'] as String?;
+      // No submission yet, or previously rejected → show submit form
+      if (status == null || status == 'rejected') {
+        return DoctorVerificationSubmitScreen(
+          onSubmitted:     _loadRole,
+          rejectionReason: _verification?['rejection_reason'] as String?,
+        );
+      }
       return DoctorHomeScreen(
-        onThemeChanged:  widget.onThemeChanged,
-        onLocaleChanged: widget.onLocaleChanged,
-        currentTheme:    widget.currentTheme,
-        currentLocale:   widget.currentLocale,
+        verificationStatus: status,
+        onThemeChanged:     widget.onThemeChanged,
+        onLocaleChanged:    widget.onLocaleChanged,
+        currentTheme:       widget.currentTheme,
+        currentLocale:      widget.currentLocale,
       );
     }
 
