@@ -26,7 +26,7 @@ class AccountService {
 
     final data = await _client
         .from('profiles')
-        .select('full_name, email, avatar_url, phone')
+        .select('full_name, email, avatar_url, phone, role')
         .eq('id', uid)
         .maybeSingle();
 

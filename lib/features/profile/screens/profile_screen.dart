@@ -11,8 +11,10 @@ import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/account_service.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/doctor_verification_service.dart';
 import '../../../core/services/profile_service.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../doctor/screens/doctor_credentials_screen.dart';
 import '../models/health_profile.dart';
 import 'edit_profile_screen.dart';
 
@@ -502,7 +504,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                         const SizedBox(height: 24),
 
-                        // 4. Account Settings (NEW)
+                        // 4. Doctor Credentials (only for doctors)
+                        if (_account?['role'] == 'doctor') ...[
+                          _SectionLabel(text: 'My Credentials'),
+                          const SizedBox(height: 12),
+                          _DoctorCredentialsSummaryCard(
+                            onTap: () async {
+                              await Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const DoctorCredentialsScreen(),
+                                ),
+                              );
+                            },
+                          ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.06),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // 5. Account Settings
                         _SectionLabel(text: s.accountSettings),
                         const SizedBox(height: 12),
                         _AccountSettingsCard(
@@ -1542,6 +1560,129 @@ class _ThemeChip extends StatelessWidget {
           icon,
           size: 16,
           color: selected ? c.purpleBright : c.textMuted,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Doctor credentials summary card ──────────────────────────────────────────
+class _DoctorCredentialsSummaryCard extends StatefulWidget {
+  final VoidCallback onTap;
+  const _DoctorCredentialsSummaryCard({required this.onTap});
+
+  @override
+  State<_DoctorCredentialsSummaryCard> createState() =>
+      _DoctorCredentialsSummaryCardState();
+}
+
+class _DoctorCredentialsSummaryCardState
+    extends State<_DoctorCredentialsSummaryCard> {
+  final _service = DoctorVerificationService();
+  Map<String, dynamic>? _data;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final data = await _service.fetchMyVerification();
+    if (mounted) setState(() => _data = data);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c           = context.colors;
+    final editStatus  = _data?['edit_status'] as String?;
+    final hasPending  = editStatus == 'pending';
+    final wasRejected = editStatus == 'rejected';
+
+    return _DarkCard(
+      accentColor: c.accent,
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(19),
+          onTap: widget.onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 42, height: 42,
+                  decoration: BoxDecoration(
+                    color: c.accent.withAlpha(15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.verified_user_rounded, color: c.accent, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text('Doctor Credentials',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: c.textPrimary)),
+                          if (hasPending) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: c.amber.withAlpha(20),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: c.amber.withAlpha(60)),
+                              ),
+                              child: Text('Pending',
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      color: c.amber)),
+                            ),
+                          ],
+                          if (wasRejected) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: c.red.withAlpha(20),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: c.red.withAlpha(60)),
+                              ),
+                              child: Text('Edit Rejected',
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      color: c.red)),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _data == null
+                            ? 'Loading...'
+                            : '${_data!['specialty'] ?? ''} · ${_data!['hospital'] ?? ''}',
+                        style: GoogleFonts.poppins(fontSize: 12, color: c.textSec),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: c.textMuted, size: 22),
+              ],
+            ),
+          ),
         ),
       ),
     );
