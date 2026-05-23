@@ -236,6 +236,29 @@ class PrescriptionService {
     return Prescription.fromMap(inserted, medicines: savedMeds);
   }
 
+  // ── Doctor: update own prescription + replace medicines ──────────────────
+
+  Future<void> updateForDoctor({
+    required String prescriptionId,
+    required String? diagnosis,
+    required DateTime date,
+    required String? notes,
+    required List<PrescriptionMedicine> medicines,
+  }) async {
+    final doctorId = _uid;
+    if (doctorId == null) throw Exception('Not authenticated');
+
+    await _client.from('prescriptions').update({
+      'diagnosis':         diagnosis,
+      'prescription_date': date.toIso8601String().substring(0, 10),
+      'notes':             notes,
+    })
+        .eq('id', prescriptionId)
+        .eq('written_by_doctor_id', doctorId); // safety: only own prescriptions
+
+    await replaceMedicines(prescriptionId, medicines);
+  }
+
   // ── Allergy cross-check ───────────────────────────────────────────────────
   // Returns a list of medicine names that appear in the user's allergy string.
 

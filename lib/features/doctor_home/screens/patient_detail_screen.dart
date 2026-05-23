@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/profile_service.dart';
@@ -45,6 +46,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   List<Appointment>  _appts  = [];
   bool               _loading = true;
 
+  final String _currentDoctorId =
+      Supabase.instance.client.auth.currentUser?.id ?? '';
+
   @override
   void initState() {
     super.initState();
@@ -74,13 +78,24 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   }
 
   Future<void> _goWriteRx() async {
-    await Navigator.of(context).push(MaterialPageRoute(
+    final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
       builder: (_) => DoctorWritePrescriptionScreen(
         patientId:   widget.patientId,
         patientName: widget.patientName,
       ),
     ));
-    _load();
+    if (result == true) _load();
+  }
+
+  Future<void> _goEditRx(Prescription rx) async {
+    final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
+      builder: (_) => DoctorWritePrescriptionScreen(
+        patientId:   widget.patientId,
+        patientName: widget.patientName,
+        existing:    rx,
+      ),
+    ));
+    if (result == true) _load();
   }
 
   Future<void> _goAddAppt() async {
@@ -125,8 +140,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         _HealthProfileSection(profile: _profile)
                             .animate().fadeIn(delay: 100.ms),
                         const SizedBox(height: 20),
-                        _PrescriptionsSection(list: _rxList)
-                            .animate().fadeIn(delay: 150.ms),
+                        _PrescriptionsSection(
+                          list:            _rxList,
+                          currentDoctorId: _currentDoctorId,
+                          onEdit:          _goEditRx,
+                        ).animate().fadeIn(delay: 150.ms),
                         const SizedBox(height: 20),
                         _LabReportsSection(list: _labs)
                             .animate().fadeIn(delay: 200.ms),
@@ -413,8 +431,15 @@ class _ProfileRow extends StatelessWidget {
 // ── Prescriptions section ─────────────────────────────────────────────────────
 
 class _PrescriptionsSection extends StatelessWidget {
-  final List<Prescription> list;
-  const _PrescriptionsSection({required this.list});
+  final List<Prescription>          list;
+  final String                      currentDoctorId;
+  final Future<void> Function(Prescription) onEdit;
+
+  const _PrescriptionsSection({
+    required this.list,
+    required this.currentDoctorId,
+    required this.onEdit,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -432,7 +457,11 @@ class _PrescriptionsSection extends StatelessWidget {
         if (list.isEmpty)
           _EmptySection(message: 'No prescriptions found.')
         else
-          ...list.take(5).map((rx) => _RxTile(rx: rx)),
+          ...list.take(5).map((rx) => _RxTile(
+            rx:             rx,
+            canEdit:        rx.writtenByDoctorId == currentDoctorId,
+            onEdit:         () => onEdit(rx),
+          )),
       ],
     );
   }
@@ -440,7 +469,14 @@ class _PrescriptionsSection extends StatelessWidget {
 
 class _RxTile extends StatelessWidget {
   final Prescription rx;
-  const _RxTile({required this.rx});
+  final bool         canEdit;
+  final VoidCallback onEdit;
+
+  const _RxTile({
+    required this.rx,
+    required this.canEdit,
+    required this.onEdit,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -479,6 +515,7 @@ class _RxTile extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
@@ -491,6 +528,20 @@ class _RxTile extends StatelessWidget {
                   color: rx.medicines.isEmpty || rx.isActive ? c.green : c.textMuted),
             ),
           ),
+          if (canEdit) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: onEdit,
+              child: Container(
+                width: 32, height: 32,
+                decoration: BoxDecoration(
+                  color:        c.accent.withAlpha(15),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(Icons.edit_rounded, size: 15, color: c.accent),
+              ),
+            ),
+          ],
         ],
       ),
     );

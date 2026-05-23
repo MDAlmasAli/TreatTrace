@@ -9,6 +9,8 @@ class PrescriptionMedicine {
   final bool     afternoon;
   final bool     evening;
   final bool     night;
+  final bool     beforeMeal;
+  final bool     afterMeal;
   final int?     durationDays;
   final String?  instructions;
   final DateTime? startDate;
@@ -18,10 +20,12 @@ class PrescriptionMedicine {
     required this.prescriptionId,
     required this.medicineName,
     this.dose,
-    this.morning   = false,
-    this.afternoon = false,
-    this.evening   = false,
-    this.night     = false,
+    this.morning    = false,
+    this.afternoon  = false,
+    this.evening    = false,
+    this.night      = false,
+    this.beforeMeal = false,
+    this.afterMeal  = false,
     this.durationDays,
     this.instructions,
     this.startDate,
@@ -36,6 +40,12 @@ class PrescriptionMedicine {
     if (evening)   parts.add('Evening');
     if (night)     parts.add('Night');
     return parts.isEmpty ? 'As directed' : parts.join(' · ');
+  }
+
+  String get mealDisplay {
+    if (beforeMeal) return 'Before meal';
+    if (afterMeal)  return 'After meal';
+    return 'Any time';
   }
 
   // e.g. "1-0-0-1" (morning-afternoon-evening-night)
@@ -75,8 +85,10 @@ class PrescriptionMedicine {
         afternoon:      (m['afternoon']      as bool?) ?? false,
         evening:        (m['evening']        as bool?) ?? false,
         night:          (m['night']          as bool?) ?? false,
+        beforeMeal:     (m['before_meal']    as bool?) ?? false,
+        afterMeal:      (m['after_meal']     as bool?) ?? false,
         durationDays:   m['duration_days']   as int?,
-        instructions:   m['instructions']   as String?,
+        instructions:   m['instructions']    as String?,
         startDate: m['start_date'] != null
             ? DateTime.tryParse(m['start_date'] as String)
             : null,
@@ -90,6 +102,8 @@ class PrescriptionMedicine {
         'afternoon':       afternoon,
         'evening':         evening,
         'night':           night,
+        'before_meal':     beforeMeal,
+        'after_meal':      afterMeal,
         'duration_days':   durationDays,
         'instructions':    instructions,
         'start_date':      startDate?.toIso8601String().substring(0, 10),
@@ -104,6 +118,8 @@ class PrescriptionMedicine {
     bool?     afternoon,
     bool?     evening,
     bool?     night,
+    bool?     beforeMeal,
+    bool?     afterMeal,
     int?      durationDays,
     String?   instructions,
     DateTime? startDate,
@@ -117,6 +133,8 @@ class PrescriptionMedicine {
         afternoon:      afternoon      ?? this.afternoon,
         evening:        evening        ?? this.evening,
         night:          night          ?? this.night,
+        beforeMeal:     beforeMeal     ?? this.beforeMeal,
+        afterMeal:      afterMeal      ?? this.afterMeal,
         durationDays:   durationDays   ?? this.durationDays,
         instructions:   instructions   ?? this.instructions,
         startDate:      startDate      ?? this.startDate,
