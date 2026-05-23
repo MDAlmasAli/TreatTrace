@@ -19,15 +19,26 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.10 — Active Development |
+| **Stage** | v0.11 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal |
-| **Backend Status** | Auth · Profile · Prescriptions + Medicines · Lab Reports · Doctors · Appointments · Doctor–Patient Links |
+| **Backend Status** | Auth · Profile · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links |
 | **Platform** | Android · iOS |
 | **Last Updated** | 2026-05-23 |
 
 ---
 
 ## Latest Updates (2026-05-23)
+
+**v0.11 — Doctor-Linked Test Reports + Full Doctor View Access**
+
+- **Test Report renamed throughout doctor portal** — "Lab Report / Lab Order" renamed to "Test Report" across all doctor-facing screens (`DoctorLabReportScreen`, `PatientDetailScreen` section header)
+- **Doctor → Patient Detail: all test reports tappable** — any test report in a patient's file now opens a full read-only detail view (category, date, doctor name, notes, uploaded images); previously only the edit button was shown for own reports with no way to view others
+- **Edit access scoped by `ordered_by_doctor_id`** — green ✏️ edit button appears only on reports where `ordered_by_doctor_id == currentDoctorId`; all other reports are view-only with full content visible
+- **Patient → Add Test Report: test name field removed** — category now serves as the report identifier; `test_name` is auto-derived from the selected category on save; custom category dialog retained for non-preset types
+- **Doctor autocomplete in patient's test report form** — "Doctor Name" field now shows suggestions from the patient's accepted linked doctors (fetched from `doctor_patient_links`); selecting a doctor stores their UUID in `ordered_by_doctor_id`, granting them edit access to that report from their patient view
+- **`ordered_by_doctor_id` settable by patients** — patients can now link one of their My Doctors to a self-uploaded test report; the linked doctor immediately sees the edit button on that report in the patient detail screen
+- **RLS confirmed** — `doctor_reads_patient_labs` SELECT policy already covers doctors viewing linked patient reports; `doctor_updates_own_lab_order` UPDATE policy enforces the edit scope
+- `dart analyze` passes clean across all changed files
 
 **v0.10 — Plus Jakarta Sans Font + Animated Splash Screen**
 
@@ -110,6 +121,10 @@
 
 ## Update History
 
+- `[2026-05-23]` Doctor-linked test reports — patient can link a doctor from their accepted list to a test report; doctor gains edit access via `ordered_by_doctor_id`
+- `[2026-05-23]` Doctor patient view: all test reports tappable with full read-only detail (images, notes); edit button shown only for own reports
+- `[2026-05-23]` Test name field removed from patient add/edit form; category auto-used as test name
+- `[2026-05-23]` "Lab Report / Lab Order" renamed to "Test Report" throughout doctor portal
 - `[2026-05-23]` Plus Jakarta Sans bundled font — variable TTF in `assets/fonts/`; theme fully migrated; 400/500/600/700 weights registered
 - `[2026-05-23]` Animated "Clarity Reveal" splash — pin scale-in, ECG heartbeat draw, wordmark ClipRect wipe, tagline fade, 2 500 ms minimum display
 - `[2026-05-22]` Doctor Portal — dedicated doctor dashboard, My Patients, Patient Detail, Search Patient, Doctor Write Prescription, Doctor Add Appointment
@@ -206,9 +221,10 @@ Built as a portfolio project demonstrating real-world Flutter + Supabase integra
 - **Search** by doctor name or diagnosis; **Tab filter** — All / Active / Expired
 
 ### Test Report Viewer
-- Add / Edit / Delete lab/test reports
-- Category picker — preset types (Blood Test, Urine Test, X-Ray, MRI/CT Scan, Ultrasound, ECG/EEG, Pathology, Other) + custom user-defined categories
-- Test date, referring doctor, lab/hospital, notes
+- Add / Edit / Delete test reports
+- Category picker — preset types (Blood Test, Urine Test, X-Ray, MRI/CT Scan, Ultrasound, ECG/EEG, Pathology, Other) + custom user-defined categories; category auto-used as the report name (no separate test name field)
+- Test date, doctor name, lab/hospital, notes
+- **Doctor autocomplete** — Doctor Name field shows suggestions from the patient's accepted linked doctors; selecting one stores `ordered_by_doctor_id`, granting that doctor edit access from the doctor portal
 - Multi-image upload per report (camera + gallery)
 - Optional prescription link
 - Search by test name, doctor, hospital, category
@@ -235,10 +251,15 @@ Built as a portfolio project demonstrating real-world Flutter + Supabase integra
 ### Doctor Portal (Role: Doctor)
 - **Doctor Home** — dedicated dashboard with greeting, quick actions (My Patients), and profile nav
 - **My Patients** — list of all patients linked to this doctor; search by name
-- **Patient Detail** — view a patient's full health profile, prescriptions, and appointments
+- **Patient Detail** — full view of a patient's health profile, prescriptions, test reports, and appointments
+  - **Test Reports** — all reports are tappable; opens full read-only detail (images, notes, category); green ✏️ edit button only when `ordered_by_doctor_id == doctorId`
+  - **Prescriptions** — view all; edit button only when `written_by_doctor_id == doctorId`
+- **Order Test** — doctor can create a new test report for a linked patient; doctor info auto-filled from verified credentials
+- **Edit Test Report** — doctor can edit any test report they ordered or that the patient linked to them
 - **Search Patient** — find any registered patient and establish a doctor–patient link
-- **Doctor Write Prescription** — create a prescription directly into a patient's medical record
+- **Doctor Write Prescription** — create a prescription directly into a patient's medical record; doctor info auto-filled from `doctor_verifications`
 - **Doctor Add Appointment** — log an appointment into a patient's timeline
+- Edit access scoped by `ordered_by_doctor_id` (test reports) and `written_by_doctor_id` (prescriptions) at both the UI layer and Supabase RLS layer
 - RLS ensures doctors only see their own linked patients; patients see only their own links
 
 ### Role-Based Routing
@@ -349,6 +370,7 @@ lib/
 │   │   │   ├── search_patient_screen.dart
 │   │   │   ├── linked_doctors_screen.dart
 │   │   │   ├── doctor_write_prescription_screen.dart
+│   │   │   ├── doctor_lab_report_screen.dart       # Order / edit test reports for patients
 │   │   │   └── doctor_add_appointment_screen.dart
 │   │   └── services/
 │   │       └── doctor_patient_link_service.dart
@@ -553,14 +575,21 @@ Auto-created for every new user via a Supabase trigger.
 |---|---|---|
 | `id` | UUID | PK |
 | `user_id` | UUID | FK → `auth.users` |
-| `test_name` | TEXT | Required |
-| `category` | TEXT | Preset or custom |
+| `test_name` | TEXT | Auto-derived from `category` on client |
+| `category` | TEXT | Preset or custom; drives the report display name |
 | `test_date` | DATE | |
 | `doctor_name` | TEXT | |
 | `hospital` | TEXT | |
 | `image_urls` | TEXT[] | Array of signed Storage URLs |
 | `notes` | TEXT | |
 | `prescription_id` | UUID | FK → `prescriptions` (SET NULL on delete) |
+| `ordered_by_doctor_id` | UUID | FK → `auth.users`; grants edit access to that doctor; set by doctor (Order Test) or by patient (Doctor autocomplete) |
+
+**RLS policies on `lab_reports`:**
+- `Users can view own lab_reports` — patient reads their own
+- `doctor_reads_patient_labs` — doctor reads any linked patient's reports
+- `doctor_updates_own_lab_order` — doctor updates only where `ordered_by_doctor_id = auth.uid()` and link is accepted
+- `doctor_inserts_patient_lab` — doctor inserts for a linked patient
 
 ### `public.doctors`
 
