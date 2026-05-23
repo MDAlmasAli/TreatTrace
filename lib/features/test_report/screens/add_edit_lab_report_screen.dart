@@ -1,7 +1,4 @@
 // add_edit_lab_report_screen.dart
-// Form to create or edit a lab/test report.
-// Features: test info, category (preset chips + custom input), date picker,
-// doctor/lab info, multi-image upload, notes, optional prescription link.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,12 +8,13 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../doctor_home/models/doctor_patient_link.dart';
+import '../../doctor_home/services/doctor_patient_link_service.dart';
 import '../../prescription/models/prescription.dart';
 import '../../prescription/services/prescription_service.dart';
 import '../models/lab_report.dart';
 import '../services/lab_report_service.dart';
 
-// Default category presets — user can also type a custom one.
 const _kPresetCategories = [
   'Blood Test',
   'Urine Test',
@@ -39,13 +37,13 @@ class AddEditLabReportScreen extends StatefulWidget {
 }
 
 class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
-  final _formKey       = GlobalKey<FormState>();
   final _reportService = LabReportService();
   final _prescService  = PrescriptionService();
+  final _linkSvc       = DoctorPatientLinkService();
   final _imagePicker   = ImagePicker();
 
-  final _testNameCtrl  = TextEditingController();
   final _doctorCtrl    = TextEditingController();
+  final _doctorFocusNode = FocusNode();
   final _hospitalCtrl  = TextEditingController();
   final _notesCtrl     = TextEditingController();
 
@@ -55,24 +53,39 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
   bool         _uploadingImage = false;
   bool         _saving         = false;
 
+  // Doctor link
+  List<DoctorPatientLink> _myDoctors      = [];
+  String?                 _linkedDoctorId;
+
   // Prescription link
-  List<Prescription> _prescriptions      = [];
+  List<Prescription> _prescriptions       = [];
   String?            _linkedPrescId;
   bool               _loadingPrescriptions = false;
 
   bool get _isEdit => widget.existing != null;
 
+  List<DoctorPatientLink> get _doctorSuggestions {
+    if (!_doctorFocusNode.hasFocus || _myDoctors.isEmpty) return [];
+    final q = _doctorCtrl.text.trim().toLowerCase();
+    if (q.isEmpty) return _myDoctors;
+    return _myDoctors
+        .where((d) => (d.doctorName ?? '').toLowerCase().contains(q))
+        .toList();
+  }
+
   @override
   void initState() {
     super.initState();
     _loadPrescriptions();
+    _loadMyDoctors();
+    _doctorFocusNode.addListener(() => setState(() {}));
     if (_isEdit) _populate();
   }
 
   @override
   void dispose() {
-    _testNameCtrl.dispose();
     _doctorCtrl.dispose();
+    _doctorFocusNode.dispose();
     _hospitalCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
@@ -87,9 +100,16 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
     }
   }
 
+  Future<void> _loadMyDoctors() async {
+    final links = await _linkSvc.fetchIncomingRequests();
+    if (mounted) {
+      setState(() =>
+          _myDoctors = links.where((l) => l.isAccepted).toList());
+    }
+  }
+
   void _populate() {
     final r = widget.existing!;
-    _testNameCtrl.text = r.testName;
     _doctorCtrl.text   = r.doctorName  ?? '';
     _hospitalCtrl.text = r.hospital    ?? '';
     _notesCtrl.text    = r.notes       ?? '';
@@ -97,6 +117,7 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
     _testDate          = r.testDate;
     _imageUrls         = List.from(r.imageUrls);
     _linkedPrescId     = r.prescriptionId;
+    _linkedDoctorId    = r.orderedByDoctorId;
   }
 
   // ── Category picker ───────────────────────────────────────────────────────
@@ -116,12 +137,10 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
           controller:    ctrl,
           autofocus:     true,
           textCapitalization: TextCapitalization.words,
-          style:         GoogleFonts.poppins(
-              fontSize: 13, color: c.textPrimary),
+          style:         GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
           decoration: InputDecoration(
             hintText:  s.enterCustomCategory,
-            hintStyle: GoogleFonts.poppins(
-                fontSize: 12, color: c.textMuted),
+            hintStyle: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
             filled:      true,
             fillColor:   c.surface,
             border: OutlineInputBorder(
@@ -134,8 +153,7 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(
-                  color: c.cyan, width: 1.5),
+              borderSide: BorderSide(color: c.cyan, width: 1.5),
             ),
           ),
         ),
@@ -152,8 +170,7 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
             },
             child: Text(s.confirm,
                 style: GoogleFonts.poppins(
-                    color: c.cyan,
-                    fontWeight: FontWeight.w700)),
+                    color: c.cyan, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -218,20 +235,15 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
                 color: c.textPrimary, fontWeight: FontWeight.w600)),
         actions: [
           TextButton.icon(
-            icon:  Icon(Icons.photo_library_rounded,
-                color: c.cyan),
-            label: Text('Gallery',
-                style: GoogleFonts.poppins(color: c.cyan)),
+            icon:  Icon(Icons.photo_library_rounded, color: c.cyan),
+            label: Text('Gallery', style: GoogleFonts.poppins(color: c.cyan)),
             onPressed: () => Navigator.of(ctx).pop(ImageSource.gallery),
           ),
           TextButton.icon(
-            icon:  Icon(Icons.camera_alt_rounded,
-                color: c.purpleBright),
+            icon:  Icon(Icons.camera_alt_rounded, color: c.purpleBright),
             label: Text('Camera',
-                style: GoogleFonts.poppins(
-                    color: c.purpleBright)),
-            onPressed: () =>
-                Navigator.of(ctx).pop(ImageSource.camera),
+                style: GoogleFonts.poppins(color: c.purpleBright)),
+            onPressed: () => Navigator.of(ctx).pop(ImageSource.camera),
           ),
         ],
       ),
@@ -241,23 +253,33 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
   // ── Save ──────────────────────────────────────────────────────────────────
 
   Future<void> _save() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_category == null || _category!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Please select a test category.',
+            style: GoogleFonts.poppins()),
+        backgroundColor: context.colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
+      return;
+    }
 
     setState(() => _saving = true);
     try {
       final draft = LabReport(
-        id:             _isEdit ? widget.existing!.id : '',
-        userId:         '',
-        testName:       _testNameCtrl.text.trim(),
-        category:       _category?.isEmpty == true ? null : _category,
-        testDate:       _testDate,
-        doctorName:     _doctorCtrl.text.trim().nullIfEmpty,
-        hospital:       _hospitalCtrl.text.trim().nullIfEmpty,
-        imageUrls:      _imageUrls,
-        notes:          _notesCtrl.text.trim().nullIfEmpty,
-        prescriptionId: _linkedPrescId,
-        createdAt:      DateTime.now(),
-        updatedAt:      DateTime.now(),
+        id:                _isEdit ? widget.existing!.id : '',
+        userId:            '',
+        testName:          _category!,
+        category:          _category,
+        testDate:          _testDate,
+        doctorName:        _doctorCtrl.text.trim().nullIfEmpty,
+        hospital:          _hospitalCtrl.text.trim().nullIfEmpty,
+        imageUrls:         _imageUrls,
+        notes:             _notesCtrl.text.trim().nullIfEmpty,
+        prescriptionId:    _linkedPrescId,
+        orderedByDoctorId: _linkedDoctorId,
+        createdAt:         DateTime.now(),
+        updatedAt:         DateTime.now(),
       );
 
       if (_isEdit) {
@@ -278,8 +300,7 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e',
-                style: GoogleFonts.poppins())));
+            SnackBar(content: Text('Error: $e', style: GoogleFonts.poppins())));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -298,119 +319,289 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
       statusBarIconBrightness: c.statusBarIconBrightness,
     ));
 
+    final suggestions = _doctorSuggestions;
+
     return Scaffold(
       backgroundColor: c.bg,
       body: Column(
         children: [
           _buildHeader(c, s),
           Expanded(
-            child: Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Test Info ─────────────────────────────────────────
-                    _SectionLabel(text: 'Test Info'),
-                    const SizedBox(height: 12),
-                    _FormCard(children: [
-                      _Field(
-                        ctrl:      _testNameCtrl,
-                        label:     s.testName,
-                        icon:      Icons.science_rounded,
-                        required:  true,
-                      ),
-                      _DateRow(
-                        date:  _testDate,
-                        onTap: _pickDate,
-                        label: s.testDate,
-                        onClear: () => setState(() => _testDate = null),
-                      ),
-                    ]),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
 
-                    // ── Category ──────────────────────────────────────────
-                    const SizedBox(height: 24),
-                    _SectionLabel(text: s.category),
-                    const SizedBox(height: 12),
-                    _CategoryPicker(
-                      selected:       _category,
-                      onSelect:       (cat) => setState(() => _category = cat),
-                      onPickCustom:   _pickCustomCategory,
-                    ),
-
-                    // ── Doctor / Lab Info ─────────────────────────────────
-                    const SizedBox(height: 24),
-                    _SectionLabel(text: 'Doctor / Lab Info'),
-                    const SizedBox(height: 12),
-                    _FormCard(children: [
-                      _Field(
-                        ctrl:  _doctorCtrl,
-                        label: s.doctorName,
-                        icon:  Icons.person_rounded,
+                  // ── Test Info (date only) ──────────────────────────────
+                  _SectionLabel(text: 'Test Info'),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: _pickDate,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color:        c.card,
+                        borderRadius: BorderRadius.circular(20),
+                        border:       Border.all(color: c.border, width: 1),
                       ),
-                      _Field(
-                        ctrl:   _hospitalCtrl,
-                        label:  s.labHospital,
-                        icon:   Icons.local_hospital_rounded,
-                        isLast: true,
-                      ),
-                    ]),
-
-                    // ── Images ────────────────────────────────────────────
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        _SectionLabel(text: s.uploadImage),
-                        const Spacer(),
-                        if (_uploadingImage)
-                          SizedBox(
-                            width: 16, height: 16,
-                            child: CircularProgressIndicator(
-                                color: c.cyan,
-                                strokeWidth: 2),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_today_rounded,
+                              size: 18, color: c.cyan),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(s.testDate,
+                                    style: GoogleFonts.poppins(
+                                        fontSize: 12, color: c.textMuted)),
+                                Text(
+                                  _testDate != null
+                                      ? '${_testDate!.day.toString().padLeft(2, '0')}/'
+                                        '${_testDate!.month.toString().padLeft(2, '0')}/'
+                                        '${_testDate!.year}'
+                                      : '—',
+                                  style: GoogleFonts.poppins(
+                                    fontSize:   13,
+                                    color:      _testDate != null
+                                        ? c.textPrimary
+                                        : c.textMuted,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          if (_testDate != null)
+                            GestureDetector(
+                              onTap: () => setState(() => _testDate = null),
+                              child: Icon(Icons.close_rounded,
+                                  size: 16, color: c.textMuted),
+                            )
+                          else
+                            Icon(Icons.edit_calendar_rounded,
+                                size: 16, color: c.textMuted),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // ── Category ──────────────────────────────────────────
+                  const SizedBox(height: 24),
+                  _SectionLabel(text: s.category),
+                  const SizedBox(height: 12),
+                  _CategoryPicker(
+                    selected:     _category,
+                    onSelect:     (cat) => setState(() => _category = cat),
+                    onPickCustom: _pickCustomCategory,
+                  ),
+
+                  // ── Doctor / Lab Info ──────────────────────────────────
+                  const SizedBox(height: 24),
+                  _SectionLabel(text: 'Doctor / Lab Info'),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color:        c.card,
+                      borderRadius: BorderRadius.circular(20),
+                      border:       Border.all(color: c.border, width: 1),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Doctor name field
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 4),
+                          child: TextField(
+                            controller: _doctorCtrl,
+                            focusNode:  _doctorFocusNode,
+                            onChanged:  (_) => setState(() {
+                              if (_linkedDoctorId != null) {
+                                _linkedDoctorId = null;
+                              }
+                            }),
+                            style: GoogleFonts.poppins(
+                                fontSize: 13, color: c.textPrimary),
+                            decoration: InputDecoration(
+                              labelText:  s.doctorName,
+                              labelStyle: GoogleFonts.poppins(
+                                  fontSize: 12, color: c.textMuted),
+                              prefixIcon: Icon(Icons.person_rounded,
+                                  size: 18, color: c.cyan),
+                              suffixIcon: _linkedDoctorId != null
+                                  ? Padding(
+                                      padding:
+                                          const EdgeInsets.only(right: 12),
+                                      child: Icon(Icons.verified_rounded,
+                                          color: c.green, size: 18),
+                                    )
+                                  : null,
+                              suffixIconConstraints: const BoxConstraints(),
+                              border: InputBorder.none,
+                              contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                        // Suggestions from linked doctors
+                        if (suggestions.isNotEmpty) ...[
+                          Divider(
+                              height: 1,
+                              indent: 16,
+                              endIndent: 16,
+                              color: c.border,
+                              thickness: 1),
+                          Container(
+                            margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                            decoration: BoxDecoration(
+                              color:        c.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border:       Border.all(color: c.border),
+                            ),
+                            child: Column(
+                              children: suggestions.asMap().entries.map((e) {
+                                final idx  = e.key;
+                                final link = e.value;
+                                final isSelected =
+                                    _linkedDoctorId == link.doctorId;
+                                final isLast = idx == suggestions.length - 1;
+                                return Column(
+                                  children: [
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(12),
+                                      onTap: () {
+                                        setState(() {
+                                          _doctorCtrl.text =
+                                              link.doctorName ?? '';
+                                          _linkedDoctorId  = link.doctorId;
+                                        });
+                                        _doctorFocusNode.unfocus();
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 10),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 30, height: 30,
+                                              decoration: BoxDecoration(
+                                                color: c.cyan.withAlpha(20),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Icon(
+                                                  Icons.person_rounded,
+                                                  color: c.cyan,
+                                                  size: 14),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                'Dr. ${link.doctorName ?? "Unknown"}',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize:   13,
+                                                  fontWeight: isSelected
+                                                      ? FontWeight.w600
+                                                      : FontWeight.w400,
+                                                  color: isSelected
+                                                      ? c.cyan
+                                                      : c.textPrimary,
+                                                ),
+                                              ),
+                                            ),
+                                            if (isSelected)
+                                              Icon(
+                                                  Icons.check_circle_rounded,
+                                                  color: c.green,
+                                                  size: 16),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    if (!isLast)
+                                      Divider(
+                                          height: 1,
+                                          indent: 12,
+                                          endIndent: 12,
+                                          color: c.border,
+                                          thickness: 1),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ],
+                        // Hospital
+                        Divider(
+                            height: 1,
+                            indent: 16,
+                            endIndent: 16,
+                            color: c.border,
+                            thickness: 1),
+                        _Field(
+                          ctrl:   _hospitalCtrl,
+                          label:  s.labHospital,
+                          icon:   Icons.local_hospital_rounded,
+                          isLast: true,
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    _MultiImageUploadCard(
-                      imageUrls: _imageUrls,
-                      uploading: _uploadingImage,
-                      onAdd:     _pickImage,
-                      onRemove:  (url) =>
-                          setState(() => _imageUrls.remove(url)),
+                  ),
+
+                  // ── Images ────────────────────────────────────────────
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      _SectionLabel(text: s.uploadImage),
+                      const Spacer(),
+                      if (_uploadingImage)
+                        SizedBox(
+                          width: 16, height: 16,
+                          child: CircularProgressIndicator(
+                              color: c.cyan, strokeWidth: 2),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _MultiImageUploadCard(
+                    imageUrls: _imageUrls,
+                    uploading: _uploadingImage,
+                    onAdd:     _pickImage,
+                    onRemove:  (url) => setState(() => _imageUrls.remove(url)),
+                  ),
+
+                  // ── Notes ─────────────────────────────────────────────
+                  const SizedBox(height: 24),
+                  _SectionLabel(text: s.notes),
+                  const SizedBox(height: 12),
+                  _FormCard(children: [
+                    _Field(
+                      ctrl:     _notesCtrl,
+                      label:    s.notes,
+                      icon:     Icons.notes_rounded,
+                      maxLines: 4,
+                      isLast:   true,
                     ),
+                  ]),
 
-                    // ── Notes ─────────────────────────────────────────────
-                    const SizedBox(height: 24),
-                    _SectionLabel(text: s.notes),
-                    const SizedBox(height: 12),
-                    _FormCard(children: [
-                      _Field(
-                        ctrl:     _notesCtrl,
-                        label:    s.notes,
-                        icon:     Icons.notes_rounded,
-                        maxLines: 4,
-                        isLast:   true,
-                      ),
-                    ]),
+                  // ── Prescription Link ──────────────────────────────────
+                  const SizedBox(height: 24),
+                  _SectionLabel(text: s.linkedPrescription),
+                  const SizedBox(height: 12),
+                  _PrescriptionLinkPicker(
+                    prescriptions: _prescriptions,
+                    selectedId:    _linkedPrescId,
+                    loading:       _loadingPrescriptions,
+                    onChanged: (id) => setState(() => _linkedPrescId = id),
+                  ),
 
-                    // ── Prescription Link ─────────────────────────────────
-                    const SizedBox(height: 24),
-                    _SectionLabel(text: s.linkedPrescription),
-                    const SizedBox(height: 12),
-                    _PrescriptionLinkPicker(
-                      prescriptions: _prescriptions,
-                      selectedId:    _linkedPrescId,
-                      loading:       _loadingPrescriptions,
-                      onChanged: (id) =>
-                          setState(() => _linkedPrescId = id),
-                    ),
-
-                    const SizedBox(height: 32),
-                    _SaveButton(saving: _saving, onTap: _save),
-                  ],
-                ),
+                  const SizedBox(height: 32),
+                  _SaveButton(saving: _saving, onTap: _save),
+                ],
               ),
             ),
           ),
@@ -473,7 +664,6 @@ class _CategoryPicker extends StatelessWidget {
     final c = context.colors;
     final s = S.of(context);
 
-    // If current category is custom (not in presets), show it as an extra chip
     final customCat =
         (selected != null && !_kPresetCategories.contains(selected))
             ? selected
@@ -483,7 +673,6 @@ class _CategoryPicker extends StatelessWidget {
       spacing:    8,
       runSpacing: 8,
       children: [
-        // Show custom chip first if set
         if (customCat != null)
           _Chip(
             label:    customCat,
@@ -491,14 +680,12 @@ class _CategoryPicker extends StatelessWidget {
             color:    c.purpleBright,
             onTap:    () => onSelect(null),
           ),
-        // Preset chips
         ..._kPresetCategories.map((cat) => _Chip(
               label:    cat,
               selected: selected == cat,
               color:    c.cyan,
               onTap:    () => onSelect(selected == cat ? null : cat),
             )),
-        // "+ Custom" chip
         _Chip(
           label:    '+ ${s.customCategory}',
           selected: false,
@@ -564,7 +751,7 @@ class _Chip extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _PrescriptionLinkPicker — dropdown to optionally link to a prescription
+// _PrescriptionLinkPicker
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _PrescriptionLinkPicker extends StatelessWidget {
@@ -653,7 +840,7 @@ class _PrescriptionLinkPicker extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Shared form widgets (mirrors prescription screen style)
+// Shared form widgets
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _SectionLabel extends StatelessWidget {
@@ -695,7 +882,6 @@ class _Field extends StatelessWidget {
   final IconData              icon;
   final int                   maxLines;
   final bool                  isLast;
-  final bool                  required;
 
   const _Field({
     required this.ctrl,
@@ -703,7 +889,6 @@ class _Field extends StatelessWidget {
     required this.icon,
     this.maxLines = 1,
     this.isLast   = false,
-    this.required = false,
   });
 
   @override
@@ -713,25 +898,16 @@ class _Field extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: TextFormField(
+          child: TextField(
             controller: ctrl,
             maxLines:   maxLines,
-            style: GoogleFonts.poppins(
-                fontSize: 13, color: c.textPrimary),
-            validator: required
-                ? (v) => (v == null || v.trim().isEmpty)
-                    ? 'Required'
-                    : null
-                : null,
+            style: GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
             decoration: InputDecoration(
               labelText:  label,
-              labelStyle: GoogleFonts.poppins(
-                  fontSize: 12, color: c.textMuted),
-              prefixIcon: Icon(icon,
-                  size: 18, color: c.cyan),
+              labelStyle: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
+              prefixIcon: Icon(icon, size: 18, color: c.cyan),
               border:         InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
             ),
           ),
         ),
@@ -742,78 +918,6 @@ class _Field extends StatelessWidget {
               endIndent: 16,
               color: c.border,
               thickness: 1),
-      ],
-    );
-  }
-}
-
-class _DateRow extends StatelessWidget {
-  final DateTime?    date;
-  final VoidCallback onTap;
-  final VoidCallback onClear;
-  final String       label;
-
-  const _DateRow({
-    required this.date,
-    required this.onTap,
-    required this.onClear,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Column(
-      children: [
-        Divider(height: 1, indent: 16, endIndent: 16,
-            color: c.border, thickness: 1),
-        InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today_rounded,
-                    size: 18, color: c.cyan),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(label,
-                          style: GoogleFonts.poppins(
-                              fontSize: 12, color: c.textMuted)),
-                      Text(
-                        date != null
-                            ? '${date!.day.toString().padLeft(2, '0')}/'
-                              '${date!.month.toString().padLeft(2, '0')}/'
-                              '${date!.year}'
-                            : '—',
-                        style: GoogleFonts.poppins(
-                          fontSize:   13,
-                          color:      date != null
-                              ? c.textPrimary
-                              : c.textMuted,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (date != null)
-                  GestureDetector(
-                    onTap: onClear,
-                    child: Icon(Icons.close_rounded,
-                        size: 16, color: c.textMuted),
-                  )
-                else
-                  Icon(Icons.edit_calendar_rounded,
-                      size: 16, color: c.textMuted),
-              ],
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -855,24 +959,21 @@ class _MultiImageUploadCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     border:       Border.all(color: c.border),
                   ),
-                  child: Icon(Icons.broken_image_rounded,
-                      color: c.cyan),
+                  child: Icon(Icons.broken_image_rounded, color: c.cyan),
                 ),
               ),
             ),
             Positioned(
               bottom: 4, left: 4,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 5, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                 decoration: BoxDecoration(
                   color:        Colors.black54,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   '${idx + 1}',
-                  style: GoogleFonts.poppins(
-                      fontSize: 9, color: Colors.white),
+                  style: GoogleFonts.poppins(fontSize: 9, color: Colors.white),
                 ),
               ),
             ),
@@ -885,8 +986,7 @@ class _MultiImageUploadCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color:  c.red,
                     shape:  BoxShape.circle,
-                    border: Border.all(
-                        color: Colors.white, width: 1.5),
+                    border: Border.all(color: Colors.white, width: 1.5),
                   ),
                   child: const Icon(Icons.close_rounded,
                       color: Colors.white, size: 12),

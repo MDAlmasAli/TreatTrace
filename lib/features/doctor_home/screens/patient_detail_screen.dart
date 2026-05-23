@@ -13,6 +13,7 @@ import '../../test_report/models/lab_report.dart';
 import '../../test_report/services/lab_report_service.dart';
 import '../../appointment/models/appointment.dart';
 import '../../appointment/services/appointment_service.dart';
+import '../../test_report/screens/lab_report_detail_screen.dart';
 import 'doctor_write_prescription_screen.dart';
 import 'doctor_add_appointment_screen.dart';
 import 'doctor_lab_report_screen.dart';
@@ -120,6 +121,27 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     if (result == true) _load();
   }
 
+  Future<void> _goViewLab(LabReport lab) async {
+    final canEdit = lab.orderedByDoctorId == _currentDoctorId;
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => LabReportDetailScreen(
+        report:    lab,
+        canEdit:   canEdit,
+        canDelete: false,
+        onEditOverride: canEdit
+            ? (r) => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => DoctorLabReportScreen(
+                    patientId:   widget.patientId,
+                    patientName: widget.patientName,
+                    existing:    r,
+                  ),
+                ))
+            : null,
+      ),
+    ));
+    _load();
+  }
+
   Future<void> _goAddAppt() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => DoctorAddAppointmentScreen(
@@ -171,6 +193,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         _LabReportsSection(
                           list:            _labs,
                           currentDoctorId: _currentDoctorId,
+                          onView:          _goViewLab,
                           onEdit:          _goEditLab,
                           onOrder:         _goOrderLab,
                         ).animate().fadeIn(delay: 200.ms),
@@ -577,14 +600,16 @@ class _RxTile extends StatelessWidget {
 // ── Lab Reports section ───────────────────────────────────────────────────────
 
 class _LabReportsSection extends StatelessWidget {
-  final List<LabReport>             list;
-  final String                      currentDoctorId;
+  final List<LabReport>                  list;
+  final String                           currentDoctorId;
+  final Future<void> Function(LabReport) onView;
   final Future<void> Function(LabReport) onEdit;
-  final VoidCallback                onOrder;
+  final VoidCallback                     onOrder;
 
   const _LabReportsSection({
     required this.list,
     required this.currentDoctorId,
+    required this.onView,
     required this.onEdit,
     required this.onOrder,
   });
@@ -600,7 +625,7 @@ class _LabReportsSection extends StatelessWidget {
             Expanded(
               child: _SectionHeader(
                 icon:  Icons.science_rounded,
-                title: 'Lab Reports',
+                title: 'Test Reports',
                 count: list.length,
                 color: c.green,
               ),
@@ -629,11 +654,12 @@ class _LabReportsSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         if (list.isEmpty)
-          _EmptySection(message: 'No lab reports found.')
+          _EmptySection(message: 'No test reports found.')
         else
           ...list.take(5).map((lab) => _LabTile(
                 lab:     lab,
                 canEdit: lab.orderedByDoctorId == currentDoctorId,
+                onTap:   () => onView(lab),
                 onEdit:  () => onEdit(lab),
               )),
       ],
@@ -644,11 +670,13 @@ class _LabReportsSection extends StatelessWidget {
 class _LabTile extends StatelessWidget {
   final LabReport    lab;
   final bool         canEdit;
+  final VoidCallback onTap;
   final VoidCallback onEdit;
 
   const _LabTile({
     required this.lab,
     required this.canEdit,
+    required this.onTap,
     required this.onEdit,
   });
 
@@ -659,7 +687,9 @@ class _LabTile extends StatelessWidget {
     final d       = lab.testDate;
     final dateStr = d != null ? '${d.day} ${months[d.month - 1]} ${d.year}' : '—';
 
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -717,6 +747,7 @@ class _LabTile extends StatelessWidget {
           ],
         ],
       ),
+    ),
     );
   }
 }

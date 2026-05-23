@@ -13,9 +13,18 @@ import '../services/lab_report_service.dart';
 import 'add_edit_lab_report_screen.dart';
 
 class LabReportDetailScreen extends StatefulWidget {
-  final LabReport report;
+  final LabReport  report;
+  final bool       canEdit;
+  final bool       canDelete;
+  final Future<void> Function(LabReport)? onEditOverride;
 
-  const LabReportDetailScreen({super.key, required this.report});
+  const LabReportDetailScreen({
+    super.key,
+    required this.report,
+    this.canEdit        = true,
+    this.canDelete      = true,
+    this.onEditOverride,
+  });
 
   @override
   State<LabReportDetailScreen> createState() =>
@@ -47,6 +56,11 @@ class _LabReportDetailScreenState extends State<LabReportDetailScreen> {
   // ── Edit ──────────────────────────────────────────────────────────────────
 
   Future<void> _edit() async {
+    if (widget.onEditOverride != null) {
+      await widget.onEditOverride!(_r);
+      if (mounted) Navigator.of(context).pop(true);
+      return;
+    }
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
           builder: (_) => AddEditLabReportScreen(existing: _r)),
@@ -221,11 +235,13 @@ class _LabReportDetailScreenState extends State<LabReportDetailScreen> {
                               .fadeIn(delay: 120.ms),
                         ],
 
-                        const SizedBox(height: 28),
-                        _ActionRow(
-                          onEdit:   _edit,
-                          onDelete: _delete,
-                        ),
+                        if (widget.canEdit || widget.canDelete) ...[
+                          const SizedBox(height: 28),
+                          _ActionRow(
+                            onEdit:   widget.canEdit   ? _edit   : null,
+                            onDelete: widget.canDelete ? _delete : null,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -578,32 +594,34 @@ class _FullScreenGalleryState extends State<_FullScreenGallery> {
 // ── Action buttons ────────────────────────────────────────────────────────────
 
 class _ActionRow extends StatelessWidget {
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
-  const _ActionRow({required this.onEdit, required this.onDelete});
+  const _ActionRow({this.onEdit, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     return Row(
       children: [
-        Expanded(
-          child: _ActionBtn(
-            label: 'Edit',
-            icon:  Icons.edit_rounded,
-            color: c.cyan,
-            onTap: onEdit,
+        if (onEdit != null)
+          Expanded(
+            child: _ActionBtn(
+              label: 'Edit',
+              icon:  Icons.edit_rounded,
+              color: c.cyan,
+              onTap: onEdit!,
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        _ActionBtn(
-          label:  'Delete',
-          icon:   Icons.delete_rounded,
-          color:  c.red,
-          onTap:  onDelete,
-          square: true,
-        ),
+        if (onEdit != null && onDelete != null) const SizedBox(width: 10),
+        if (onDelete != null)
+          _ActionBtn(
+            label:  'Delete',
+            icon:   Icons.delete_rounded,
+            color:  c.red,
+            onTap:  onDelete!,
+            square: true,
+          ),
       ],
     );
   }

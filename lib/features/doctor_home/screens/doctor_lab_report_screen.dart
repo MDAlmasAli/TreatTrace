@@ -112,7 +112,7 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
       }
 
       if (mounted) {
-        _snack(_isEdit ? 'Lab order updated!' : 'Lab order created!');
+        _snack(_isEdit ? 'Test report updated!' : 'Test report created!');
         Navigator.of(context).pop(true);
       }
     } catch (_) {
@@ -245,7 +245,7 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : Icon(_isEdit ? Icons.save_rounded : Icons.add_circle_rounded, size: 20),
                     label: Text(
-                      _saving ? 'Saving...' : (_isEdit ? 'Update Lab Order' : 'Create Lab Order'),
+                      _saving ? 'Saving...' : (_isEdit ? 'Update Test Report' : 'Create Test Report'),
                       style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700),
                     ),
                     style: ElevatedButton.styleFrom(
@@ -310,7 +310,7 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_isEdit ? 'Edit Lab Order' : 'Order Lab Test',
+                Text(_isEdit ? 'Edit Test Report' : 'Order Test',
                     style: GoogleFonts.poppins(fontSize: 19, fontWeight: FontWeight.w700, color: c.textPrimary)),
                 Text('For ${widget.patientName}',
                     style: GoogleFonts.poppins(fontSize: 12, color: c.textSec)),

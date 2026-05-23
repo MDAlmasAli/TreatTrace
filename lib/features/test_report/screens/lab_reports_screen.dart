@@ -347,7 +347,8 @@ class _LabReportCard extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              if (r.category?.isNotEmpty == true)
+                              if (r.category?.isNotEmpty == true &&
+                                  r.category != r.testName)
                                 _CategoryBadge(label: r.category!),
                             ],
                           ),
