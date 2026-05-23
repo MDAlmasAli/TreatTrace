@@ -15,6 +15,7 @@ import '../../appointment/models/appointment.dart';
 import '../../appointment/services/appointment_service.dart';
 import 'doctor_write_prescription_screen.dart';
 import 'doctor_add_appointment_screen.dart';
+import 'doctor_lab_report_screen.dart';
 
 class PatientDetailScreen extends StatefulWidget {
   final String  patientId;
@@ -98,6 +99,27 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     if (result == true) _load();
   }
 
+  Future<void> _goOrderLab() async {
+    final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
+      builder: (_) => DoctorLabReportScreen(
+        patientId:   widget.patientId,
+        patientName: widget.patientName,
+      ),
+    ));
+    if (result == true) _load();
+  }
+
+  Future<void> _goEditLab(LabReport lab) async {
+    final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
+      builder: (_) => DoctorLabReportScreen(
+        patientId:   widget.patientId,
+        patientName: widget.patientName,
+        existing:    lab,
+      ),
+    ));
+    if (result == true) _load();
+  }
+
   Future<void> _goAddAppt() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => DoctorAddAppointmentScreen(
@@ -146,8 +168,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           onEdit:          _goEditRx,
                         ).animate().fadeIn(delay: 150.ms),
                         const SizedBox(height: 20),
-                        _LabReportsSection(list: _labs)
-                            .animate().fadeIn(delay: 200.ms),
+                        _LabReportsSection(
+                          list:            _labs,
+                          currentDoctorId: _currentDoctorId,
+                          onEdit:          _goEditLab,
+                          onOrder:         _goOrderLab,
+                        ).animate().fadeIn(delay: 200.ms),
                         const SizedBox(height: 20),
                         _AppointmentsSection(list: _appts)
                             .animate().fadeIn(delay: 250.ms),
@@ -551,8 +577,17 @@ class _RxTile extends StatelessWidget {
 // ── Lab Reports section ───────────────────────────────────────────────────────
 
 class _LabReportsSection extends StatelessWidget {
-  final List<LabReport> list;
-  const _LabReportsSection({required this.list});
+  final List<LabReport>             list;
+  final String                      currentDoctorId;
+  final Future<void> Function(LabReport) onEdit;
+  final VoidCallback                onOrder;
+
+  const _LabReportsSection({
+    required this.list,
+    required this.currentDoctorId,
+    required this.onEdit,
+    required this.onOrder,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -560,32 +595,69 @@ class _LabReportsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(
-          icon:  Icons.science_rounded,
-          title: 'Lab Reports',
-          count: list.length,
-          color: c.green,
+        Row(
+          children: [
+            Expanded(
+              child: _SectionHeader(
+                icon:  Icons.science_rounded,
+                title: 'Lab Reports',
+                count: list.length,
+                color: c.green,
+              ),
+            ),
+            GestureDetector(
+              onTap: onOrder,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color:        c.green.withAlpha(15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_rounded, size: 14, color: c.green),
+                    const SizedBox(width: 4),
+                    Text('Order Test',
+                        style: GoogleFonts.poppins(
+                            fontSize: 12, fontWeight: FontWeight.w600, color: c.green)),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         if (list.isEmpty)
           _EmptySection(message: 'No lab reports found.')
         else
-          ...list.take(5).map((lab) => _LabTile(lab: lab)),
+          ...list.take(5).map((lab) => _LabTile(
+                lab:     lab,
+                canEdit: lab.orderedByDoctorId == currentDoctorId,
+                onEdit:  () => onEdit(lab),
+              )),
       ],
     );
   }
 }
 
 class _LabTile extends StatelessWidget {
-  final LabReport lab;
-  const _LabTile({required this.lab});
+  final LabReport    lab;
+  final bool         canEdit;
+  final VoidCallback onEdit;
+
+  const _LabTile({
+    required this.lab,
+    required this.canEdit,
+    required this.onEdit,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final c      = context.colors;
-    final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    final d      = lab.testDate;
-    final dateStr = d != null ? '${d.day} ${months[d.month-1]} ${d.year}' : '—';
+    final c       = context.colors;
+    final months  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final d       = lab.testDate;
+    final dateStr = d != null ? '${d.day} ${months[d.month - 1]} ${d.year}' : '—';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -599,7 +671,8 @@ class _LabTile extends StatelessWidget {
         children: [
           Container(
             width: 40, height: 40,
-            decoration: BoxDecoration(color: c.green.withAlpha(15), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+                color: c.green.withAlpha(15), borderRadius: BorderRadius.circular(12)),
             child: Icon(Icons.science_rounded, color: c.green, size: 20),
           ),
           const SizedBox(width: 12),
@@ -608,20 +681,40 @@ class _LabTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(lab.testName,
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary),
+                    style: GoogleFonts.poppins(
+                        fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
                 Text(dateStr, style: GoogleFonts.poppins(fontSize: 11, color: c.textSec)),
               ],
             ),
           ),
-          if (lab.category != null)
+          if (lab.category != null) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: c.green.withAlpha(15), borderRadius: BorderRadius.circular(8)),
-              child: Text(lab.category!, style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: c.green),
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              decoration: BoxDecoration(
+                  color: c.green.withAlpha(15), borderRadius: BorderRadius.circular(8)),
+              child: Text(lab.category!,
+                  style: GoogleFonts.poppins(
+                      fontSize: 10, fontWeight: FontWeight.w600, color: c.green),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
             ),
+          ],
+          if (canEdit) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: onEdit,
+              child: Container(
+                width: 32, height: 32,
+                decoration: BoxDecoration(
+                  color:        c.green.withAlpha(15),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(Icons.edit_rounded, size: 15, color: c.green),
+              ),
+            ),
+          ],
         ],
       ),
     );

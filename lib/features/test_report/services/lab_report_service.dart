@@ -128,6 +128,33 @@ class LabReportService {
     return rows.map((r) => LabReport.fromMap(r)).toList();
   }
 
+  // ── Doctor: create a lab report for a linked patient ─────────────────────
+
+  Future<LabReport> createForPatient({
+    required String   patientId,
+    required LabReport report,
+  }) async {
+    final doctorId = _uid;
+    if (doctorId == null) throw Exception('Not authenticated');
+    final inserted = await _client.from('lab_reports').insert({
+      ...report.toMap(),
+      'user_id':              patientId,
+      'ordered_by_doctor_id': doctorId,
+    }).select().single();
+    return LabReport.fromMap(inserted);
+  }
+
+  // ── Doctor: update a lab report they ordered ──────────────────────────────
+
+  Future<void> updateForDoctor(LabReport report) async {
+    final doctorId = _uid;
+    if (doctorId == null) throw Exception('Not authenticated');
+    await _client.from('lab_reports')
+        .update(report.toMap())
+        .eq('id', report.id)
+        .eq('ordered_by_doctor_id', doctorId);
+  }
+
   // ── Fetch all distinct categories used by this user ──────────────────────
 
   Future<List<String>> fetchCategories() async {
