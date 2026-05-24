@@ -101,7 +101,7 @@ class _DoctorWritePrescriptionScreenState
     super.dispose();
   }
 
-  void _addMed() => setState(() => _meds.add(_MedEntry()));
+  void _addMed() => setState(() => _meds.insert(0, _MedEntry()));
 
   void _removeMed(int i) {
     _meds[i].dispose();
