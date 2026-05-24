@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
-import '../../../core/services/doctor_verification_service.dart';
 import '../../test_report/models/lab_report.dart';
 import '../../test_report/services/lab_report_service.dart';
 
@@ -26,18 +26,18 @@ class DoctorLabReportScreen extends StatefulWidget {
 }
 
 class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
-  final _svc    = LabReportService();
-  final _dvrSvc = DoctorVerificationService();
+  final _svc         = LabReportService();
+  final _imagePicker = ImagePicker();
 
-  final _testNameCtrl = TextEditingController();
   final _notesCtrl    = TextEditingController();
   final _categoryCtrl = TextEditingController();
 
-  DateTime? _testDate;
-  bool      _saving        = false;
-  bool      _loadingDoctor = true;
-  String?   _doctorName;
-  String?   _doctorHospital;
+  DateTime?    _testDate;
+  List<String> _imageUrls      = [];
+  bool         _uploadingImage = false;
+  bool         _saving         = false;
+  bool         _loadingDoctor  = true;
+  String?      _doctorName;
 
   bool get _isEdit => widget.existing != null;
 
@@ -47,23 +47,17 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
     _loadDoctorInfo();
     if (_isEdit) {
       final e = widget.existing!;
-      _testNameCtrl.text = e.testName;
       _notesCtrl.text    = e.notes    ?? '';
-      _categoryCtrl.text = e.category ?? '';
+      _categoryCtrl.text = e.category ?? e.testName;
       _testDate          = e.testDate;
+      _imageUrls         = List.from(e.imageUrls);
     }
   }
 
   Future<void> _loadDoctorInfo() async {
     final meta = Supabase.instance.client.auth.currentUser?.userMetadata;
     _doctorName = meta?['full_name'] as String?;
-    final dv = await _dvrSvc.fetchMyVerification();
-    if (mounted) {
-      setState(() {
-        _doctorHospital = dv?['hospital'] as String?;
-        _loadingDoctor  = false;
-      });
-    }
+    if (mounted) setState(() => _loadingDoctor = false);
   }
 
   Future<void> _pickDate() async {
@@ -82,10 +76,51 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
     if (picked != null) setState(() => _testDate = picked);
   }
 
+  Future<void> _pickImage() async {
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (ctx) {
+        final c = ctx.colors;
+        return AlertDialog(
+          backgroundColor: c.card,
+          title: Text('Choose source',
+              style: GoogleFonts.poppins(
+                  color: c.textPrimary, fontWeight: FontWeight.w600)),
+          actions: [
+            TextButton.icon(
+              icon:  Icon(Icons.photo_library_rounded, color: c.accent),
+              label: Text('Gallery', style: GoogleFonts.poppins(color: c.accent)),
+              onPressed: () => Navigator.of(ctx).pop(ImageSource.gallery),
+            ),
+            TextButton.icon(
+              icon:  Icon(Icons.camera_alt_rounded, color: c.green),
+              label: Text('Camera', style: GoogleFonts.poppins(color: c.green)),
+              onPressed: () => Navigator.of(ctx).pop(ImageSource.camera),
+            ),
+          ],
+        );
+      },
+    );
+    if (source == null) return;
+    final picked = await _imagePicker.pickImage(
+        source: source, imageQuality: 80, maxWidth: 1024);
+    if (picked == null) return;
+
+    setState(() => _uploadingImage = true);
+    try {
+      final url = await _svc.uploadImage(picked);
+      if (url != null && mounted) setState(() => _imageUrls.add(url));
+    } catch (e) {
+      if (mounted) _snack('Image upload failed: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
+    }
+  }
+
   Future<void> _save() async {
-    final name = _testNameCtrl.text.trim();
-    if (name.isEmpty) {
-      _snack('Enter a test name.', isError: true);
+    final category = _categoryCtrl.text.trim();
+    if (category.isEmpty) {
+      _snack('Enter a test category.', isError: true);
       return;
     }
     setState(() => _saving = true);
@@ -93,13 +128,12 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
       final report = LabReport(
         id:                widget.existing?.id ?? '',
         userId:            widget.patientId,
-        testName:          name,
-        category:          _categoryCtrl.text.trim().isEmpty ? null : _categoryCtrl.text.trim(),
+        testName:          category,
+        category:          category,
         testDate:          _testDate,
         doctorName:        _doctorName,
-        hospital:          _doctorHospital,
         notes:             _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
-        imageUrls:         widget.existing?.imageUrls ?? [],
+        imageUrls:         _imageUrls,
         orderedByDoctorId: widget.existing?.orderedByDoctorId,
         createdAt:         widget.existing?.createdAt ?? DateTime.now(),
         updatedAt:         DateTime.now(),
@@ -134,7 +168,6 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
 
   @override
   void dispose() {
-    _testNameCtrl.dispose();
     _notesCtrl.dispose();
     _categoryCtrl.dispose();
     super.dispose();
@@ -165,18 +198,13 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
 
                 // Doctor banner
                 _DoctorBanner(
-                  name:     _doctorName,
-                  hospital: _doctorHospital,
-                  loading:  _loadingDoctor,
+                  name:    _doctorName,
+                  loading: _loadingDoctor,
                 ).animate().fadeIn(delay: 40.ms),
                 const SizedBox(height: 20),
 
-                // Test name
-                _field(_testNameCtrl, c, 'Test name *', Icons.science_rounded),
-                const SizedBox(height: 10),
-
-                // Category
-                _field(_categoryCtrl, c, 'Category (e.g. Blood, Urine)', Icons.category_rounded),
+                // Category (= test name)
+                _field(_categoryCtrl, c, 'Test Category * (e.g. Blood Test, X-Ray)', Icons.category_rounded),
                 const SizedBox(height: 10),
 
                 // Date
@@ -232,6 +260,10 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 10),
+
+                // Images
+                _buildImageSection(c),
                 const SizedBox(height: 28),
 
                 // Save
@@ -282,6 +314,86 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
     );
   }
 
+  Widget _buildImageSection(ThemeColors c) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color:        c.card,
+        borderRadius: BorderRadius.circular(14),
+        border:       Border.all(color: c.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.image_rounded, color: c.accent, size: 18),
+              const SizedBox(width: 8),
+              Text('Report Images',
+                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary)),
+              const Spacer(),
+              GestureDetector(
+                onTap: _uploadingImage ? null : _pickImage,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color:        c.accent.withAlpha(20),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: _uploadingImage
+                      ? SizedBox(width: 14, height: 14,
+                          child: CircularProgressIndicator(color: c.accent, strokeWidth: 2))
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.add_rounded, color: c.accent, size: 16),
+                            const SizedBox(width: 4),
+                            Text('Add', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: c.accent)),
+                          ],
+                        ),
+                ),
+              ),
+            ],
+          ),
+          if (_imageUrls.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _imageUrls.map((url) => Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(url, width: 80, height: 80, fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, st) => Container(
+                          width: 80, height: 80,
+                          decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(10)),
+                          child: Icon(Icons.broken_image_rounded, color: c.textMuted),
+                        )),
+                  ),
+                  Positioned(
+                    top: 3, right: 3,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _imageUrls.remove(url)),
+                      child: Container(
+                        width: 20, height: 20,
+                        decoration: BoxDecoration(color: c.red, shape: BoxShape.circle),
+                        child: const Icon(Icons.close_rounded, color: Colors.white, size: 13),
+                      ),
+                    ),
+                  ),
+                ],
+              )).toList(),
+            ),
+          ] else ...[
+            const SizedBox(height: 8),
+            Text('No images added', style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted)),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader(ThemeColors c) {
     final topPad = MediaQuery.of(context).padding.top;
     return Container(
@@ -325,9 +437,8 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
 
 class _DoctorBanner extends StatelessWidget {
   final String? name;
-  final String? hospital;
   final bool    loading;
-  const _DoctorBanner({this.name, this.hospital, required this.loading});
+  const _DoctorBanner({this.name, required this.loading});
 
   @override
   Widget build(BuildContext context) {
@@ -353,10 +464,8 @@ class _DoctorBanner extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(name != null ? 'Ordered by Dr. $name' : 'Ordering Doctor',
+                      Text(name != null ? 'Dr. $name' : 'Ordering Doctor',
                           style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: c.textPrimary)),
-                      if (hospital != null)
-                        Text(hospital!, style: GoogleFonts.poppins(fontSize: 11, color: c.textSec)),
                     ],
                   ),
                 ),

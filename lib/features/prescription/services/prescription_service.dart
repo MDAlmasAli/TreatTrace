@@ -144,24 +144,31 @@ class PrescriptionService {
     final uid = _uid;
     if (uid == null) return null;
 
-    final ext  = file.path.split('.').last.toLowerCase();
-    final path = '$uid/${DateTime.now().millisecondsSinceEpoch}.$ext';
+    final ext         = file.path.split('.').last.toLowerCase();
+    final contentType = _mimeFromExt(ext);
+    final path        = '$uid/${DateTime.now().millisecondsSinceEpoch}.$ext';
+    final opts        = FileOptions(upsert: true, contentType: contentType);
 
     if (kIsWeb) {
       final bytes = await file.readAsBytes();
-      await _client.storage
-          .from('prescriptions')
-          .uploadBinary(path, bytes, fileOptions: FileOptions(upsert: true));
+      await _client.storage.from('prescriptions').uploadBinary(path, bytes, fileOptions: opts);
     } else {
-      await _client.storage
-          .from('prescriptions')
-          .upload(path, File(file.path), fileOptions: FileOptions(upsert: true));
+      await _client.storage.from('prescriptions').upload(path, File(file.path), fileOptions: opts);
     }
 
-    // Private bucket → signed URL valid for 10 years
-    return await _client.storage
-        .from('prescriptions')
-        .createSignedUrl(path, 315360000);
+    return await _client.storage.from('prescriptions').createSignedUrl(path, 315360000);
+  }
+
+  static String _mimeFromExt(String ext) {
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg': return 'image/jpeg';
+      case 'png':  return 'image/png';
+      case 'webp': return 'image/webp';
+      case 'heic':
+      case 'heif': return 'image/heif';
+      default:     return 'image/jpeg';
+    }
   }
 
   Future<void> _deleteImageByUrl(String url) async {

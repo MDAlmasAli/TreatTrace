@@ -222,15 +222,22 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content:         Text(msg, style: GoogleFonts.poppins()),
+      backgroundColor: context.colors.red,
+      behavior:        SnackBarBehavior.floating,
+      shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    ));
+  }
+
   Future<void> _save() async {
     if (_category == null || _category!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Please select a test category.',
-            style: GoogleFonts.poppins()),
-        backgroundColor: context.colors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
+      _showError('Please select a test category.');
+      return;
+    }
+    if (_testDate == null) {
+      _showError('Please select a test date.');
       return;
     }
 
