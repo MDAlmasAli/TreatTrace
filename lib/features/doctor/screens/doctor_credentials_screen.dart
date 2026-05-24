@@ -68,15 +68,16 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
     setState(() { _saving = true; _error = null; });
     try {
       await _service.submitEdit(
-        bmdcNumber:    _bmdcCtrl.text.trim(),
-        specialty:     _specialtyCtrl.text.trim(),
-        hospital:      _hospitalCtrl.text.trim(),
-        nidPassport:   _nidCtrl.text.trim(),
+        bmdcNumber:     _bmdcCtrl.text.trim(),
+        specialty:      _specialtyCtrl.text.trim(),
+        hospital:       _hospitalCtrl.text.trim(),
+        nidPassport:    _nidCtrl.text.trim(),
         additionalInfo: _additionalCtrl.text.trim(),
       );
+      if (mounted) setState(() => _saving = false);
       await _load();
-    } catch (_) {
-      if (mounted) setState(() { _error = 'Failed to submit. Please try again.'; _saving = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = 'Failed to submit: $e'; _saving = false; });
     }
   }
 
