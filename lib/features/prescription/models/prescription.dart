@@ -15,6 +15,7 @@ class Prescription {
   final String?  notes;
   final DateTime createdAt;
   final String?  writtenByDoctorId;
+  final String?  linkedDoctorId;
   final List<PrescriptionMedicine> medicines;
   final List<String> allergyConflicts;
 
@@ -31,6 +32,7 @@ class Prescription {
     this.notes,
     required this.createdAt,
     this.writtenByDoctorId,
+    this.linkedDoctorId,
     this.medicines        = const [],
     this.allergyConflicts = const [],
   });
@@ -67,6 +69,7 @@ class Prescription {
         notes:             m['notes']                 as String?,
         createdAt:         DateTime.parse(m['created_at'] as String),
         writtenByDoctorId: m['written_by_doctor_id']   as String?,
+        linkedDoctorId:    m['linked_doctor_id']        as String?,
         medicines:         medicines,
       );
 
@@ -81,6 +84,7 @@ class Prescription {
         'image_urls':           imageUrls,
         'notes':                notes,
         'written_by_doctor_id': writtenByDoctorId,
+        'linked_doctor_id':     linkedDoctorId,
       };
 
   Prescription copyWith({
@@ -96,6 +100,7 @@ class Prescription {
     String?   notes,
     DateTime? createdAt,
     String?   writtenByDoctorId,
+    String?   linkedDoctorId,
     List<PrescriptionMedicine>? medicines,
     List<String>? allergyConflicts,
   }) =>
@@ -112,6 +117,7 @@ class Prescription {
         notes:             notes             ?? this.notes,
         createdAt:         createdAt         ?? this.createdAt,
         writtenByDoctorId: writtenByDoctorId ?? this.writtenByDoctorId,
+        linkedDoctorId:    linkedDoctorId    ?? this.linkedDoctorId,
         medicines:         medicines         ?? this.medicines,
         allergyConflicts:  allergyConflicts  ?? this.allergyConflicts,
       );

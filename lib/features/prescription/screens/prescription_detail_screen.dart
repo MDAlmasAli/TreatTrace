@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
@@ -35,14 +36,16 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
   final _reminders      = ReminderService();
 
   late Prescription _p;
-  List<String> _allergyConflicts = [];
-  bool         _loading = false;
+  List<String>         _allergyConflicts = [];
+  bool                 _loading          = false;
+  Map<String, String?> _doctorProfile    = {};
 
   @override
   void initState() {
     super.initState();
     _p = widget.prescription;
     _checkAllergies();
+    _fetchDoctorProfile();
   }
 
   Future<void> _checkAllergies() async {
@@ -52,16 +55,44 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
     setState(() => _allergyConflicts = conflicts);
   }
 
+  Future<void> _fetchDoctorProfile() async {
+    final docId = _p.linkedDoctorId ?? _p.writtenByDoctorId;
+    if (docId == null) return;
+    final client = Supabase.instance.client;
+    final results = await Future.wait([
+      client.from('profiles').select('full_name, phone').eq('id', docId).maybeSingle(),
+      client.from('doctor_verifications').select('specialty, hospital').eq('id', docId).eq('status', 'approved').maybeSingle(),
+    ]);
+    final prof  = results[0];
+    final verif = results[1];
+    if (mounted) {
+      setState(() {
+        _doctorProfile = {
+          'name':      prof?['full_name']  as String?,
+          'specialty': verif?['specialty'] as String?,
+          'hospital':  verif?['hospital']  as String?,
+          'phone':     prof?['phone']      as String?,
+        };
+      });
+    }
+  }
+
   Future<void> _refresh() async {
     setState(() => _loading = true);
     try {
       final fresh = await _service.fetchOne(_p.id);
       if (fresh != null && mounted) setState(() => _p = fresh);
-      await _checkAllergies();
+      await Future.wait([_checkAllergies(), _fetchDoctorProfile()]);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
+
+  // Resolved doctor display values — prefer fetched profile, fall back to stored text.
+  String? get _docName     => _doctorProfile['name']      ?? _p.doctorName;
+  String? get _docSpecialty => _doctorProfile['specialty'] ?? _p.doctorSpecialty;
+  String? get _docHospital  => _doctorProfile['hospital']  ?? _p.doctorHospital;
+  String? get _docPhone     => _doctorProfile['phone']     ?? _p.doctorPhone;
 
   // ── Edit ──────────────────────────────────────────────────────────────────
 
@@ -209,14 +240,14 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
 
           // Doctor section
           _pdfSection('Doctor Information', [
-            if (p.doctorName?.isNotEmpty == true)
-              _pdfRow('Name', 'Dr. ${p.doctorName!}'),
-            if (p.doctorSpecialty?.isNotEmpty == true)
-              _pdfRow('Specialty', p.doctorSpecialty!),
-            if (p.doctorHospital?.isNotEmpty == true)
-              _pdfRow('Hospital / Clinic', p.doctorHospital!),
-            if (p.doctorPhone?.isNotEmpty == true)
-              _pdfRow('Phone', p.doctorPhone!),
+            if (_docName?.isNotEmpty == true)
+              _pdfRow('Name', 'Dr. $_docName'),
+            if (_docSpecialty?.isNotEmpty == true)
+              _pdfRow('Specialty', _docSpecialty!),
+            if (_docHospital?.isNotEmpty == true)
+              _pdfRow('Hospital / Clinic', _docHospital!),
+            if (_docPhone?.isNotEmpty == true)
+              _pdfRow('Phone', _docPhone!),
           ]),
 
           if (p.diagnosis?.isNotEmpty == true) ...[
@@ -350,7 +381,12 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
                         // Doctor info
                         _SectionLabel(text: 'Doctor Information'),
                         const SizedBox(height: 10),
-                        _DoctorCard(p: _p)
+                        _DoctorCard(
+                          name:      _docName,
+                          specialty: _docSpecialty,
+                          hospital:  _docHospital,
+                          phone:     _docPhone,
+                        )
                             .animate()
                             .fadeIn(delay: 60.ms)
                             .slideY(begin: 0.06),
@@ -439,8 +475,8 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _p.doctorName?.isNotEmpty == true
-                      ? 'Dr. ${_p.doctorName}'
+                  _docName?.isNotEmpty == true
+                      ? 'Dr. $_docName'
                       : s.prescription,
                   style: GoogleFonts.poppins(
                     fontSize:   20,
@@ -490,8 +526,17 @@ class _SectionLabel extends StatelessWidget {
 }
 
 class _DoctorCard extends StatelessWidget {
-  final Prescription p;
-  const _DoctorCard({required this.p});
+  final String? name;
+  final String? specialty;
+  final String? hospital;
+  final String? phone;
+
+  const _DoctorCard({
+    this.name,
+    this.specialty,
+    this.hospital,
+    this.phone,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -501,33 +546,31 @@ class _DoctorCard extends StatelessWidget {
       child: Column(
         children: [
           _InfoRow(
-            icon:       Icons.person_rounded,
-            iconColor:  c.cyan,
-            label:      'Doctor',
-            value:      p.doctorName?.isNotEmpty == true
-                ? 'Dr. ${p.doctorName!}'
-                : '—',
+            icon:      Icons.person_rounded,
+            iconColor: c.cyan,
+            label:     'Doctor',
+            value:     name?.isNotEmpty == true ? 'Dr. $name' : '—',
           ),
-          if (p.doctorSpecialty?.isNotEmpty == true)
+          if (specialty?.isNotEmpty == true)
             _InfoRow(
               icon:      Icons.medical_services_rounded,
               iconColor: c.purpleBright,
               label:     'Specialty',
-              value:     p.doctorSpecialty!,
+              value:     specialty!,
             ),
-          if (p.doctorHospital?.isNotEmpty == true)
+          if (hospital?.isNotEmpty == true)
             _InfoRow(
               icon:      Icons.local_hospital_rounded,
               iconColor: c.green,
               label:     'Hospital',
-              value:     p.doctorHospital!,
+              value:     hospital!,
             ),
-          if (p.doctorPhone?.isNotEmpty == true)
+          if (phone?.isNotEmpty == true)
             _InfoRow(
               icon:      Icons.phone_rounded,
               iconColor: c.amber,
               label:     'Phone',
-              value:     p.doctorPhone!,
+              value:     phone!,
               isLast:    true,
             )
           else

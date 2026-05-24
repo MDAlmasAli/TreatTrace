@@ -11,6 +11,7 @@ import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/profile_service.dart';
 import '../../../core/services/reminder_service.dart';
+import '../../../core/widgets/linked_doctor_picker_card.dart';
 import '../models/prescription.dart';
 import '../models/prescription_medicine.dart';
 import '../services/prescription_service.dart';
@@ -33,13 +34,11 @@ class _AddEditPrescriptionScreenState
   final _reminderService = ReminderService();
   final _imagePicker     = ImagePicker();
 
-  // Doctor fields
-  final _doctorNameCtrl     = TextEditingController();
-  final _specialtyCtrl      = TextEditingController();
-  final _hospitalCtrl       = TextEditingController();
-  final _doctorPhoneCtrl    = TextEditingController();
-  final _diagnosisCtrl      = TextEditingController();
-  final _notesCtrl          = TextEditingController();
+  // Doctor picker
+  String? _linkedDoctorId;
+
+  final _diagnosisCtrl = TextEditingController();
+  final _notesCtrl     = TextEditingController();
 
   DateTime     _prescDate     = DateTime.now();
   List<String> _imageUrls     = [];
@@ -69,23 +68,16 @@ class _AddEditPrescriptionScreenState
 
   void _populateFromExisting() {
     final p = widget.existing!;
-    _doctorNameCtrl.text  = p.doctorName    ?? '';
-    _specialtyCtrl.text   = p.doctorSpecialty ?? '';
-    _hospitalCtrl.text    = p.doctorHospital  ?? '';
-    _doctorPhoneCtrl.text = p.doctorPhone     ?? '';
-    _diagnosisCtrl.text   = p.diagnosis       ?? '';
-    _notesCtrl.text       = p.notes           ?? '';
-    _prescDate            = p.prescriptionDate;
-    _imageUrls            = List.from(p.imageUrls);
+    _linkedDoctorId = p.linkedDoctorId;
+    _diagnosisCtrl.text = p.diagnosis ?? '';
+    _notesCtrl.text     = p.notes     ?? '';
+    _prescDate          = p.prescriptionDate;
+    _imageUrls          = List.from(p.imageUrls);
     _medicines.addAll(p.medicines.map(_MedicineDraft.fromModel));
   }
 
   @override
   void dispose() {
-    _doctorNameCtrl.dispose();
-    _specialtyCtrl.dispose();
-    _hospitalCtrl.dispose();
-    _doctorPhoneCtrl.dispose();
     _diagnosisCtrl.dispose();
     _notesCtrl.dispose();
     for (final m in _medicines) {
@@ -198,10 +190,7 @@ class _AddEditPrescriptionScreenState
 
       if (_isEdit) {
         final updated = widget.existing!.copyWith(
-          doctorName:       _doctorNameCtrl.text.trim().nullIfEmpty,
-          doctorSpecialty:  _specialtyCtrl.text.trim().nullIfEmpty,
-          doctorHospital:   _hospitalCtrl.text.trim().nullIfEmpty,
-          doctorPhone:      _doctorPhoneCtrl.text.trim().nullIfEmpty,
+          linkedDoctorId:   _linkedDoctorId,
           diagnosis:        _diagnosisCtrl.text.trim().nullIfEmpty,
           prescriptionDate: _prescDate,
           imageUrls:        _imageUrls,
@@ -214,14 +203,10 @@ class _AddEditPrescriptionScreenState
         final full = await _prescService.fetchOne(updated.id);
         if (full != null) await _reminderService.scheduleForPrescription(full);
       } else {
-        // Build a placeholder Prescription for create (id assigned by DB)
         final draft = Prescription(
           id:               '',
           userId:           '',
-          doctorName:       _doctorNameCtrl.text.trim().nullIfEmpty,
-          doctorSpecialty:  _specialtyCtrl.text.trim().nullIfEmpty,
-          doctorHospital:   _hospitalCtrl.text.trim().nullIfEmpty,
-          doctorPhone:      _doctorPhoneCtrl.text.trim().nullIfEmpty,
+          linkedDoctorId:   _linkedDoctorId,
           diagnosis:        _diagnosisCtrl.text.trim().nullIfEmpty,
           prescriptionDate: _prescDate,
           imageUrls:        _imageUrls,
@@ -283,32 +268,13 @@ class _AddEditPrescriptionScreenState
                       _AllergyBanner(medicines: _allergyConflicts)
                           .animate().fadeIn().slideY(begin: -0.1),
 
-                    _SectionLabel(text: 'Doctor Info'),
+                    _SectionLabel(text: 'Doctor'),
                     const SizedBox(height: 12),
-                    _FormCard(children: [
-                      _Field(
-                        ctrl:  _doctorNameCtrl,
-                        label: s.doctorName,
-                        icon:  Icons.person_rounded,
-                      ),
-                      _Field(
-                        ctrl:  _specialtyCtrl,
-                        label: s.doctorSpecialty,
-                        icon:  Icons.medical_services_rounded,
-                      ),
-                      _Field(
-                        ctrl:  _hospitalCtrl,
-                        label: s.hospitalClinic,
-                        icon:  Icons.local_hospital_rounded,
-                      ),
-                      _Field(
-                        ctrl:        _doctorPhoneCtrl,
-                        label:       s.doctorPhone,
-                        icon:        Icons.phone_rounded,
-                        keyboardType: TextInputType.phone,
-                        isLast:      true,
-                      ),
-                    ]),
+                    LinkedDoctorPickerCard(
+                      selectedDoctorId: _linkedDoctorId,
+                      onChanged: (link) => setState(() =>
+                          _linkedDoctorId = link?.doctorId),
+                    ),
 
                     const SizedBox(height: 24),
                     _SectionLabel(text: 'Prescription Info'),
@@ -552,16 +518,14 @@ class _Field extends StatelessWidget {
   final TextEditingController ctrl;
   final String                label;
   final IconData              icon;
-  final TextInputType         keyboardType;
   final int                   maxLines;
   final bool                  isLast;
   const _Field({
     required this.ctrl,
     required this.label,
     required this.icon,
-    this.keyboardType = TextInputType.text,
-    this.maxLines     = 1,
-    this.isLast       = false,
+    this.maxLines = 1,
+    this.isLast   = false,
   });
 
   @override
@@ -572,9 +536,8 @@ class _Field extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: TextFormField(
-            controller:   ctrl,
-            keyboardType: keyboardType,
-            maxLines:     maxLines,
+            controller: ctrl,
+            maxLines:   maxLines,
             style:        GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
             validator: null,
             decoration: InputDecoration(

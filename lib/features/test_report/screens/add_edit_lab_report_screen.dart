@@ -8,8 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
-import '../../doctor_home/models/doctor_patient_link.dart';
-import '../../doctor_home/services/doctor_patient_link_service.dart';
+import '../../../core/widgets/linked_doctor_picker_card.dart';
 import '../../prescription/models/prescription.dart';
 import '../../prescription/services/prescription_service.dart';
 import '../models/lab_report.dart';
@@ -39,13 +38,9 @@ class AddEditLabReportScreen extends StatefulWidget {
 class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
   final _reportService = LabReportService();
   final _prescService  = PrescriptionService();
-  final _linkSvc       = DoctorPatientLinkService();
   final _imagePicker   = ImagePicker();
 
-  final _doctorCtrl    = TextEditingController();
-  final _doctorFocusNode = FocusNode();
-  final _hospitalCtrl  = TextEditingController();
-  final _notesCtrl     = TextEditingController();
+  final _notesCtrl = TextEditingController();
 
   String?      _category;
   DateTime?    _testDate;
@@ -54,8 +49,7 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
   bool         _saving         = false;
 
   // Doctor link
-  List<DoctorPatientLink> _myDoctors      = [];
-  String?                 _linkedDoctorId;
+  String? _linkedDoctorId;
 
   // Prescription link
   List<Prescription> _prescriptions       = [];
@@ -64,29 +58,15 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
 
   bool get _isEdit => widget.existing != null;
 
-  List<DoctorPatientLink> get _doctorSuggestions {
-    if (!_doctorFocusNode.hasFocus || _myDoctors.isEmpty) return [];
-    final q = _doctorCtrl.text.trim().toLowerCase();
-    if (q.isEmpty) return _myDoctors;
-    return _myDoctors
-        .where((d) => (d.doctorName ?? '').toLowerCase().contains(q))
-        .toList();
-  }
-
   @override
   void initState() {
     super.initState();
     _loadPrescriptions();
-    _loadMyDoctors();
-    _doctorFocusNode.addListener(() => setState(() {}));
     if (_isEdit) _populate();
   }
 
   @override
   void dispose() {
-    _doctorCtrl.dispose();
-    _doctorFocusNode.dispose();
-    _hospitalCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
@@ -100,24 +80,14 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
     }
   }
 
-  Future<void> _loadMyDoctors() async {
-    final links = await _linkSvc.fetchIncomingRequests();
-    if (mounted) {
-      setState(() =>
-          _myDoctors = links.where((l) => l.isAccepted).toList());
-    }
-  }
-
   void _populate() {
     final r = widget.existing!;
-    _doctorCtrl.text   = r.doctorName  ?? '';
-    _hospitalCtrl.text = r.hospital    ?? '';
-    _notesCtrl.text    = r.notes       ?? '';
-    _category          = r.category;
-    _testDate          = r.testDate;
-    _imageUrls         = List.from(r.imageUrls);
-    _linkedPrescId     = r.prescriptionId;
-    _linkedDoctorId    = r.orderedByDoctorId;
+    _notesCtrl.text = r.notes       ?? '';
+    _category       = r.category;
+    _testDate       = r.testDate;
+    _imageUrls      = List.from(r.imageUrls);
+    _linkedPrescId  = r.prescriptionId;
+    _linkedDoctorId = r.orderedByDoctorId;
   }
 
   // ── Category picker ───────────────────────────────────────────────────────
@@ -272,8 +242,6 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
         testName:          _category!,
         category:          _category,
         testDate:          _testDate,
-        doctorName:        _doctorCtrl.text.trim().nullIfEmpty,
-        hospital:          _hospitalCtrl.text.trim().nullIfEmpty,
         imageUrls:         _imageUrls,
         notes:             _notesCtrl.text.trim().nullIfEmpty,
         prescriptionId:    _linkedPrescId,
@@ -318,8 +286,6 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
       statusBarColor:          Colors.transparent,
       statusBarIconBrightness: c.statusBarIconBrightness,
     ));
-
-    final suggestions = _doctorSuggestions;
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -399,162 +365,14 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
                     onPickCustom: _pickCustomCategory,
                   ),
 
-                  // ── Doctor / Lab Info ──────────────────────────────────
+                  // ── Doctor ────────────────────────────────────────────
                   const SizedBox(height: 24),
-                  _SectionLabel(text: 'Doctor / Lab Info'),
+                  _SectionLabel(text: s.doctorName),
                   const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color:        c.card,
-                      borderRadius: BorderRadius.circular(20),
-                      border:       Border.all(color: c.border, width: 1),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Doctor name field
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 4),
-                          child: TextField(
-                            controller: _doctorCtrl,
-                            focusNode:  _doctorFocusNode,
-                            onChanged:  (_) => setState(() {
-                              if (_linkedDoctorId != null) {
-                                _linkedDoctorId = null;
-                              }
-                            }),
-                            style: GoogleFonts.poppins(
-                                fontSize: 13, color: c.textPrimary),
-                            decoration: InputDecoration(
-                              labelText:  s.doctorName,
-                              labelStyle: GoogleFonts.poppins(
-                                  fontSize: 12, color: c.textMuted),
-                              prefixIcon: Icon(Icons.person_rounded,
-                                  size: 18, color: c.cyan),
-                              suffixIcon: _linkedDoctorId != null
-                                  ? Padding(
-                                      padding:
-                                          const EdgeInsets.only(right: 12),
-                                      child: Icon(Icons.verified_rounded,
-                                          color: c.green, size: 18),
-                                    )
-                                  : null,
-                              suffixIconConstraints: const BoxConstraints(),
-                              border: InputBorder.none,
-                              contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                        // Suggestions from linked doctors
-                        if (suggestions.isNotEmpty) ...[
-                          Divider(
-                              height: 1,
-                              indent: 16,
-                              endIndent: 16,
-                              color: c.border,
-                              thickness: 1),
-                          Container(
-                            margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-                            decoration: BoxDecoration(
-                              color:        c.surface,
-                              borderRadius: BorderRadius.circular(12),
-                              border:       Border.all(color: c.border),
-                            ),
-                            child: Column(
-                              children: suggestions.asMap().entries.map((e) {
-                                final idx  = e.key;
-                                final link = e.value;
-                                final isSelected =
-                                    _linkedDoctorId == link.doctorId;
-                                final isLast = idx == suggestions.length - 1;
-                                return Column(
-                                  children: [
-                                    InkWell(
-                                      borderRadius: BorderRadius.circular(12),
-                                      onTap: () {},
-                                      onTapDown: (_) {
-                                        setState(() {
-                                          _doctorCtrl.text =
-                                              link.doctorName ?? '';
-                                          _linkedDoctorId  = link.doctorId;
-                                          if (_hospitalCtrl.text.trim().isEmpty) {
-                                            _hospitalCtrl.text =
-                                                link.doctorHospital ?? '';
-                                          }
-                                        });
-                                        _doctorFocusNode.unfocus();
-                                      },
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 10),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              width: 30, height: 30,
-                                              decoration: BoxDecoration(
-                                                color: c.cyan.withAlpha(20),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: Icon(
-                                                  Icons.person_rounded,
-                                                  color: c.cyan,
-                                                  size: 14),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Text(
-                                                'Dr. ${link.doctorName ?? "Unknown"}',
-                                                style: GoogleFonts.poppins(
-                                                  fontSize:   13,
-                                                  fontWeight: isSelected
-                                                      ? FontWeight.w600
-                                                      : FontWeight.w400,
-                                                  color: isSelected
-                                                      ? c.cyan
-                                                      : c.textPrimary,
-                                                ),
-                                              ),
-                                            ),
-                                            if (isSelected)
-                                              Icon(
-                                                  Icons.check_circle_rounded,
-                                                  color: c.green,
-                                                  size: 16),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    if (!isLast)
-                                      Divider(
-                                          height: 1,
-                                          indent: 12,
-                                          endIndent: 12,
-                                          color: c.border,
-                                          thickness: 1),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ],
-                        // Hospital
-                        Divider(
-                            height: 1,
-                            indent: 16,
-                            endIndent: 16,
-                            color: c.border,
-                            thickness: 1),
-                        _Field(
-                          ctrl:   _hospitalCtrl,
-                          label:  s.labHospital,
-                          icon:   Icons.local_hospital_rounded,
-                          isLast: true,
-                        ),
-                      ],
-                    ),
+                  LinkedDoctorPickerCard(
+                    selectedDoctorId: _linkedDoctorId,
+                    onChanged: (link) =>
+                        setState(() => _linkedDoctorId = link?.doctorId),
                   ),
 
                   // ── Images ────────────────────────────────────────────
