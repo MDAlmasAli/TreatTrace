@@ -250,6 +250,7 @@ class PrescriptionService {
     required String? diagnosis,
     required DateTime date,
     required String? notes,
+    required List<String> imageUrls,
     required List<PrescriptionMedicine> medicines,
   }) async {
     final doctorId = _uid;
@@ -259,6 +260,7 @@ class PrescriptionService {
       'diagnosis':         diagnosis,
       'prescription_date': date.toIso8601String().substring(0, 10),
       'notes':             notes,
+      'image_urls':        imageUrls,
     })
         .eq('id', prescriptionId)
         .eq('written_by_doctor_id', doctorId); // safety: only own prescriptions

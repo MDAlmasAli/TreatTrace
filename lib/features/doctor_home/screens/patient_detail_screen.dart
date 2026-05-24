@@ -542,52 +542,89 @@ class _RxTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border:       Border.all(color: c.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(color: c.accent.withAlpha(15), borderRadius: BorderRadius.circular(12)),
-            child: Icon(Icons.medication_rounded, color: c.accent, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  rx.diagnosis ?? (rx.medicines.isNotEmpty ? rx.medicines.first.medicineName : 'Prescription'),
-                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          Row(
+            children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(color: c.accent.withAlpha(15), borderRadius: BorderRadius.circular(12)),
+                child: Icon(Icons.medication_rounded, color: c.accent, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      rx.diagnosis ?? (rx.medicines.isNotEmpty ? rx.medicines.first.medicineName : 'Prescription'),
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(dateStr, style: GoogleFonts.poppins(fontSize: 11, color: c.textSec)),
+                  ],
                 ),
-                Text(dateStr, style: GoogleFonts.poppins(fontSize: 11, color: c.textSec)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color:        (rx.medicines.isEmpty || rx.isActive ? c.green : c.textMuted).withAlpha(15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              '${rx.medicines.length} med${rx.medicines.length == 1 ? '' : 's'}',
-              style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600,
-                  color: rx.medicines.isEmpty || rx.isActive ? c.green : c.textMuted),
-            ),
-          ),
-          if (canEdit) ...[
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: onEdit,
-              child: Container(
-                width: 32, height: 32,
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color:        c.accent.withAlpha(15),
-                  borderRadius: BorderRadius.circular(9),
+                  color:        (rx.medicines.isEmpty || rx.isActive ? c.green : c.textMuted).withAlpha(15),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.edit_rounded, size: 15, color: c.accent),
+                child: Text(
+                  '${rx.medicines.length} med${rx.medicines.length == 1 ? '' : 's'}',
+                  style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600,
+                      color: rx.medicines.isEmpty || rx.isActive ? c.green : c.textMuted),
+                ),
+              ),
+              if (canEdit) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: onEdit,
+                  child: Container(
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(
+                      color:        c.accent.withAlpha(15),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(Icons.edit_rounded, size: 15, color: c.accent),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (rx.imageUrls.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: rx.imageUrls.map((url) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () => showDialog(
+                      context: context,
+                      builder: (ctx) => Dialog(
+                        backgroundColor: Colors.transparent,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(url, fit: BoxFit.contain),
+                        ),
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(url, width: 64, height: 64, fit: BoxFit.cover,
+                          errorBuilder: (ctx, err, st) => Container(
+                            width: 64, height: 64,
+                            decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(8)),
+                            child: Icon(Icons.broken_image_rounded, color: c.textMuted, size: 20),
+                          )),
+                    ),
+                  ),
+                )).toList(),
               ),
             ),
           ],

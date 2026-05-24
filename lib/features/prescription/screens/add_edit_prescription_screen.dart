@@ -122,8 +122,18 @@ class _AddEditPrescriptionScreenState
   Future<void> _pickImage() async {
     final source = await _showSourceDialog();
     if (source == null) return;
-    final picked = await _imagePicker.pickImage(
-        source: source, imageQuality: 80, maxWidth: 1024);
+
+    XFile? picked;
+    try {
+      picked = await _imagePicker.pickImage(
+          source: source, imageQuality: 80, maxWidth: 1024);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open camera: $e')));
+      }
+      return;
+    }
     if (picked == null) return;
 
     setState(() => _uploadingImage = true);

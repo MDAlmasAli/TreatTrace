@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
@@ -29,15 +30,18 @@ class DoctorWritePrescriptionScreen extends StatefulWidget {
 
 class _DoctorWritePrescriptionScreenState
     extends State<DoctorWritePrescriptionScreen> {
-  final _svc    = PrescriptionService();
-  final _dvrSvc = DoctorVerificationService();
+  final _svc         = PrescriptionService();
+  final _dvrSvc      = DoctorVerificationService();
+  final _imagePicker = ImagePicker();
 
   final _diagnosisCtrl = TextEditingController();
   final _notesCtrl     = TextEditingController();
 
-  DateTime         _date   = DateTime.now();
-  final List<_MedEntry> _meds = [];
-  bool _saving   = false;
+  DateTime         _date          = DateTime.now();
+  final List<_MedEntry> _meds     = [];
+  List<String>     _imageUrls     = [];
+  bool _saving        = false;
+  bool _uploadingImage = false;
   bool _loadingDoctor = true;
 
   // auto-filled from doctor_verifications
@@ -79,6 +83,7 @@ class _DoctorWritePrescriptionScreenState
     _date = rx.prescriptionDate;
     _diagnosisCtrl.text = rx.diagnosis ?? '';
     _notesCtrl.text     = rx.notes     ?? '';
+    _imageUrls          = List.from(rx.imageUrls);
     if (rx.medicines.isEmpty) {
       _addMed();
     } else {
@@ -101,6 +106,50 @@ class _DoctorWritePrescriptionScreenState
   void _removeMed(int i) {
     _meds[i].dispose();
     setState(() => _meds.removeAt(i));
+  }
+
+  Future<void> _pickImage() async {
+    final c = context.colors;
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.card,
+        title: Text('Choose source',
+            style: GoogleFonts.poppins(color: c.textPrimary, fontWeight: FontWeight.w600)),
+        actions: [
+          TextButton.icon(
+            icon:  Icon(Icons.photo_library_rounded, color: c.accent),
+            label: Text('Gallery', style: GoogleFonts.poppins(color: c.accent)),
+            onPressed: () => Navigator.of(ctx).pop(ImageSource.gallery),
+          ),
+          TextButton.icon(
+            icon:  Icon(Icons.camera_alt_rounded, color: c.green),
+            label: Text('Camera', style: GoogleFonts.poppins(color: c.green)),
+            onPressed: () => Navigator.of(ctx).pop(ImageSource.camera),
+          ),
+        ],
+      ),
+    );
+    if (source == null) return;
+
+    XFile? picked;
+    try {
+      picked = await _imagePicker.pickImage(source: source, imageQuality: 80, maxWidth: 1024);
+    } catch (e) {
+      if (mounted) _snack('Could not open camera: $e', isError: true);
+      return;
+    }
+    if (picked == null) return;
+
+    setState(() => _uploadingImage = true);
+    try {
+      final url = await _svc.uploadImage(picked);
+      if (url != null && mounted) setState(() => _imageUrls.add(url));
+    } catch (e) {
+      if (mounted) _snack('Image upload failed: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
+    }
   }
 
   Future<void> _pickDate() async {
@@ -139,6 +188,7 @@ class _DoctorWritePrescriptionScreenState
           diagnosis:      _diagnosisCtrl.text.trim().isEmpty ? null : _diagnosisCtrl.text.trim(),
           date:           _date,
           notes:          _notesCtrl.text.trim().isEmpty     ? null : _notesCtrl.text.trim(),
+          imageUrls:      _imageUrls,
           medicines:      medicines,
         );
       } else {
@@ -152,6 +202,7 @@ class _DoctorWritePrescriptionScreenState
           doctorPhone:      _doctorPhone,
           diagnosis:        _diagnosisCtrl.text.trim().isEmpty ? null : _diagnosisCtrl.text.trim(),
           prescriptionDate: _date,
+          imageUrls:        _imageUrls,
           notes:            _notesCtrl.text.trim().isEmpty     ? null : _notesCtrl.text.trim(),
           createdAt:        DateTime.now(),
           writtenByDoctorId: doctorId,
@@ -306,6 +357,83 @@ class _DoctorWritePrescriptionScreenState
                     ),
                   ),
                 ),
+
+                const SizedBox(height: 24),
+
+                // ── Prescription images ───────────────────────────────────────
+                Row(
+                  children: [
+                    _SectionLabel(label: 'Prescription Images', icon: Icons.image_rounded, color: c.textSec),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: _uploadingImage ? null : _pickImage,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color:        c.accent.withAlpha(15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: _uploadingImage
+                            ? SizedBox(width: 14, height: 14,
+                                child: CircularProgressIndicator(color: c.accent, strokeWidth: 2))
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.add_photo_alternate_rounded, size: 14, color: c.accent),
+                                  const SizedBox(width: 4),
+                                  Text('Add', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: c.accent)),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (_imageUrls.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color:        c.card,
+                      borderRadius: BorderRadius.circular(14),
+                      border:       Border.all(color: c.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.image_outlined, color: c.textMuted, size: 20),
+                        const SizedBox(width: 10),
+                        Text('No images added', style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted)),
+                      ],
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _imageUrls.map((url) => Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(url, width: 80, height: 80, fit: BoxFit.cover,
+                              errorBuilder: (ctx, err, st) => Container(
+                                width: 80, height: 80,
+                                decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(10)),
+                                child: Icon(Icons.broken_image_rounded, color: c.textMuted),
+                              )),
+                        ),
+                        Positioned(
+                          top: 3, right: 3,
+                          child: GestureDetector(
+                            onTap: () => setState(() => _imageUrls.remove(url)),
+                            child: Container(
+                              width: 20, height: 20,
+                              decoration: BoxDecoration(color: c.red, shape: BoxShape.circle),
+                              child: const Icon(Icons.close_rounded, color: Colors.white, size: 13),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )).toList(),
+                  ),
 
                 const SizedBox(height: 28),
 
@@ -542,21 +670,33 @@ class _MedicineCardState extends State<_MedicineCard> {
           ),
           const SizedBox(height: 10),
 
-          // Timing (M/A/E/N) + duration
+          // Timing (full words)
           Row(
             children: [
               Text('Timing:', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: c.textSec)),
               const SizedBox(width: 8),
-              _TimingChip(label: 'M', active: e.morning,   onTap: () => setState(() => e.morning   = !e.morning)),
-              const SizedBox(width: 5),
-              _TimingChip(label: 'A', active: e.afternoon, onTap: () => setState(() => e.afternoon = !e.afternoon)),
-              const SizedBox(width: 5),
-              _TimingChip(label: 'E', active: e.evening,   onTap: () => setState(() => e.evening   = !e.evening)),
-              const SizedBox(width: 5),
-              _TimingChip(label: 'N', active: e.night,     onTap: () => setState(() => e.night     = !e.night)),
+              Expanded(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _TimingChip(label: 'Morning',   active: e.morning,   onTap: () => setState(() => e.morning   = !e.morning)),
+                    _TimingChip(label: 'Afternoon', active: e.afternoon, onTap: () => setState(() => e.afternoon = !e.afternoon)),
+                    _TimingChip(label: 'Evening',   active: e.evening,   onTap: () => setState(() => e.evening   = !e.evening)),
+                    _TimingChip(label: 'Night',     active: e.night,     onTap: () => setState(() => e.night     = !e.night)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Duration
+          Row(
+            children: [
+              Text('Duration:', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: c.textSec)),
               const Spacer(),
               SizedBox(
-                width: 72,
+                width: 90,
                 child: _inlineField(e.durationCtrl, c, 'Days', keyboardType: TextInputType.number),
               ),
             ],
@@ -625,7 +765,7 @@ class _MedicineCardState extends State<_MedicineCard> {
   }
 }
 
-// ── Timing chip (M/A/E/N) ────────────────────────────────────────────────────
+// ── Timing chip (Morning / Afternoon / Evening / Night) ──────────────────────
 
 class _TimingChip extends StatelessWidget {
   final String       label;
@@ -640,16 +780,15 @@ class _TimingChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        width: 34, height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color:        active ? c.accent : c.surface,
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(20),
           border:       Border.all(color: active ? c.accent : c.border),
         ),
-        alignment: Alignment.center,
         child: Text(label,
             style: GoogleFonts.poppins(
-                fontSize: 12, fontWeight: FontWeight.w700,
+                fontSize: 11, fontWeight: FontWeight.w600,
                 color: active ? Colors.white : c.textSec)),
       ),
     );
