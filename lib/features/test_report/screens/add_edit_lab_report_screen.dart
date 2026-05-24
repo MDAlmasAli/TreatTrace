@@ -473,11 +473,16 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
                                   children: [
                                     InkWell(
                                       borderRadius: BorderRadius.circular(12),
-                                      onTap: () {
+                                      onTap: () {},
+                                      onTapDown: (_) {
                                         setState(() {
                                           _doctorCtrl.text =
                                               link.doctorName ?? '';
                                           _linkedDoctorId  = link.doctorId;
+                                          if (_hospitalCtrl.text.trim().isEmpty) {
+                                            _hospitalCtrl.text =
+                                                link.doctorHospital ?? '';
+                                          }
                                         });
                                         _doctorFocusNode.unfocus();
                                       },

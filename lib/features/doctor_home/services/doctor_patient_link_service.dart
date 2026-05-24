@@ -177,17 +177,28 @@ class DoctorPatientLinkService {
       List<DoctorPatientLink> links) async {
     if (links.isEmpty) return links;
     final ids = links.map((l) => l.doctorId).toList();
+
     final profiles = await _client
         .from('profiles')
         .select('id, full_name, phone, avatar_url')
         .inFilter('id', ids) as List;
 
-    final map = {for (final p in profiles) p['id'] as String: p};
+    final verifs = await _client
+        .from('doctor_verifications')
+        .select('id, hospital')
+        .eq('status', 'approved')
+        .inFilter('id', ids) as List;
+
+    final profMap  = {for (final p in profiles) p['id'] as String: p};
+    final verifMap = {for (final v in verifs)   v['id'] as String: v};
+
     return links.map((l) {
-      final prof = map[l.doctorId] as Map<String, dynamic>?;
+      final prof  = profMap[l.doctorId]  as Map<String, dynamic>?;
+      final verif = verifMap[l.doctorId] as Map<String, dynamic>?;
       return l.copyWith(
         doctorName:     prof?['full_name']  as String?,
         doctorAvatarUrl: prof?['avatar_url'] as String?,
+        doctorHospital: verif?['hospital']  as String?,
       );
     }).toList();
   }

@@ -12,6 +12,7 @@ class DoctorPatientLink {
   final String? patientAvatarUrl;
   final String? doctorName;
   final String? doctorAvatarUrl;
+  final String? doctorHospital;
 
   const DoctorPatientLink({
     required this.id,
@@ -25,6 +26,7 @@ class DoctorPatientLink {
     this.patientAvatarUrl,
     this.doctorName,
     this.doctorAvatarUrl,
+    this.doctorHospital,
   });
 
   bool get isPending  => status == 'pending';
@@ -49,6 +51,7 @@ class DoctorPatientLink {
     String? patientAvatarUrl,
     String? doctorName,
     String? doctorAvatarUrl,
+    String? doctorHospital,
   }) =>
       DoctorPatientLink(
         id:              id,
@@ -62,5 +65,6 @@ class DoctorPatientLink {
         patientAvatarUrl: patientAvatarUrl ?? this.patientAvatarUrl,
         doctorName:      doctorName      ?? this.doctorName,
         doctorAvatarUrl: doctorAvatarUrl ?? this.doctorAvatarUrl,
+        doctorHospital:  doctorHospital  ?? this.doctorHospital,
       );
 }
