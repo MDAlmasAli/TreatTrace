@@ -32,7 +32,7 @@
 **v0.19 — Doctor Full Profile Page**
 
 - **Full-page doctor profile screen** — replaced the old bottom sheet popup with a dedicated `DoctorPublicProfileScreen`; shows doctor photo (large hero), name, specialty, visiting fee badge, hospital, degree, email, and "About" paragraph in a scrollable full-page layout
-- **Accessible from two places** — opens from global doctor search results and from the patient's "My Doctors → Linked Doctors" list when tapping any linked doctor
+- **Accessible from three places** — opens from (1) global doctor search results, (2) patient's "My Doctors" list when tapping any saved doctor that has a Supabase sourceId, (3) patient's "Linked Doctors" list when tapping any linked doctor
 - **Action buttons retained** — "Add to My Doctors" (green) and "Take Appointment" (accent blue) are on the profile page with the same logic as before
 - **Service method added** — `fetchDoctorPublicProfile(doctorId)` in `DoctorPatientLinkService` fetches combined `profiles` + `doctor_verifications` data for a single doctor in parallel
 

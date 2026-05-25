@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../search/screens/doctor_public_profile_screen.dart';
 import '../../search/screens/global_search_screen.dart';
 import '../models/doctor.dart';
 import '../services/doctor_service.dart';
@@ -88,10 +89,22 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   }
 
   Future<void> _openDetail(Doctor d) async {
-    final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => DoctorDetailScreen(doctor: d)),
-    );
-    if (changed == true) _load();
+    if (d.sourceId != null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => DoctorPublicProfileScreen(
+            doctorId:        d.sourceId!,
+            initialName:     d.name,
+            initialAvatarUrl: d.imageUrl,
+          ),
+        ),
+      );
+    } else {
+      final changed = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => DoctorDetailScreen(doctor: d)),
+      );
+      if (changed == true) _load();
+    }
   }
 
   Future<void> _toggleFavorite(Doctor d) async {
