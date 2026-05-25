@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../models/doctor_patient_link.dart';
 import '../services/doctor_patient_link_service.dart';
+import '../../search/screens/doctor_public_profile_screen.dart';
 class LinkedDoctorsScreen extends StatefulWidget {
   const LinkedDoctorsScreen({super.key});
 
@@ -195,6 +196,15 @@ class _LinkedDoctorsScreenState extends State<LinkedDoctorsScreen> {
           const SizedBox(height: 12),
           ..._accepted.asMap().entries.map((e) => _LinkedDoctorTile(
                 link:     e.value,
+                onTap:    () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => DoctorPublicProfileScreen(
+                      doctorId:        e.value.doctorId,
+                      initialName:     e.value.doctorName,
+                      initialAvatarUrl: e.value.doctorAvatarUrl,
+                    ),
+                  ),
+                ),
                 onRevoke: () => _revoke(e.value),
               ).animate().fadeIn(delay: Duration(milliseconds: 60 * e.key)).slideY(begin: 0.06)),
         ],
@@ -347,9 +357,10 @@ class _DoctorRequestTile extends StatelessWidget {
 
 class _LinkedDoctorTile extends StatelessWidget {
   final DoctorPatientLink link;
+  final VoidCallback       onTap;
   final VoidCallback       onRevoke;
 
-  const _LinkedDoctorTile({required this.link, required this.onRevoke});
+  const _LinkedDoctorTile({required this.link, required this.onTap, required this.onRevoke});
 
   @override
   Widget build(BuildContext context) {
@@ -357,7 +368,9 @@ class _LinkedDoctorTile extends StatelessWidget {
     final name   = link.doctorName ?? 'Unknown Doctor';
     final avatar = link.doctorAvatarUrl;
 
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -403,6 +416,7 @@ class _LinkedDoctorTile extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

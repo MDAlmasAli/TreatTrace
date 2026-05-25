@@ -248,6 +248,41 @@ class DoctorPatientLinkService {
     }).toList();
   }
 
+  // ── Fetch a single doctor's full public profile ───────────────────────────
+
+  Future<Map<String, dynamic>?> fetchDoctorPublicProfile(String doctorId) async {
+    final results = await Future.wait([
+      _client
+          .from('profiles')
+          .select('id, full_name, avatar_url, email')
+          .eq('id', doctorId)
+          .maybeSingle(),
+      _client
+          .from('doctor_verifications')
+          .select('specialty, hospital, degree, visiting_fee, about')
+          .eq('id', doctorId)
+          .eq('status', 'approved')
+          .maybeSingle(),
+    ]);
+
+    final profile = results[0];
+    final verif   = results[1];
+
+    if (profile == null) return null;
+
+    return {
+      'id':           doctorId,
+      'full_name':    profile['full_name'],
+      'avatar_url':   profile['avatar_url'],
+      'email':        profile['email'],
+      'specialty':    verif?['specialty'],
+      'hospital':     verif?['hospital'],
+      'degree':       verif?['degree'],
+      'visiting_fee': verif?['visiting_fee'],
+      'about':        verif?['about'],
+    };
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────────
 
   Future<List<DoctorPatientLink>> _attachPatientProfiles(

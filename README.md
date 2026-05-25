@@ -19,9 +19,9 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.18 — Active Development |
-| **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search |
-| **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree & About |
+| **Stage** | v0.19 — Active Development |
+| **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page |
+| **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About & Visiting Fee |
 | **Platform** | Android · iOS |
 | **Last Updated** | 2026-05-25 |
 
@@ -29,14 +29,20 @@
 
 ## Latest Updates (2026-05-25)
 
+**v0.19 — Doctor Full Profile Page**
+
+- **Full-page doctor profile screen** — replaced the old bottom sheet popup with a dedicated `DoctorPublicProfileScreen`; shows doctor photo (large hero), name, specialty, visiting fee badge, hospital, degree, email, and "About" paragraph in a scrollable full-page layout
+- **Accessible from two places** — opens from global doctor search results and from the patient's "My Doctors → Linked Doctors" list when tapping any linked doctor
+- **Action buttons retained** — "Add to My Doctors" (green) and "Take Appointment" (accent blue) are on the profile page with the same logic as before
+- **Service method added** — `fetchDoctorPublicProfile(doctorId)` in `DoctorPatientLinkService` fetches combined `profiles` + `doctor_verifications` data for a single doctor in parallel
+
 **v0.18 — Doctor Visiting Fee + Admin Pending Edits Fix**
 
 - **Visiting Fee field added** — required field on doctor signup and credentials edit screen; stored in `doctor_verifications.visiting_fee` (INTEGER, BDT); pending edit stored in `pending_visiting_fee`; shown with green badge in credentials view
-- **Fee shown in patient-facing search** — `fetchApprovedDoctors()` now returns `visiting_fee`; displayed as green "BDT X" row in doctor search result tiles and as a green pill badge in the doctor profile bottom sheet
+- **Fee shown in patient-facing search** — `fetchApprovedDoctors()` now returns `visiting_fee`; displayed as green "BDT X" row in doctor search result tiles
 - **Admin panel shows visiting fee** — appears in both the verification review card and the pending-edit diff view
-- **Fixed admin "Edits (0)" bug** — `fetchPendingEdits()` was using an embedded `profiles(...)` join which PostgREST was silently dropping the row for (inner-join behavior on filtered queries); fixed by separating into two queries (fetch verifications, then fetch profiles by IDs); the embedded join in `fetchAllVerifications()` worked because all rows passed RLS, but the `edit_status=eq.pending` filter exposed the issue
-- **Fixed `_load()` error isolation** — admin home now uses `.onError()` per-query so one failing query can't blank out both tabs
-- **Fixed `approve_doctor_edit` RPC** — previously only copied bmdc/specialty/hospital/nid/additional when approving edits; now also copies `degree`, `about`, `visiting_fee`
+- **Fixed admin "Edits (0)" bug** — `fetchPendingEdits()` was using an embedded `profiles(...)` join which PostgREST was silently dropping rows for (inner-join behavior on filtered queries); fixed by separating into two queries
+- **Fixed `approve_doctor_edit` RPC** — now also copies `degree`, `about`, `visiting_fee` when approving edits
 - **Database migration v09** — adds `visiting_fee`, `pending_visiting_fee`; recreates `approve_doctor_edit` with full field set
 
 ---

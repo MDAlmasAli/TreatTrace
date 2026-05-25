@@ -1,4 +1,4 @@
-// global_search_screen.dart — Cross-feature search: doctors, prescriptions, lab reports.
+﻿// global_search_screen.dart â€” Cross-feature search: doctors, prescriptions, lab reports.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,11 +6,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
-import '../../appointment/screens/add_edit_appointment_screen.dart';
-import '../../doctor/models/doctor.dart';
-import '../../doctor/services/doctor_service.dart';
 import '../../doctor_home/models/doctor_patient_link.dart';
 import '../../doctor_home/services/doctor_patient_link_service.dart';
+import 'doctor_public_profile_screen.dart';
 import '../../prescription/models/prescription.dart';
 import '../../prescription/services/prescription_service.dart';
 import '../../prescription/screens/prescription_detail_screen.dart';
@@ -76,7 +74,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     }
   }
 
-  // ── Filtered results ──────────────────────────────────────────────────────
+  // â”€â”€ Filtered results â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   List<Map<String, dynamic>> get _filteredDoctors {
     if (_query.isEmpty) return [];
@@ -121,27 +119,18 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       _filteredPrescriptions.isNotEmpty ||
       _filteredLabReports.isNotEmpty;
 
-  // ── Navigation ────────────────────────────────────────────────────────────
+  // â”€â”€ Navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  Future<void> _showDoctorSheet(Map<String, dynamic> d, bool isLinked) async {
-    final takeAppointment = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _DoctorProfileSheet(doctorData: d, isLinked: isLinked),
-    );
-    if (takeAppointment == true && mounted) {
-      final name = (d['full_name'] as String?)?.trim();
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => AddEditAppointmentScreen(
-            prefilledDoctorName: name?.isEmpty == true ? null : name,
-            prefilledDoctorHospital: d['hospital'] as String?,
-            prefilledDoctorUserId: d['id'] as String?,
-          ),
+  void _openDoctorProfile(Map<String, dynamic> d) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DoctorPublicProfileScreen(
+          doctorId:        d['id'] as String,
+          initialName:     d['full_name'] as String?,
+          initialAvatarUrl: d['avatar_url'] as String?,
         ),
-      );
-    }
+      ),
+    );
   }
 
   void _openPrescription(Prescription p) {
@@ -158,7 +147,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     ).push(MaterialPageRoute(builder: (_) => LabReportDetailScreen(report: r)));
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+  // â”€â”€ Build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @override
   Widget build(BuildContext context) {
@@ -222,7 +211,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                 onChanged: (v) => setState(() => _query = v.trim()),
                 style: GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
                 decoration: InputDecoration(
-                  hintText: 'Search doctors, medicines, reports…',
+                  hintText: 'Search doctors, medicines, reportsâ€¦',
                   hintStyle: GoogleFonts.poppins(
                     fontSize: 12,
                     color: c.textMuted,
@@ -300,7 +289,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               imageUrl: d['avatar_url'] as String?,
               badge: isLinked ? 'My Doctor' : 'Doctor',
               badgeColor: isLinked ? c.green : c.accent,
-              onTap: () => _showDoctorSheet(d, isLinked),
+              onTap: () => _openDoctorProfile(d),
               c: c,
             );
           }),
@@ -323,7 +312,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                   subtitle: [
                     if (p.doctorName != null) 'Dr. ${p.doctorName}',
                     _fmt(p.prescriptionDate),
-                  ].join('  ·  '),
+                  ].join('  Â·  '),
                   onTap: () => _openPrescription(p),
                   c: c,
                 ),
@@ -347,7 +336,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                   subtitle: [
                     if (r.category != null) r.category!,
                     if (r.testDate != null) _fmt(r.testDate!),
-                  ].join('  ·  '),
+                  ].join('  Â·  '),
                   onTap: () => _openLabReport(r),
                   c: c,
                 ),
@@ -403,7 +392,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           ),
           const SizedBox(height: 28),
           Text(
-            'Type anything to search…',
+            'Type anything to searchâ€¦',
             style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
           ),
         ],
@@ -429,7 +418,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   ];
 }
 
-// ── Section header ────────────────────────────────────────────────────────────
+// â”€â”€ Section header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _SectionHeader extends StatelessWidget {
   final String title;
@@ -461,7 +450,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ── Doctor result tile (with photo) ──────────────────────────────────────────
+// â”€â”€ Doctor result tile (with photo) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _DoctorResultTile extends StatelessWidget {
   final String name;
@@ -613,7 +602,7 @@ class _DoctorResultTile extends StatelessWidget {
   );
 }
 
-// ── Generic result tile ───────────────────────────────────────────────────────
+// â”€â”€ Generic result tile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ResultTile extends StatelessWidget {
   final IconData icon;
@@ -691,7 +680,7 @@ class _ResultTile extends StatelessWidget {
   }
 }
 
-// ── Shortcut chip ─────────────────────────────────────────────────────────────
+// â”€â”€ Shortcut chip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _Shortcut {
   final IconData icon;
@@ -747,317 +736,3 @@ class _ShortcutChip extends StatelessWidget {
   }
 }
 
-// ── Doctor profile bottom sheet ───────────────────────────────────────────────
-
-class _DoctorProfileSheet extends StatefulWidget {
-  final Map<String, dynamic> doctorData;
-  final bool isLinked;
-  const _DoctorProfileSheet({required this.doctorData, required this.isLinked});
-
-  @override
-  State<_DoctorProfileSheet> createState() => _DoctorProfileSheetState();
-}
-
-class _DoctorProfileSheetState extends State<_DoctorProfileSheet> {
-  final _doctorSvc = DoctorService();
-  bool _openingAppointment = false;
-  bool _checkingMyDoctor = true;
-  bool _addingMyDoctor = false;
-  bool _alreadyInMyDoctors = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkAlreadyInMyDoctors();
-  }
-
-  void _takeAppointment() {
-    if (_openingAppointment) return;
-    setState(() => _openingAppointment = true);
-    Navigator.of(context).pop(true);
-  }
-
-  Future<void> _checkAlreadyInMyDoctors() async {
-    try {
-      final all = await _doctorSvc.fetchAll();
-      final sourceId = widget.doctorData['id'] as String?;
-      final fullName = (widget.doctorData['full_name'] as String?)
-          ?.trim()
-          .toLowerCase();
-      final hospital = (widget.doctorData['hospital'] as String?)
-          ?.trim()
-          .toLowerCase();
-      final exists = all.any((d) {
-        if (sourceId != null && d.sourceId == sourceId) return true;
-        final dn = d.name.trim().toLowerCase();
-        final dh = d.hospital?.trim().toLowerCase();
-        return dn == fullName && dh == hospital;
-      });
-      if (!mounted) return;
-      setState(() {
-        _alreadyInMyDoctors = exists;
-        _checkingMyDoctor = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _checkingMyDoctor = false);
-    }
-  }
-
-  Future<void> _addToMyDoctors() async {
-    if (_addingMyDoctor || _alreadyInMyDoctors) return;
-    setState(() => _addingMyDoctor = true);
-    try {
-      final d = widget.doctorData;
-      await _doctorSvc.create(
-        Doctor(
-          id: '',
-          userId: '',
-          name: (d['full_name'] as String?)?.trim().isNotEmpty == true
-              ? (d['full_name'] as String).trim()
-              : 'Unknown',
-          specialty: (d['specialty'] as String?)?.trim(),
-          hospital: (d['hospital'] as String?)?.trim(),
-          imageUrl: d['avatar_url'] as String?,
-          sourceId: d['id'] as String?,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-      );
-      if (!mounted) return;
-      setState(() {
-        _alreadyInMyDoctors = true;
-        _addingMyDoctor = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Doctor added to My Doctors.',
-            style: GoogleFonts.poppins(),
-          ),
-        ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _addingMyDoctor = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to add doctor. Please try again.',
-            style: GoogleFonts.poppins(),
-          ),
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final d = widget.doctorData;
-    final name = d['full_name'] as String? ?? 'Unknown';
-    final specialty = d['specialty'] as String?;
-    final hospital = d['hospital'] as String?;
-    final visitingFee = d['visiting_fee'] as int?;
-    final avatar = d['avatar_url'] as String?;
-    final botPad = MediaQuery.of(context).padding.bottom;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
-      ),
-      padding: EdgeInsets.fromLTRB(24, 8, 24, botPad + 28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: c.border,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 22),
-          CircleAvatar(
-            radius: 40,
-            backgroundColor: c.accent.withAlpha(20),
-            backgroundImage: avatar != null ? NetworkImage(avatar) : null,
-            child: avatar == null
-                ? Icon(
-                    Icons.medical_services_rounded,
-                    color: c.accent,
-                    size: 38,
-                  )
-                : null,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Dr. $name',
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: c.textPrimary,
-            ),
-          ),
-          if (specialty?.isNotEmpty == true) ...[
-            const SizedBox(height: 4),
-            Text(
-              specialty!,
-              style: GoogleFonts.poppins(fontSize: 13, color: c.accent),
-            ),
-          ],
-          if (hospital != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              hospital,
-              style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
-            ),
-          ],
-          if (visitingFee != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: c.green.withAlpha(15),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: c.green.withAlpha(50)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.payments_rounded, size: 14, color: c.green),
-                  const SizedBox(width: 5),
-                  Text(
-                    'Visiting Fee: BDT $visitingFee',
-                    style: GoogleFonts.poppins(
-                        fontSize: 12, fontWeight: FontWeight.w600, color: c.green),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          if (widget.isLinked)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: c.green.withAlpha(20),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: c.green.withAlpha(60)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle_rounded, size: 14, color: c.green),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Linked Doctor',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: c.green,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          if (widget.isLinked) ...[const SizedBox(height: 10)],
-          const SizedBox(height: 28),
-          SizedBox(
-            width: double.infinity,
-            child: Column(
-              children: [
-                ElevatedButton.icon(
-                  onPressed:
-                      _checkingMyDoctor ||
-                          _addingMyDoctor ||
-                          _alreadyInMyDoctors
-                      ? null
-                      : _addToMyDoctors,
-                  icon: _checkingMyDoctor || _addingMyDoctor
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Icon(
-                          _alreadyInMyDoctors
-                              ? Icons.check_circle_rounded
-                              : Icons.person_add_rounded,
-                          size: 18,
-                        ),
-                  label: Text(
-                    _alreadyInMyDoctors
-                        ? 'Added to My Doctors'
-                        : 'Add to My Doctors',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _alreadyInMyDoctors ? c.green : c.green,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: _alreadyInMyDoctors
-                        ? c.green.withAlpha(170)
-                        : c.green.withAlpha(120),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ElevatedButton.icon(
-                  onPressed: _openingAppointment ? null : _takeAppointment,
-                  icon: const Icon(Icons.event_available_rounded, size: 18),
-                  label: Text(
-                    'Take Appointment',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: c.accent,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: c.border),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Close',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: c.textSec,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
