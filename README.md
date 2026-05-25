@@ -19,15 +19,23 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.14 — Active Development |
+| **Stage** | v0.15 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search |
-| **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory |
+| **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS |
 | **Platform** | Android · iOS |
 | **Last Updated** | 2026-05-25 |
 
 ---
 
 ## Latest Updates (2026-05-25)
+
+**v0.15 — Doctor Today's Schedule Fix**
+
+- **Today's Schedule now shows appointments correctly** — doctors can see all appointments booked under their name from the doctor portal; root cause was `doctor_user_id = null` on existing appointments combined with RLS blocking the name-snapshot fallback query
+- **New RLS policy `doctor_reads_by_name_snapshot`** — added to `appointments` table; allows a doctor to read any appointment where `doctor_name_snapshot ILIKE their profile full_name`; acts as a permanent safety net for appointments where `doctor_user_id` is not set
+- **`doctor_user_id` backfilled** — all existing appointments where `doctor_name_snapshot` exactly matches a doctor's `profiles.full_name` (case-insensitive) have been updated to set `doctor_user_id` to that doctor's UUID; primary query path (`doctor_user_id = uid`) now returns results directly
+
+---
 
 **v0.14 — Global Doctor Search + UI Fixes**
 
@@ -167,6 +175,7 @@
 
 ## Update History
 
+- `[2026-05-25]` Doctor Today's Schedule fix — `doctor_reads_by_name_snapshot` RLS policy added; `doctor_user_id` backfilled for all existing appointments matching a doctor's `full_name`
 - `[2026-05-25]` Doctor profile bottom sheet — tapping a doctor in global search shows profile sheet with Save to My Doctors button; navigates to DoctorDetailScreen on save
 - `[2026-05-25]` Global doctor search — all approved doctors in system now searchable by name/hospital; linked doctors shown with "My Doctor" badge; `fetchApprovedDoctors()` added to `DoctorPatientLinkService`
 - `[2026-05-25]` "Last Prescribed" button wired to Prescriptions screen; "Add Doctor" FAB restored with info dialog in My Doctors screen

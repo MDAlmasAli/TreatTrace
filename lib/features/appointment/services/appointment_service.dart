@@ -38,13 +38,36 @@ class AppointmentService {
     return row == null ? null : Appointment.fromMap(row);
   }
 
-  Future<Appointment> create(Appointment appt) async {
-    final inserted = await _client
-        .from('appointments')
-        .insert({...appt.toMap(), 'user_id': _uid})
-        .select()
-        .single();
-    return Appointment.fromMap(inserted);
+  Future<Appointment> create(Appointment appt, {String? doctorUserId}) async {
+    final uid = _uid;
+    if (uid == null) throw Exception('Not authenticated');
+
+    final payload = <String, dynamic>{...appt.toMap(), 'user_id': uid};
+    final resolvedDoctorUserId = await _resolveDoctorUserId(
+      doctorId: appt.doctorId,
+      override: doctorUserId,
+    );
+    if (resolvedDoctorUserId != null && resolvedDoctorUserId.isNotEmpty) {
+      payload['doctor_user_id'] = resolvedDoctorUserId;
+    }
+
+    try {
+      final inserted = await _client
+          .from('appointments')
+          .insert(payload)
+          .select()
+          .single();
+      return Appointment.fromMap(inserted);
+    } catch (_) {
+      // Fallback for schema versions without `doctor_user_id`.
+      payload.remove('doctor_user_id');
+      final inserted = await _client
+          .from('appointments')
+          .insert(payload)
+          .select()
+          .single();
+      return Appointment.fromMap(inserted);
+    }
   }
 
   Future<void> update(Appointment appt) async {
@@ -139,6 +162,7 @@ class AppointmentService {
     final uid = _uid;
     if (uid == null) return [];
     final date = day == null ? null : _dateOnly(day);
+    final merged = <String, Map<String, dynamic>>{};
 
     try {
       var query = _client
@@ -147,18 +171,67 @@ class AppointmentService {
           .eq('doctor_user_id', uid);
       if (date != null) query = query.eq('appointment_date', date);
       final rows = await query.order('created_at', ascending: false);
-      return rows as List;
-    } catch (_) {
-      final doctorName = _doctorName;
-      if (doctorName == null || doctorName.trim().isEmpty) return [];
-      var query = _client
-          .from('appointments')
-          .select(columns)
-          .eq('doctor_name_snapshot', doctorName.trim());
-      if (date != null) query = query.eq('appointment_date', date);
-      final rows = await query.order('created_at', ascending: false);
-      return rows as List;
+      for (final row in rows as List) {
+        final map = row as Map<String, dynamic>;
+        final id = map['id']?.toString();
+        if (id != null && id.isNotEmpty) merged[id] = map;
+      }
+    } catch (_) {}
+
+    final doctorName = _doctorName?.trim();
+    if (doctorName != null && doctorName.isNotEmpty) {
+      for (final nameToken in _doctorNameTokens(doctorName)) {
+        try {
+          var query = _client
+              .from('appointments')
+              .select(columns)
+              .ilike('doctor_name_snapshot', '%$nameToken%');
+          if (date != null) query = query.eq('appointment_date', date);
+          final rows = await query.order('created_at', ascending: false);
+          for (final row in rows as List) {
+            final map = row as Map<String, dynamic>;
+            final id = map['id']?.toString();
+            if (id != null && id.isNotEmpty) merged[id] = map;
+          }
+        } catch (_) {}
+      }
     }
+
+    return merged.values.toList();
+  }
+
+  Future<String?> _resolveDoctorUserId({
+    String? doctorId,
+    String? override,
+  }) async {
+    final direct = override?.trim();
+    if (direct != null && direct.isNotEmpty) return direct;
+    if (doctorId == null || doctorId.isEmpty) return null;
+    try {
+      final row = await _client
+          .from('doctors')
+          .select('source_id')
+          .eq('id', doctorId)
+          .maybeSingle();
+      return (row?['source_id'] as String?)?.trim();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Set<String> _doctorNameTokens(String raw) {
+    final trimmed = raw.trim();
+    final normalized = trimmed
+        .replaceFirst(RegExp(r'^\s*dr\.?\s*', caseSensitive: false), '')
+        .trim();
+    final tokens = <String>{};
+    if (trimmed.isNotEmpty) tokens.add(trimmed);
+    if (normalized.isNotEmpty) {
+      tokens.add(normalized);
+      tokens.add('Dr. $normalized');
+      tokens.add('Dr $normalized');
+    }
+    return tokens.where((t) => t.length >= 2).toSet();
   }
 
   String _dateOnly(DateTime d) =>

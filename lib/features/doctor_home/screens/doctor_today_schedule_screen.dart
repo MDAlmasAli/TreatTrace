@@ -17,12 +17,16 @@ class DoctorTodayScheduleScreen extends StatefulWidget {
       _DoctorTodayScheduleScreenState();
 }
 
+enum _ScheduleFilter { today, upcoming }
+
 class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
   final _apptSvc = AppointmentService();
   final _client = Supabase.instance.client;
 
   List<Appointment> _appointments = [];
   Map<String, Map<String, dynamic>> _patientById = {};
+  _ScheduleFilter _filter = _ScheduleFilter.today;
+  DateTime? _selectedUpcomingDate;
   bool _loading = true;
 
   @override
@@ -34,8 +38,9 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final appts = await _apptSvc.fetchForCurrentDoctor(day: DateTime.now());
-      final sorted = [...appts]..sort(_sortByTimeThenCreated);
+      final appts = await _apptSvc.fetchForCurrentDoctor();
+      final sorted = [...appts]..sort(_sortByDateTimeThenCreated);
+
       final ids = sorted.map((a) => a.userId).toSet().toList();
       Map<String, Map<String, dynamic>> patientMap = {};
       if (ids.isNotEmpty) {
@@ -50,6 +55,7 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
             (row['id'] as String): row as Map<String, dynamic>,
         };
       }
+
       if (!mounted) return;
       setState(() {
         _appointments = sorted;
@@ -60,15 +66,44 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
     }
   }
 
-  int _sortByTimeThenCreated(Appointment a, Appointment b) {
-    final ta = _minutesFrom12h(a.appointmentTime);
-    final tb = _minutesFrom12h(b.appointmentTime);
-    if (ta == null && tb == null) return b.createdAt.compareTo(a.createdAt);
-    if (ta == null) return 1;
-    if (tb == null) return -1;
-    final cmp = ta.compareTo(tb);
+  List<Appointment> get _visibleAppointments {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (_filter == _ScheduleFilter.today) {
+      return _appointments
+          .where((a) => _isSameDate(a.appointmentDate, today))
+          .toList();
+    }
+
+    var list = _appointments.where((a) {
+      final d = DateTime(
+        a.appointmentDate.year,
+        a.appointmentDate.month,
+        a.appointmentDate.day,
+      );
+      return !d.isBefore(today);
+    }).toList();
+
+    if (_selectedUpcomingDate != null) {
+      list = list
+          .where((a) => _isSameDate(a.appointmentDate, _selectedUpcomingDate!))
+          .toList();
+    }
+    return list;
+  }
+
+  int _sortByDateTimeThenCreated(Appointment a, Appointment b) {
+    final aDateTime = _toComparableDateTime(a);
+    final bDateTime = _toComparableDateTime(b);
+    final cmp = aDateTime.compareTo(bDateTime);
     if (cmp != 0) return cmp;
     return b.createdAt.compareTo(a.createdAt);
+  }
+
+  DateTime _toComparableDateTime(Appointment appt) {
+    final d = appt.appointmentDate;
+    final mins = _minutesFrom12h(appt.appointmentTime) ?? 24 * 60 - 1;
+    return DateTime(d.year, d.month, d.day).add(Duration(minutes: mins));
   }
 
   int? _minutesFrom12h(String? text) {
@@ -84,6 +119,35 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
     var hour = hourRaw % 12;
     if (period == 'PM') hour += 12;
     return hour * 60 + minute;
+  }
+
+  bool _isSameDate(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  Future<void> _pickUpcomingDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedUpcomingDate ?? now,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(now.year + 5, 12, 31),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: context.colors.accent,
+            onPrimary: Colors.white,
+            surface: context.colors.card,
+            onSurface: context.colors.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked == null) return;
+    setState(() {
+      _filter = _ScheduleFilter.upcoming;
+      _selectedUpcomingDate = DateTime(picked.year, picked.month, picked.day);
+    });
   }
 
   Future<void> _openPatient(Appointment appt) async {
@@ -113,11 +177,12 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
       ),
     );
 
+    final visible = _visibleAppointments;
     return Scaffold(
       backgroundColor: c.bg,
       body: Column(
         children: [
-          _buildHeader(c),
+          _buildHeader(c, visible.length),
           Expanded(
             child: _loading
                 ? Center(
@@ -129,16 +194,17 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
                 : RefreshIndicator(
                     color: c.accent,
                     onRefresh: _load,
-                    child: _appointments.isEmpty
-                        ? _EmptyState()
+                    child: visible.isEmpty
+                        ? _EmptyState(filter: _filter)
                         : ListView.builder(
                             padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
-                            itemCount: _appointments.length,
+                            itemCount: visible.length,
                             itemBuilder: (context, i) {
-                              final appt = _appointments[i];
+                              final appt = visible[i];
                               final prof = _patientById[appt.userId];
                               return _ScheduleTile(
                                 appointment: appt,
+                                showDate: _filter == _ScheduleFilter.upcoming,
                                 patientName:
                                     (prof?['full_name'] as String?) ??
                                     'Patient',
@@ -156,7 +222,7 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
     );
   }
 
-  Widget _buildHeader(ThemeColors c) {
+  Widget _buildHeader(ThemeColors c, int count) {
     final topPad = MediaQuery.of(context).padding.top;
     final now = DateTime.now();
     final months = const [
@@ -173,6 +239,12 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
       'Nov',
       'Dec',
     ];
+    final selectedDate = _filter == _ScheduleFilter.today
+        ? now
+        : (_selectedUpcomingDate ?? now);
+    final title = _filter == _ScheduleFilter.today
+        ? "Today's Schedule"
+        : 'Upcoming Schedule';
 
     return Container(
       decoration: BoxDecoration(
@@ -189,55 +261,124 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
         right: 20,
         bottom: 18,
       ),
-      child: Row(
+      child: Column(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.of(context).pop(true),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: c.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: c.border),
-              ),
-              child: Icon(Icons.arrow_back_rounded, color: c.textSec, size: 20),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Today's Schedule",
-                  style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: c.textPrimary,
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(true),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: c.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: c.border),
+                  ),
+                  child: Icon(
+                    Icons.arrow_back_rounded,
+                    color: c.textSec,
+                    size: 20,
                   ),
                 ),
-                Text(
-                  '${now.day} ${months[now.month - 1]} ${now.year}',
-                  style: GoogleFonts.poppins(fontSize: 12, color: c.textSec),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: c.accent.withAlpha(20),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              '${_appointments.length}',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: c.accent,
               ),
-            ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: c.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      '${selectedDate.day} ${months[selectedDate.month - 1]} ${selectedDate.year}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: c.textSec,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: c.accent.withAlpha(20),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$count',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: c.accent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _FilterChip(
+                label: 'Today',
+                selected: _filter == _ScheduleFilter.today,
+                onTap: () => setState(() {
+                  _filter = _ScheduleFilter.today;
+                  _selectedUpcomingDate = null;
+                }),
+              ),
+              const SizedBox(width: 8),
+              _FilterChip(
+                label: _selectedUpcomingDate == null
+                    ? 'Upcoming'
+                    : 'Upcoming: ${_selectedUpcomingDate!.day}/${_selectedUpcomingDate!.month}',
+                selected: _filter == _ScheduleFilter.upcoming,
+                onTap: () => setState(() => _filter = _ScheduleFilter.upcoming),
+              ),
+              const Spacer(),
+              if (_filter == _ScheduleFilter.upcoming)
+                GestureDetector(
+                  onTap: _pickUpcomingDate,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: c.accent.withAlpha(16),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: c.accent.withAlpha(60)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_month_rounded,
+                          size: 14,
+                          color: c.accent,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Pick Date',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: c.accent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -247,12 +388,14 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
 
 class _ScheduleTile extends StatelessWidget {
   final Appointment appointment;
+  final bool showDate;
   final String patientName;
   final String? patientPhone;
   final VoidCallback onTapPatient;
 
   const _ScheduleTile({
     required this.appointment,
+    required this.showDate,
     required this.patientName,
     required this.patientPhone,
     required this.onTapPatient,
@@ -324,6 +467,19 @@ class _ScheduleTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+          if (showDate) ...[
+            Row(
+              children: [
+                Icon(Icons.event_rounded, size: 13, color: c.textMuted),
+                const SizedBox(width: 4),
+                Text(
+                  '${appointment.appointmentDate.day}/${appointment.appointmentDate.month}/${appointment.appointmentDate.year}',
+                  style: GoogleFonts.poppins(fontSize: 12, color: c.textSec),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
           Text(
             patientName,
             style: GoogleFonts.poppins(
@@ -381,9 +537,13 @@ class _ScheduleTile extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
+  final _ScheduleFilter filter;
+  const _EmptyState({required this.filter});
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final isToday = filter == _ScheduleFilter.today;
     return ListView(
       children: [
         const SizedBox(height: 90),
@@ -393,7 +553,9 @@ class _EmptyState extends StatelessWidget {
               Icon(Icons.event_busy_rounded, size: 66, color: c.textMuted),
               const SizedBox(height: 14),
               Text(
-                'No schedule for today',
+                isToday
+                    ? 'No schedule for today'
+                    : 'No upcoming schedule found',
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -402,13 +564,54 @@ class _EmptyState extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Today has no appointments yet.',
+                isToday
+                    ? 'Today has no appointments yet.'
+                    : 'No appointments found for upcoming dates.',
                 style: GoogleFonts.poppins(fontSize: 13, color: c.textMuted),
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? c.accent.withAlpha(20) : c.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? c.accent : c.border,
+            width: selected ? 1.3 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            color: selected ? c.accent : c.textSec,
+          ),
+        ),
+      ),
     );
   }
 }

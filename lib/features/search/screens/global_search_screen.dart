@@ -137,6 +137,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           builder: (_) => AddEditAppointmentScreen(
             prefilledDoctorName: name?.isEmpty == true ? null : name,
             prefilledDoctorHospital: d['hospital'] as String?,
+            prefilledDoctorUserId: d['id'] as String?,
           ),
         ),
       );
