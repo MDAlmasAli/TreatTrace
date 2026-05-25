@@ -798,9 +798,88 @@ class _ActionCard extends StatelessWidget {
     this.fullWidth = false,
   });
 
+  Widget _arrowBox(Color color) => Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          color: color.withAlpha(20),
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Icon(Icons.arrow_forward_rounded, size: 16, color: color),
+      );
+
+  Widget _iconBox(Color color) => Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: color.withAlpha(20),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withAlpha(40), width: 1),
+        ),
+        child: Icon(icon, color: color, size: 26),
+      );
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+
+    final inner = fullWidth
+        // Horizontal layout — no Spacer needed, works without bounded height
+        ? Row(
+            children: [
+              _iconBox(accentColor),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: c.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.poppins(
+                          fontSize: 11, color: c.textSec),
+                    ),
+                  ],
+                ),
+              ),
+              _arrowBox(accentColor),
+            ],
+          )
+        // Vertical layout — must be inside IntrinsicHeight for Spacer to work
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _iconBox(accentColor),
+              const SizedBox(height: 14),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: c.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: GoogleFonts.poppins(fontSize: 11, color: c.textSec),
+              ),
+              const Spacer(),
+              Align(
+                alignment: Alignment.bottomRight,
+                child: _arrowBox(accentColor),
+              ),
+            ],
+          );
+
     return Material(
       color: c.card,
       borderRadius: BorderRadius.circular(20),
@@ -822,55 +901,7 @@ class _ActionCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: accentColor.withAlpha(20),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: accentColor.withAlpha(40),
-                    width: 1,
-                  ),
-                ),
-                child: Icon(icon, color: accentColor, size: 26),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: c.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: GoogleFonts.poppins(fontSize: 11, color: c.textSec),
-              ),
-              const Spacer(),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: accentColor.withAlpha(20),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 16,
-                    color: accentColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          child: inner,
         ),
       ),
     );
