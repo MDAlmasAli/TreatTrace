@@ -6,6 +6,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
+import '../../doctor/models/doctor.dart';
+import '../../doctor/services/doctor_service.dart';
+import '../../doctor/screens/doctor_detail_screen.dart';
 import '../../doctor_home/models/doctor_patient_link.dart';
 import '../../doctor_home/services/doctor_patient_link_service.dart';
 import '../../prescription/models/prescription.dart';
@@ -109,6 +112,23 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       _filteredLabReports.isNotEmpty;
 
   // ── Navigation ────────────────────────────────────────────────────────────
+
+  Future<void> _showDoctorSheet(Map<String, dynamic> d, bool isLinked) async {
+    final created = await showModalBottomSheet<Doctor>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _DoctorProfileSheet(
+        doctorData: d,
+        isLinked:   isLinked,
+      ),
+    );
+    if (created != null && mounted) {
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => DoctorDetailScreen(doctor: created),
+      ));
+    }
+  }
 
   void _openPrescription(Prescription p) {
     Navigator.of(context).push(
@@ -256,7 +276,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               imageUrl:   d['avatar_url'] as String?,
               badge:      isLinked ? 'My Doctor' : 'Doctor',
               badgeColor: isLinked ? c.green : c.accent,
-              onTap:      () => Navigator.of(context).pop(),
+              onTap:      () => _showDoctorSheet(d, isLinked),
               c: c,
             );
           }),
@@ -658,6 +678,126 @@ class _ShortcutChip extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Doctor profile bottom sheet ───────────────────────────────────────────────
+
+class _DoctorProfileSheet extends StatefulWidget {
+  final Map<String, dynamic> doctorData;
+  final bool                 isLinked;
+  const _DoctorProfileSheet({required this.doctorData, required this.isLinked});
+
+  @override
+  State<_DoctorProfileSheet> createState() => _DoctorProfileSheetState();
+}
+
+class _DoctorProfileSheetState extends State<_DoctorProfileSheet> {
+  final _svc   = DoctorService();
+  bool _saving = false;
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      final d = widget.doctorData;
+      final created = await _svc.create(Doctor(
+        id:        '',
+        userId:    '',
+        name:      d['full_name'] as String? ?? 'Unknown',
+        hospital:  d['hospital']   as String?,
+        imageUrl:  d['avatar_url'] as String?,
+        sourceId:  d['id']         as String?,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ));
+      if (mounted) Navigator.of(context).pop(created);
+    } catch (_) {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c        = context.colors;
+    final d        = widget.doctorData;
+    final name     = d['full_name']  as String? ?? 'Unknown';
+    final hospital = d['hospital']   as String?;
+    final avatar   = d['avatar_url'] as String?;
+    final botPad   = MediaQuery.of(context).padding.bottom;
+
+    return Container(
+      decoration: BoxDecoration(
+        color:        c.card,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+      ),
+      padding: EdgeInsets.fromLTRB(24, 8, 24, botPad + 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 22),
+          CircleAvatar(
+            radius: 40,
+            backgroundColor: c.accent.withAlpha(20),
+            backgroundImage: avatar != null ? NetworkImage(avatar) : null,
+            child: avatar == null
+                ? Icon(Icons.medical_services_rounded, color: c.accent, size: 38)
+                : null,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Dr. $name',
+            style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: c.textPrimary),
+          ),
+          if (hospital != null) ...[
+            const SizedBox(height: 4),
+            Text(hospital, style: GoogleFonts.poppins(fontSize: 13, color: c.textSec)),
+          ],
+          const SizedBox(height: 12),
+          if (widget.isLinked)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color:        c.green.withAlpha(20),
+                borderRadius: BorderRadius.circular(20),
+                border:       Border.all(color: c.green.withAlpha(60)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_rounded, size: 14, color: c.green),
+                  const SizedBox(width: 6),
+                  Text('Linked Doctor',
+                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: c.green)),
+                ],
+              ),
+            ),
+          const SizedBox(height: 28),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _saving ? null : _save,
+              icon: _saving
+                  ? const SizedBox(width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.person_add_rounded, size: 18),
+              label: Text(_saving ? 'Saving…' : 'Save to My Doctors',
+                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor:         c.accent,
+                foregroundColor:         Colors.white,
+                disabledBackgroundColor: c.accent.withAlpha(120),
+                shape:   RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                padding: const EdgeInsets.symmetric(vertical: 15),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
