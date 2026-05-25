@@ -15,7 +15,6 @@ import '../../appointment/models/appointment.dart';
 import '../../appointment/services/appointment_service.dart';
 import '../../test_report/screens/lab_report_detail_screen.dart';
 import 'doctor_write_prescription_screen.dart';
-import 'doctor_add_appointment_screen.dart';
 import 'doctor_lab_report_screen.dart';
 
 class PatientDetailScreen extends StatefulWidget {
@@ -142,16 +141,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     _load();
   }
 
-  Future<void> _goAddAppt() async {
-    await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => DoctorAddAppointmentScreen(
-        patientId:   widget.patientId,
-        patientName: widget.patientName,
-      ),
-    ));
-    _load();
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -162,7 +151,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
 
     return Scaffold(
       backgroundColor: c.bg,
-      bottomNavigationBar: _BottomBar(onWriteRx: _goWriteRx, onAddAppt: _goAddAppt),
+      bottomNavigationBar: _BottomBar(onWriteRx: _goWriteRx),
       body: Column(
         children: [
           _buildHeader(c),
@@ -881,49 +870,31 @@ class _ApptTile extends StatelessWidget {
 
 class _BottomBar extends StatelessWidget {
   final VoidCallback onWriteRx;
-  final VoidCallback onAddAppt;
-  const _BottomBar({required this.onWriteRx, required this.onAddAppt});
+  const _BottomBar({required this.onWriteRx});
 
   @override
   Widget build(BuildContext context) {
-    final c       = context.colors;
-    final botPad  = MediaQuery.of(context).padding.bottom;
+    final c      = context.colors;
+    final botPad = MediaQuery.of(context).padding.bottom;
     return Container(
       padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + botPad),
       decoration: BoxDecoration(
         color:  c.card,
         border: Border(top: BorderSide(color: c.border, width: 1)),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: onAddAppt,
-              icon:  const Icon(Icons.calendar_month_rounded, size: 18),
-              label: Text('Add Appointment', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: c.accent,
-                side:            BorderSide(color: c.accent.withAlpha(120)),
-                shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding:         const EdgeInsets.symmetric(vertical: 14),
-              ),
-            ),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: onWriteRx,
+          icon:  const Icon(Icons.medication_rounded, size: 18),
+          label: Text('Write Prescription', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: c.accent,
+            foregroundColor: Colors.white,
+            shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding:         const EdgeInsets.symmetric(vertical: 14),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: onWriteRx,
-              icon:  const Icon(Icons.medication_rounded, size: 18),
-              label: Text('Write Prescription', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: c.accent,
-                foregroundColor: Colors.white,
-                shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding:         const EdgeInsets.symmetric(vertical: 14),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

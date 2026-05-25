@@ -19,7 +19,7 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.19 — Active Development |
+| **Stage** | v0.20 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About & Visiting Fee |
 | **Platform** | Android · iOS |
@@ -28,6 +28,10 @@
 ---
 
 ## Latest Updates (2026-05-25)
+
+**v0.20 — Patient Details UI fix**
+
+- **Removed "Add Appointment" button** from Patient Details screen bottom bar — only "Write Prescription" remains
 
 **v0.19 — Doctor Full Profile Page**
 
