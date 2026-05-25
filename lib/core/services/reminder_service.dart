@@ -17,6 +17,9 @@ class ReminderService {
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
+  // Callback set by the active screen to handle notification taps.
+  static void Function(String? payload)? onNotificationTapped;
+
   // ── Initialize ────────────────────────────────────────────────────────────
 
   Future<void> init() async {
@@ -33,6 +36,9 @@ class ReminderService {
 
     await _plugin.initialize(
       const InitializationSettings(android: android, iOS: ios),
+      onDidReceiveNotificationResponse: (response) {
+        onNotificationTapped?.call(response.payload);
+      },
     );
 
     // Request Android 13+ permission
@@ -42,6 +48,47 @@ class ReminderService {
         ?.requestNotificationsPermission();
 
     _initialized = true;
+  }
+
+  // Returns the notification payload if the app was launched by tapping one.
+  Future<String?> getLaunchPayload() async {
+    if (kIsWeb || !_initialized) return null;
+    final details = await _plugin.getNotificationAppLaunchDetails();
+    if (details?.didNotificationLaunchApp == true) {
+      return details?.notificationResponse?.payload;
+    }
+    return null;
+  }
+
+  // ── Doctor: appointment booking alert ────────────────────────────────────
+
+  Future<void> showAppointmentNotification({
+    required String patientName,
+    required String appointmentDate,
+    String? payload,
+  }) async {
+    if (kIsWeb || !_initialized) return;
+    await _plugin.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000 % 2000000000,
+      'New Appointment Booked',
+      '$patientName booked an appointment on $appointmentDate',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'doctor_appointments',
+          'Appointment Alerts',
+          channelDescription: 'New appointment booking alerts for doctors',
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: payload,
+    );
   }
 
   // ── Schedule reminders for all active medicines in a prescription ─────────

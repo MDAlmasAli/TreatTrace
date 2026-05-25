@@ -19,7 +19,7 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.15 — Active Development |
+| **Stage** | v0.16 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS |
 | **Platform** | Android · iOS |
@@ -28,6 +28,16 @@
 ---
 
 ## Latest Updates (2026-05-25)
+
+**v0.16 — Doctor Appointment Notifications + Patient Requests Section**
+
+- **Real-time appointment notifications** — when a patient books an appointment the doctor's app receives a Supabase Realtime event; a local push notification fires immediately with the patient's name and appointment date; tapping the notification navigates the doctor directly to the Search Patient screen to send a link request
+- **`showAppointmentNotification()` added to `ReminderService`** — dedicated `doctor_appointments` notification channel (high importance); static `onNotificationTapped` callback wired in `DoctorHomeScreen` so taps navigate correctly; `getLaunchPayload()` handles cold-start launches from notification tray
+- **Patient Requests section on Doctor Home** — new section below Quick Actions listing all pending outgoing link requests the doctor has sent; each tile shows patient avatar, name, phone, and "Pending" amber badge; tapping navigates to Search Patient; empty state shown when no pending requests
+- **Test Reports removed from Doctor Home quick actions** — section was redundant (accessed via My Patients → Patient Detail); replaced Write Prescription with a full-width card
+- **Supabase Realtime subscription** — `doctor_home_screen` subscribes to `appointments` INSERT filtered by `doctor_user_id = uid`; channel cleaned up on dispose
+
+---
 
 **v0.15 — Doctor Today's Schedule Fix**
 
@@ -175,6 +185,9 @@
 
 ## Update History
 
+- `[2026-05-25]` Doctor appointment notifications — Supabase Realtime fires local push when patient books; tap navigates to Search Patient screen
+- `[2026-05-25]` Patient Requests section added to Doctor Home — pending link requests with avatar, name, phone, Pending badge; empty state when none
+- `[2026-05-25]` Test Reports quick action removed from Doctor Home; Write Prescription promoted to full-width card
 - `[2026-05-25]` Doctor Today's Schedule fix — `doctor_reads_by_name_snapshot` RLS policy added; `doctor_user_id` backfilled for all existing appointments matching a doctor's `full_name`
 - `[2026-05-25]` Doctor profile bottom sheet — tapping a doctor in global search shows profile sheet with Save to My Doctors button; navigates to DoctorDetailScreen on save
 - `[2026-05-25]` Global doctor search — all approved doctors in system now searchable by name/hospital; linked doctors shown with "My Doctor" badge; `fetchApprovedDoctors()` added to `DoctorPatientLinkService`
