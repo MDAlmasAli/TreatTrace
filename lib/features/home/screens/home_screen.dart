@@ -267,10 +267,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       bottomNavigationBar: _BottomBar(
-        searchCtrl:   _searchCtrl,
-        onSearchTap:  _goToSearch,
-        onProfileTap: _goToProfile,
-        avatarUrl:    _avatarUrl,
+        searchCtrl:          _searchCtrl,
+        onSearchTap:         _goToSearch,
+        onProfileTap:        _goToProfile,
+        onLastPrescribedTap: _goToPrescriptions,
+        avatarUrl:           _avatarUrl,
       ),
     );
   }
@@ -756,12 +757,14 @@ class _BottomBar extends StatelessWidget {
   final TextEditingController searchCtrl;
   final VoidCallback?         onSearchTap;
   final VoidCallback?         onProfileTap;
+  final VoidCallback?         onLastPrescribedTap;
   final String?               avatarUrl;
 
   const _BottomBar({
     required this.searchCtrl,
     this.onSearchTap,
     this.onProfileTap,
+    this.onLastPrescribedTap,
     this.avatarUrl,
   });
 
@@ -799,6 +802,7 @@ class _BottomBar extends StatelessWidget {
           _BarButton(
             icon:  Icons.receipt_long_rounded,
             label: 'Last\nPrescribed',
+            onTap: onLastPrescribedTap,
           ),
 
           const SizedBox(width: 12),
@@ -849,16 +853,17 @@ class _BottomBar extends StatelessWidget {
 }
 
 class _BarButton extends StatelessWidget {
-  final IconData icon;
-  final String   label;
+  final IconData      icon;
+  final String        label;
+  final VoidCallback? onTap;
 
-  const _BarButton({required this.icon, required this.label});
+  const _BarButton({required this.icon, required this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     return GestureDetector(
-      onTap: null,
+      onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

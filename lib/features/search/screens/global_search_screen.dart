@@ -6,9 +6,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
-import '../../doctor/models/doctor.dart';
-import '../../doctor/services/doctor_service.dart';
-import '../../doctor/screens/doctor_detail_screen.dart';
+import '../../doctor_home/models/doctor_patient_link.dart';
+import '../../doctor_home/services/doctor_patient_link_service.dart';
 import '../../prescription/models/prescription.dart';
 import '../../prescription/services/prescription_service.dart';
 import '../../prescription/screens/prescription_detail_screen.dart';
@@ -27,15 +26,16 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   final _searchCtrl = TextEditingController();
   final _focusNode  = FocusNode();
 
-  final _doctorSvc       = DoctorService();
+  final _linkSvc         = DoctorPatientLinkService();
   final _prescriptionSvc = PrescriptionService();
   final _labReportSvc    = LabReportService();
 
-  bool               _loading       = true;
-  String             _query         = '';
+  bool                       _loading       = true;
+  String                     _query         = '';
 
-  List<Doctor>       _myDoctors     = [];
-  List<Prescription> _prescriptions = [];
+  List<Map<String, dynamic>> _allDoctors    = [];
+  Set<String>                _linkedIds     = {};
+  List<Prescription>         _prescriptions = [];
   List<LabReport>    _labReports    = [];
 
   @override
@@ -56,11 +56,16 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     setState(() => _loading = true);
     try {
       final results = await Future.wait([
-        _doctorSvc.fetchAll(),
+        _linkSvc.fetchApprovedDoctors(),
+        _linkSvc.fetchIncomingRequests(),
         _prescriptionSvc.fetchAll(),
         _labReportSvc.fetchAll(),
       ]);
-      _myDoctors     = results[0] as List<Doctor>;
+      _allDoctors = results[0] as List<Map<String, dynamic>>;
+      _linkedIds  = (results[1] as List<DoctorPatientLink>)
+          .where((l) => l.isAccepted)
+          .map((l) => l.doctorId)
+          .toSet();
       _prescriptions = results[1] as List<Prescription>;
       _labReports    = results[2] as List<LabReport>;
     } finally {
@@ -70,13 +75,12 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
   // ── Filtered results ──────────────────────────────────────────────────────
 
-  List<Doctor> get _filteredMyDoctors {
+  List<Map<String, dynamic>> get _filteredDoctors {
     if (_query.isEmpty) return [];
     final q = _query.toLowerCase();
-    return _myDoctors.where((d) =>
-        d.name.toLowerCase().contains(q) ||
-        (d.specialty?.toLowerCase().contains(q) ?? false) ||
-        (d.hospital?.toLowerCase().contains(q) ?? false)).toList();
+    return _allDoctors.where((d) =>
+        ((d['full_name'] as String?)?.toLowerCase().contains(q) ?? false) ||
+        ((d['hospital']  as String?)?.toLowerCase().contains(q) ?? false)).toList();
   }
 
   List<Prescription> get _filteredPrescriptions {
@@ -100,17 +104,11 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   }
 
   bool get _hasAnyResults =>
-      _filteredMyDoctors.isNotEmpty ||
+      _filteredDoctors.isNotEmpty ||
       _filteredPrescriptions.isNotEmpty ||
       _filteredLabReports.isNotEmpty;
 
   // ── Navigation ────────────────────────────────────────────────────────────
-
-  void _openDoctor(Doctor d) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => DoctorDetailScreen(doctor: d)),
-    );
-  }
 
   void _openPrescription(Prescription p) {
     Navigator.of(context).push(
@@ -242,24 +240,26 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
       children: [
-        if (_filteredMyDoctors.isNotEmpty) ...[
+        if (_filteredDoctors.isNotEmpty) ...[
           _SectionHeader(
-            title: 'My Doctors',
+            title: 'Doctors',
             icon:  Icons.person_rounded,
-            onSeeAll: () => Navigator.of(context).pop(),
             c: c,
           ),
           const SizedBox(height: 8),
-          ..._filteredMyDoctors.take(4).map((d) => _DoctorResultTile(
-                name:      d.displayName,
-                specialty: d.specialty,
-                hospital:  d.hospital,
-                imageUrl:  d.imageUrl,
-                badge:     'My Doctor',
-                badgeColor: c.green,
-                onTap:     () => _openDoctor(d),
-                c: c,
-              )),
+          ..._filteredDoctors.take(4).map((d) {
+            final isLinked = _linkedIds.contains(d['id'] as String?);
+            return _DoctorResultTile(
+              name:       'Dr. ${d['full_name'] ?? "Unknown"}',
+              specialty:  null,
+              hospital:   d['hospital']   as String?,
+              imageUrl:   d['avatar_url'] as String?,
+              badge:      isLinked ? 'My Doctor' : 'Doctor',
+              badgeColor: isLinked ? c.green : c.accent,
+              onTap:      () => Navigator.of(context).pop(),
+              c: c,
+            );
+          }),
           const SizedBox(height: 20),
         ],
         if (_filteredPrescriptions.isNotEmpty) ...[
@@ -371,14 +371,12 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 class _SectionHeader extends StatelessWidget {
   final String      title;
   final IconData    icon;
-  final VoidCallback? onSeeAll;
   final ThemeColors c;
 
   const _SectionHeader({
     required this.title,
     required this.icon,
     required this.c,
-    this.onSeeAll,
   });
 
   @override
@@ -395,18 +393,6 @@ class _SectionHeader extends StatelessWidget {
             color:      c.textPrimary,
           ),
         ),
-        const Spacer(),
-        if (onSeeAll != null)
-          GestureDetector(
-            onTap: onSeeAll,
-            child: Text(
-              'See all',
-              style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  color: c.accent,
-                  fontWeight: FontWeight.w600),
-            ),
-          ),
       ],
     );
   }

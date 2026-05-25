@@ -151,6 +151,36 @@ class DoctorPatientLinkService {
     await _client.from('doctor_patient_links').delete().eq('id', linkId);
   }
 
+  // ── Patient: fetch all approved doctors in the system ────────────────────
+
+  Future<List<Map<String, dynamic>>> fetchApprovedDoctors() async {
+    final profiles = await _client
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .eq('role', 'doctor') as List;
+
+    if (profiles.isEmpty) return [];
+
+    final ids = profiles.map((p) => p['id'] as String).toList();
+    final verifs = await _client
+        .from('doctor_verifications')
+        .select('id, hospital')
+        .eq('status', 'approved')
+        .inFilter('id', ids) as List;
+
+    final approvedMap = {for (final v in verifs) v['id'] as String: v};
+
+    return profiles
+        .where((p) => approvedMap.containsKey(p['id'] as String))
+        .map((p) => {
+              'id':         p['id'],
+              'full_name':  p['full_name'],
+              'avatar_url': p['avatar_url'],
+              'hospital':   approvedMap[p['id'] as String]?['hospital'],
+            })
+        .toList();
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────────
 
   Future<List<DoctorPatientLink>> _attachPatientProfiles(

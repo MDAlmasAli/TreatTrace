@@ -66,6 +66,28 @@ class _LinkedDoctorsScreenState extends State<LinkedDoctorsScreen> {
     } catch (_) {}
   }
 
+  void _showAddDoctorInfo() {
+    final c = context.colors;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('How to Add a Doctor',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: c.textPrimary)),
+        content: Text(
+          'Doctors can find and link with you from the TreatTrace Doctor Portal.\n\n'
+          'Share your registered phone number or username with your doctor so they can send you a link request.',
+          style: GoogleFonts.poppins(fontSize: 13, color: c.textSec, height: 1.55),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Got it', style: GoogleFonts.poppins(color: c.accent, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _revoke(DoctorPatientLink link) async {
     final c  = context.colors;
     final ok = await showDialog<bool>(
@@ -98,6 +120,13 @@ class _LinkedDoctorsScreenState extends State<LinkedDoctorsScreen> {
 
     return Scaffold(
       backgroundColor: c.bg,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddDoctorInfo,
+        backgroundColor: c.accent,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
+        label: Text('Add Doctor', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+      ),
       body: Column(
         children: [
           _buildHeader(c),

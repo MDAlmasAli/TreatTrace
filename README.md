@@ -19,15 +19,26 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.13 — Active Development |
-| **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System |
-| **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links |
+| **Stage** | v0.14 — Active Development |
+| **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search |
+| **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory |
 | **Platform** | Android · iOS |
 | **Last Updated** | 2026-05-25 |
 
 ---
 
 ## Latest Updates (2026-05-25)
+
+**v0.14 — Global Doctor Search + UI Fixes**
+
+- **Global search now finds all approved doctors** — any patient can search for any doctor in the system by name or hospital; results show "My Doctor" badge (green) if already linked, or "Doctor" badge (blue) if not; previously only manually added doctors from the `doctors` table were searchable
+- **`fetchApprovedDoctors()` added to `DoctorPatientLinkService`** — fetches all `profiles` with `role = 'doctor'` joined with `doctor_verifications` where `status = 'approved'`; both linked status and full doctor list loaded in parallel
+- **"Last Prescribed" button wired up** — bottom bar button on the home screen (patient) now navigates to the Prescriptions screen; was previously a no-op (`onTap: null`)
+- **"Add Doctor" FAB restored** — `FloatingActionButton.extended` restored in "My Doctors" screen; since patients can't initiate links (doctors do), tap now shows an info dialog explaining how to get linked
+
+---
+
+## v0.13 Updates (2026-05-25)
 
 **v0.13 — Username System + Signup Fix + Codebase Cleanup**
 
@@ -155,6 +166,8 @@
 
 ## Update History
 
+- `[2026-05-25]` Global doctor search — all approved doctors in system now searchable by name/hospital; linked doctors shown with "My Doctor" badge; `fetchApprovedDoctors()` added to `DoctorPatientLinkService`
+- `[2026-05-25]` "Last Prescribed" button wired to Prescriptions screen; "Add Doctor" FAB restored with info dialog in My Doctors screen
 - `[2026-05-25]` Username system — `profiles.username` column (unique, `[a-z0-9_]`, 3–20 chars); `check_username_available` RPC; signup field with real-time check; `@username` shown in profile header and account settings change dialog
 - `[2026-05-25]` Signup "Failed to fetch" fix — network timeout on SMTP delay now shows confirmation dialog instead of error, preventing double-request OTP invalidation
 - `[2026-05-25]` RLS circular dependency fix — `profiles` policy no longer cross-references `doctor_verifications`; role picker no longer reappears after restart
