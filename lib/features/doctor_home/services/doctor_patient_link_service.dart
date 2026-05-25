@@ -164,7 +164,7 @@ class DoctorPatientLinkService {
     final ids = profiles.map((p) => p['id'] as String).toList();
     final verifs = await _client
         .from('doctor_verifications')
-        .select('id, hospital')
+        .select('id, specialty, hospital')
         .eq('status', 'approved')
         .inFilter('id', ids) as List;
 
@@ -176,6 +176,7 @@ class DoctorPatientLinkService {
               'id':         p['id'],
               'full_name':  p['full_name'],
               'avatar_url': p['avatar_url'],
+              'specialty':  approvedMap[p['id'] as String]?['specialty'],
               'hospital':   approvedMap[p['id'] as String]?['hospital'],
             })
         .toList();

@@ -6,6 +6,8 @@ import '../models/appointment.dart';
 class AppointmentService {
   final _client = Supabase.instance.client;
   String? get _uid => _client.auth.currentUser?.id;
+  String? get _doctorName =>
+      _client.auth.currentUser?.userMetadata?['full_name'] as String?;
 
   Future<List<Appointment>> fetchAll() async {
     final uid = _uid;
@@ -46,10 +48,7 @@ class AppointmentService {
   }
 
   Future<void> update(Appointment appt) async {
-    await _client
-        .from('appointments')
-        .update(appt.toMap())
-        .eq('id', appt.id);
+    await _client.from('appointments').update(appt.toMap()).eq('id', appt.id);
   }
 
   Future<void> updateStatus(String id, AppointmentStatus status) async {
@@ -83,16 +82,40 @@ class AppointmentService {
     final doctorUserId = _uid;
     if (doctorUserId == null) throw Exception('Not authenticated');
 
-    final inserted = await _client
-        .from('appointments')
-        .insert({
-          ...appt.toMap(),
-          'user_id':       patientId,
-          'doctor_user_id': doctorUserId,
-        })
-        .select()
-        .single();
-    return Appointment.fromMap(inserted);
+    try {
+      final inserted = await _client
+          .from('appointments')
+          .insert({
+            ...appt.toMap(),
+            'user_id': patientId,
+            'doctor_user_id': doctorUserId,
+          })
+          .select()
+          .single();
+      return Appointment.fromMap(inserted);
+    } catch (_) {
+      final inserted = await _client
+          .from('appointments')
+          .insert({...appt.toMap(), 'user_id': patientId})
+          .select()
+          .single();
+      return Appointment.fromMap(inserted);
+    }
+  }
+
+  Future<List<Appointment>> fetchForCurrentDoctor({DateTime? day}) async {
+    final rows = await _fetchRowsForCurrentDoctor(columns: '*', day: day);
+    return rows
+        .map((row) => Appointment.fromMap(row as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<int> countTodayForCurrentDoctor() async {
+    final rows = await _fetchRowsForCurrentDoctor(
+      columns: 'id',
+      day: DateTime.now(),
+    );
+    return rows.length;
   }
 
   // Count upcoming appointments (scheduled + date >= today)
@@ -108,4 +131,38 @@ class AppointmentService {
         .gte('appointment_date', today);
     return rows.length;
   }
+
+  Future<List<dynamic>> _fetchRowsForCurrentDoctor({
+    required String columns,
+    DateTime? day,
+  }) async {
+    final uid = _uid;
+    if (uid == null) return [];
+    final date = day == null ? null : _dateOnly(day);
+
+    try {
+      var query = _client
+          .from('appointments')
+          .select(columns)
+          .eq('doctor_user_id', uid);
+      if (date != null) query = query.eq('appointment_date', date);
+      final rows = await query.order('created_at', ascending: false);
+      return rows as List;
+    } catch (_) {
+      final doctorName = _doctorName;
+      if (doctorName == null || doctorName.trim().isEmpty) return [];
+      var query = _client
+          .from('appointments')
+          .select(columns)
+          .eq('doctor_name_snapshot', doctorName.trim());
+      if (date != null) query = query.eq('appointment_date', date);
+      final rows = await query.order('created_at', ascending: false);
+      return rows as List;
+    }
+  }
+
+  String _dateOnly(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 }

@@ -13,7 +13,6 @@ import '../../appointment/screens/appointment_detail_screen.dart';
 import '../../appointment/services/appointment_service.dart';
 import '../models/doctor.dart';
 import '../services/doctor_service.dart';
-import 'add_edit_doctor_screen.dart';
 
 class DoctorDetailScreen extends StatefulWidget {
   final Doctor doctor;
@@ -25,12 +24,12 @@ class DoctorDetailScreen extends StatefulWidget {
 
 class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
   final _doctorSvc = DoctorService();
-  final _apptSvc   = AppointmentService();
+  final _apptSvc = AppointmentService();
 
-  late Doctor           _doctor;
-  List<Appointment>     _appointments = [];
-  bool                  _loading      = true;
-  bool                  _changed      = false;
+  late Doctor _doctor;
+  List<Appointment> _appointments = [];
+  bool _loading = true;
+  bool _changed = false;
 
   @override
   void initState() {
@@ -48,22 +47,6 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
     }
   }
 
-  Future<void> _edit() async {
-    final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-          builder: (_) => AddEditDoctorScreen(existing: _doctor)),
-    );
-    if (changed == true) {
-      final updated = await _doctorSvc.fetchOne(_doctor.id);
-      if (mounted && updated != null) {
-        setState(() {
-          _doctor  = updated;
-          _changed = true;
-        });
-      }
-    }
-  }
-
   Future<void> _delete() async {
     final s = S.of(context);
     final ok = await showDialog<bool>(
@@ -72,30 +55,44 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
         final c = context.colors;
         return AlertDialog(
           backgroundColor: c.card,
-          title: Text(s.deleteDoctor,
-              style: GoogleFonts.poppins(
-                  color: c.textPrimary, fontWeight: FontWeight.w600)),
-          content: Text(s.deleteDoctorConfirm,
-              style: GoogleFonts.poppins(fontSize: 13, color: c.textSec)),
+          title: Text(
+            s.deleteDoctor,
+            style: GoogleFonts.poppins(
+              color: c.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: Text(
+            s.deleteDoctorConfirm,
+            style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(s.cancel,
-                  style: GoogleFonts.poppins(color: c.textSec)),
+              child: Text(
+                s.cancel,
+                style: GoogleFonts.poppins(color: c.textSec),
+              ),
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text('Delete',
-                  style: GoogleFonts.poppins(
-                      color: c.red, fontWeight: FontWeight.w700)),
+              child: Text(
+                'Delete',
+                style: GoogleFonts.poppins(
+                  color: c.red,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ],
         );
       },
     );
     if (ok != true) return;
+
     await _doctorSvc.delete(_doctor.id);
-    if (mounted) Navigator.of(context).pop(true);
+    if (!mounted) return;
+    Navigator.of(context).pop(true);
   }
 
   Future<void> _toggleFavorite() async {
@@ -103,7 +100,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
     final updated = await _doctorSvc.fetchOne(_doctor.id);
     if (mounted && updated != null) {
       setState(() {
-        _doctor  = updated;
+        _doctor = updated;
         _changed = true;
       });
     }
@@ -112,8 +109,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
   Future<void> _addAppointment() async {
     final added = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => AddEditAppointmentScreen(
-            preselectedDoctor: _doctor),
+        builder: (_) => AddEditAppointmentScreen(preselectedDoctor: _doctor),
       ),
     );
     if (added == true) _loadAppointments();
@@ -122,7 +118,8 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
   Future<void> _openAppt(Appointment a) async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-          builder: (_) => AppointmentDetailScreen(appointment: a)),
+        builder: (_) => AppointmentDetailScreen(appointment: a),
+      ),
     );
     if (changed == true) _loadAppointments();
   }
@@ -132,10 +129,12 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
     final c = context.colors;
     final s = S.of(context);
 
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor:          Colors.transparent,
-      statusBarIconBrightness: c.statusBarIconBrightness,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: c.statusBarIconBrightness,
+      ),
+    );
 
     return PopScope(
       canPop: true,
@@ -158,42 +157,47 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
 
                     const SizedBox(height: 28),
 
-                    // ── Action row ────────────────────────────────────────
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _SmallActionBtn(
-                            label:   'Edit',
-                            icon:    Icons.edit_rounded,
-                            color:   c.green,
-                            onTap:   _edit,
-                            outlined: true,
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _delete,
+                        icon: Icon(
+                          Icons.delete_outline_rounded,
+                          size: 18,
+                          color: c.red,
+                        ),
+                        label: Text(
+                          'Delete from My Doctors',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: c.red,
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _SmallActionBtn(
-                            label:   'Delete',
-                            icon:    Icons.delete_outline_rounded,
-                            color:   c.red,
-                            onTap:   _delete,
-                            outlined: true,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: c.red.withAlpha(120),
+                            width: 1.2,
                           ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                      ],
+                      ),
                     ),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 22),
 
-                    // ── Appointments section ──────────────────────────────
+                    // Appointments section
                     Row(
                       children: [
                         Text(
                           s.appointments,
                           style: GoogleFonts.poppins(
-                            fontSize:   16,
+                            fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color:      c.textPrimary,
+                            color: c.textPrimary,
                           ),
                         ),
                         const Spacer(),
@@ -201,25 +205,30 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                           onTap: _addAppointment,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
-                              color:        c.amber.withAlpha(20),
+                              color: c.amber.withAlpha(20),
                               borderRadius: BorderRadius.circular(12),
-                              border:       Border.all(
-                                  color: c.amber.withAlpha(60)),
+                              border: Border.all(color: c.amber.withAlpha(60)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.add_rounded,
-                                    size: 14, color: c.amber),
+                                Icon(
+                                  Icons.add_rounded,
+                                  size: 14,
+                                  color: c.amber,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   'Add',
                                   style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: c.amber),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: c.amber,
+                                  ),
                                 ),
                               ],
                             ),
@@ -231,24 +240,23 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                     const SizedBox(height: 12),
 
                     if (_loading)
-                      Center(
-                        child: CircularProgressIndicator(
-                            color: c.amber),
-                      )
+                      Center(child: CircularProgressIndicator(color: c.amber))
                     else if (_appointments.isEmpty)
                       Container(
-                        width:   double.infinity,
+                        width: double.infinity,
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color:        c.card,
+                          color: c.card,
                           borderRadius: BorderRadius.circular(16),
-                          border:       Border.all(color: c.border),
+                          border: Border.all(color: c.border),
                         ),
                         child: Text(
                           s.noAppointments,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.poppins(
-                              fontSize: 13, color: c.textSec),
+                            fontSize: 13,
+                            color: c.textSec,
+                          ),
                         ),
                       )
                     else
@@ -256,11 +264,9 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                         final a = _appointments[i];
                         return Padding(
                           padding: EdgeInsets.only(
-                              bottom: i < _appointments.length - 1 ? 10 : 0),
-                          child: _ApptRow(
-                            appt:  a,
-                            onTap: () => _openAppt(a),
+                            bottom: i < _appointments.length - 1 ? 10 : 0,
                           ),
+                          child: _ApptRow(appt: a, onTap: () => _openAppt(a)),
                         );
                       }),
                   ],
@@ -279,20 +285,24 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
       decoration: BoxDecoration(
         color: c.card,
         borderRadius: const BorderRadius.only(
-          bottomLeft:  Radius.circular(28),
+          bottomLeft: Radius.circular(28),
           bottomRight: Radius.circular(28),
         ),
         border: Border(bottom: BorderSide(color: c.border, width: 1)),
         boxShadow: [
           BoxShadow(
-            color:      Colors.black.withAlpha(8),
+            color: Colors.black.withAlpha(8),
             blurRadius: 20,
-            offset:     const Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       padding: EdgeInsets.only(
-          top: topPad + 16, left: 20, right: 20, bottom: 18),
+        top: topPad + 16,
+        left: 20,
+        right: 20,
+        bottom: 18,
+      ),
       child: Row(
         children: [
           GestureDetector(
@@ -307,16 +317,15 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                 Text(
                   _doctor.displayName,
                   style: GoogleFonts.poppins(
-                    fontSize:   20,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color:      c.textPrimary,
+                    color: c.textPrimary,
                   ),
                 ),
                 if (_doctor.specialty?.isNotEmpty == true)
                   Text(
                     _doctor.specialty!,
-                    style: GoogleFonts.poppins(
-                        fontSize: 12, color: c.green),
+                    style: GoogleFonts.poppins(fontSize: 12, color: c.green),
                   ),
               ],
             ),
@@ -367,12 +376,12 @@ class _InfoCard extends StatelessWidget {
 
     if (rows.isEmpty) {
       return Container(
-        width:   double.infinity,
+        width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color:        c.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(20),
-          border:       Border.all(color: c.border),
+          border: Border.all(color: c.border),
         ),
         child: Text(
           'No additional info saved.',
@@ -384,9 +393,9 @@ class _InfoCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color:        c.card,
+        color: c.card,
         borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: c.border, width: 1),
+        border: Border.all(color: c.border, width: 1),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(19),
@@ -404,36 +413,40 @@ class _InfoCard extends StatelessWidget {
                       children: [
                         Padding(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Container(
-                                width: 32, height: 32,
+                                width: 32,
+                                height: 32,
                                 decoration: BoxDecoration(
-                                  color:        c.green.withAlpha(15),
+                                  color: c.green.withAlpha(15),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Icon(icon,
-                                    size: 16, color: c.green),
+                                child: Icon(icon, size: 16, color: c.green),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(label,
-                                        style: GoogleFonts.poppins(
-                                            fontSize: 11,
-                                            color: c.textMuted)),
+                                    Text(
+                                      label,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 11,
+                                        color: c.textMuted,
+                                      ),
+                                    ),
                                     const SizedBox(height: 2),
                                     Text(
                                       value,
                                       style: GoogleFonts.poppins(
-                                        fontSize:   13,
+                                        fontSize: 13,
                                         fontWeight: FontWeight.w600,
-                                        color:      c.textPrimary,
+                                        color: c.textPrimary,
                                       ),
                                     ),
                                   ],
@@ -444,11 +457,12 @@ class _InfoCard extends StatelessWidget {
                         ),
                         if (!isLast)
                           Divider(
-                              height: 1,
-                              indent: 16,
-                              endIndent: 16,
-                              color: c.border,
-                              thickness: 1),
+                            height: 1,
+                            indent: 16,
+                            endIndent: 16,
+                            color: c.border,
+                            thickness: 1,
+                          ),
                       ],
                     );
                   }).toList(),
@@ -465,16 +479,19 @@ class _InfoCard extends StatelessWidget {
 // ── Appointment mini-row ──────────────────────────────────────────────────────
 
 class _ApptRow extends StatelessWidget {
-  final Appointment  appt;
+  final Appointment appt;
   final VoidCallback onTap;
 
   const _ApptRow({required this.appt, required this.onTap});
 
   Color _color(ThemeColors c) {
     switch (appt.status) {
-      case AppointmentStatus.scheduled: return c.amber;
-      case AppointmentStatus.completed: return c.green;
-      case AppointmentStatus.cancelled: return c.red;
+      case AppointmentStatus.scheduled:
+        return c.amber;
+      case AppointmentStatus.completed:
+        return c.green;
+      case AppointmentStatus.cancelled:
+        return c.red;
     }
   }
 
@@ -484,15 +501,15 @@ class _ApptRow extends StatelessWidget {
     final a = appt;
 
     return Material(
-      color:        c.card,
+      color: c.card,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap:        onTap,
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border:       Border.all(color: c.border, width: 1),
+            border: Border.all(color: c.border, width: 1),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(13),
@@ -504,7 +521,9 @@ class _ApptRow extends StatelessWidget {
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       child: Row(
                         children: [
                           Expanded(
@@ -514,16 +533,18 @@ class _ApptRow extends StatelessWidget {
                                 Text(
                                   _fmtDate(a.appointmentDate),
                                   style: GoogleFonts.poppins(
-                                    fontSize:   13,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w600,
-                                    color:      c.textPrimary,
+                                    color: c.textPrimary,
                                   ),
                                 ),
                                 if (a.visitReason?.isNotEmpty == true)
                                   Text(
                                     a.visitReason!,
                                     style: GoogleFonts.poppins(
-                                        fontSize: 11, color: c.textSec),
+                                      fontSize: 11,
+                                      color: c.textSec,
+                                    ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -532,8 +553,11 @@ class _ApptRow extends StatelessWidget {
                           ),
                           _StatusDot(status: a.status),
                           const SizedBox(width: 8),
-                          Icon(Icons.chevron_right_rounded,
-                              color: c.textMuted, size: 18),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: c.textMuted,
+                            size: 18,
+                          ),
                         ],
                       ),
                     ),
@@ -564,78 +588,34 @@ class _StatusDot extends StatelessWidget {
     final label = status == AppointmentStatus.scheduled
         ? s.statusScheduled
         : status == AppointmentStatus.completed
-            ? s.statusCompleted
-            : s.statusCancelled;
+        ? s.statusCompleted
+        : s.statusCancelled;
     final color = status == AppointmentStatus.scheduled
         ? c.amber
         : status == AppointmentStatus.completed
-            ? c.green
-            : c.red;
+        ? c.green
+        : c.red;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color:        color.withAlpha(20),
+        color: color.withAlpha(20),
         borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: color.withAlpha(60)),
+        border: Border.all(color: color.withAlpha(60)),
       ),
       child: Text(
         label,
         style: GoogleFonts.poppins(
-            fontSize: 10, fontWeight: FontWeight.w700, color: color),
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }
 }
 
 // ── Shared widgets ────────────────────────────────────────────────────────────
-
-class _SmallActionBtn extends StatelessWidget {
-  final String       label;
-  final IconData     icon;
-  final Color        color;
-  final VoidCallback onTap;
-  final bool         outlined;
-
-  const _SmallActionBtn({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-    this.outlined = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 44,
-        decoration: BoxDecoration(
-          color:        outlined ? Colors.transparent : color,
-          borderRadius: BorderRadius.circular(12),
-          border:       Border.all(color: color, width: 1.5),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 16,
-                color: outlined ? color : Colors.white),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize:   13,
-                fontWeight: FontWeight.w600,
-                color:      outlined ? color : Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _IconBtn extends StatelessWidget {
   final IconData icon;
@@ -645,11 +625,12 @@ class _IconBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     return Container(
-      width: 40, height: 40,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
-        color:        c.surface,
+        color: c.surface,
         borderRadius: BorderRadius.circular(12),
-        border:       Border.all(color: c.border, width: 1),
+        border: Border.all(color: c.border, width: 1),
       ),
       child: Icon(icon, color: c.textSec, size: 20),
     );

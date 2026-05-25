@@ -6,9 +6,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
+import '../../appointment/screens/add_edit_appointment_screen.dart';
 import '../../doctor/models/doctor.dart';
 import '../../doctor/services/doctor_service.dart';
-import '../../doctor/screens/doctor_detail_screen.dart';
 import '../../doctor_home/models/doctor_patient_link.dart';
 import '../../doctor_home/services/doctor_patient_link_service.dart';
 import '../../prescription/models/prescription.dart';
@@ -27,19 +27,19 @@ class GlobalSearchScreen extends StatefulWidget {
 
 class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   final _searchCtrl = TextEditingController();
-  final _focusNode  = FocusNode();
+  final _focusNode = FocusNode();
 
-  final _linkSvc         = DoctorPatientLinkService();
+  final _linkSvc = DoctorPatientLinkService();
   final _prescriptionSvc = PrescriptionService();
-  final _labReportSvc    = LabReportService();
+  final _labReportSvc = LabReportService();
 
-  bool                       _loading       = true;
-  String                     _query         = '';
+  bool _loading = true;
+  String _query = '';
 
-  List<Map<String, dynamic>> _allDoctors    = [];
-  Set<String>                _linkedIds     = {};
-  List<Prescription>         _prescriptions = [];
-  List<LabReport>    _labReports    = [];
+  List<Map<String, dynamic>> _allDoctors = [];
+  Set<String> _linkedIds = {};
+  List<Prescription> _prescriptions = [];
+  List<LabReport> _labReports = [];
 
   @override
   void initState() {
@@ -65,12 +65,12 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         _labReportSvc.fetchAll(),
       ]);
       _allDoctors = results[0] as List<Map<String, dynamic>>;
-      _linkedIds  = (results[1] as List<DoctorPatientLink>)
+      _linkedIds = (results[1] as List<DoctorPatientLink>)
           .where((l) => l.isAccepted)
           .map((l) => l.doctorId)
           .toSet();
-      _prescriptions = results[1] as List<Prescription>;
-      _labReports    = results[2] as List<LabReport>;
+      _prescriptions = results[2] as List<Prescription>;
+      _labReports = results[3] as List<LabReport>;
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -81,9 +81,16 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   List<Map<String, dynamic>> get _filteredDoctors {
     if (_query.isEmpty) return [];
     final q = _query.toLowerCase();
-    return _allDoctors.where((d) =>
-        ((d['full_name'] as String?)?.toLowerCase().contains(q) ?? false) ||
-        ((d['hospital']  as String?)?.toLowerCase().contains(q) ?? false)).toList();
+    return _allDoctors
+        .where(
+          (d) =>
+              ((d['full_name'] as String?)?.toLowerCase().contains(q) ??
+                  false) ||
+              ((d['specialty'] as String?)?.toLowerCase().contains(q) ??
+                  false) ||
+              ((d['hospital'] as String?)?.toLowerCase().contains(q) ?? false),
+        )
+        .toList();
   }
 
   List<Prescription> get _filteredPrescriptions {
@@ -92,18 +99,21 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     return _prescriptions.where((p) {
       if (p.doctorName?.toLowerCase().contains(q) ?? false) return true;
       if (p.diagnosis?.toLowerCase().contains(q) ?? false) return true;
-      return p.medicines.any(
-          (m) => m.medicineName.toLowerCase().contains(q));
+      return p.medicines.any((m) => m.medicineName.toLowerCase().contains(q));
     }).toList();
   }
 
   List<LabReport> get _filteredLabReports {
     if (_query.isEmpty) return [];
     final q = _query.toLowerCase();
-    return _labReports.where((r) =>
-        r.testName.toLowerCase().contains(q) ||
-        (r.category?.toLowerCase().contains(q) ?? false) ||
-        (r.doctorName?.toLowerCase().contains(q) ?? false)).toList();
+    return _labReports
+        .where(
+          (r) =>
+              r.testName.toLowerCase().contains(q) ||
+              (r.category?.toLowerCase().contains(q) ?? false) ||
+              (r.doctorName?.toLowerCase().contains(q) ?? false),
+        )
+        .toList();
   }
 
   bool get _hasAnyResults =>
@@ -114,34 +124,37 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   // ── Navigation ────────────────────────────────────────────────────────────
 
   Future<void> _showDoctorSheet(Map<String, dynamic> d, bool isLinked) async {
-    final created = await showModalBottomSheet<Doctor>(
+    final takeAppointment = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _DoctorProfileSheet(
-        doctorData: d,
-        isLinked:   isLinked,
-      ),
+      builder: (_) => _DoctorProfileSheet(doctorData: d, isLinked: isLinked),
     );
-    if (created != null && mounted) {
-      await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => DoctorDetailScreen(doctor: created),
-      ));
+    if (takeAppointment == true && mounted) {
+      final name = (d['full_name'] as String?)?.trim();
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AddEditAppointmentScreen(
+            prefilledDoctorName: name?.isEmpty == true ? null : name,
+            prefilledDoctorHospital: d['hospital'] as String?,
+          ),
+        ),
+      );
     }
   }
 
   void _openPrescription(Prescription p) {
     Navigator.of(context).push(
       MaterialPageRoute(
-          builder: (_) => PrescriptionDetailScreen(prescription: p)),
+        builder: (_) => PrescriptionDetailScreen(prescription: p),
+      ),
     );
   }
 
   void _openLabReport(LabReport r) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-          builder: (_) => LabReportDetailScreen(report: r)),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => LabReportDetailScreen(report: r)));
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -150,10 +163,12 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   Widget build(BuildContext context) {
     final c = context.colors;
 
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor:          Colors.transparent,
-      statusBarIconBrightness: c.statusBarIconBrightness,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: c.statusBarIconBrightness,
+      ),
+    );
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -171,17 +186,22 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     return Container(
       color: c.card,
       padding: EdgeInsets.only(
-          top: topPad + 12, left: 16, right: 16, bottom: 14),
+        top: topPad + 12,
+        left: 16,
+        right: 16,
+        bottom: 14,
+      ),
       child: Row(
         children: [
           GestureDetector(
             onTap: () => Navigator.of(context).pop(),
             child: Container(
-              width: 40, height: 40,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color:        c.surface,
+                color: c.surface,
                 borderRadius: BorderRadius.circular(12),
-                border:       Border.all(color: c.border),
+                border: Border.all(color: c.border),
               ),
               child: Icon(Icons.arrow_back_rounded, color: c.textSec, size: 20),
             ),
@@ -191,33 +211,40 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             child: Container(
               height: 44,
               decoration: BoxDecoration(
-                color:        c.surface,
+                color: c.surface,
                 borderRadius: BorderRadius.circular(14),
-                border:       Border.all(color: c.border),
+                border: Border.all(color: c.border),
               ),
               child: TextField(
-                controller:  _searchCtrl,
-                focusNode:   _focusNode,
-                onChanged:   (v) => setState(() => _query = v.trim()),
-                style: GoogleFonts.poppins(
-                    fontSize: 13, color: c.textPrimary),
+                controller: _searchCtrl,
+                focusNode: _focusNode,
+                onChanged: (v) => setState(() => _query = v.trim()),
+                style: GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
                 decoration: InputDecoration(
-                  hintText:  'Search doctors, medicines, reports…',
+                  hintText: 'Search doctors, medicines, reports…',
                   hintStyle: GoogleFonts.poppins(
-                      fontSize: 12, color: c.textMuted),
-                  prefixIcon: Icon(Icons.search_rounded,
-                      color: c.accent, size: 20),
+                    fontSize: 12,
+                    color: c.textMuted,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    color: c.accent,
+                    size: 20,
+                  ),
                   suffixIcon: _query.isNotEmpty
                       ? GestureDetector(
                           onTap: () {
                             _searchCtrl.clear();
                             setState(() => _query = '');
                           },
-                          child: Icon(Icons.close_rounded,
-                              color: c.textMuted, size: 18),
+                          child: Icon(
+                            Icons.close_rounded,
+                            color: c.textMuted,
+                            size: 18,
+                          ),
                         )
                       : null,
-                  border:         InputBorder.none,
+                  border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 13),
                 ),
               ),
@@ -230,8 +257,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
   Widget _buildBody(ThemeColors c) {
     if (_loading) {
-      return Center(
-          child: CircularProgressIndicator(color: c.accent));
+      return Center(child: CircularProgressIndicator(color: c.accent));
     }
     if (_query.isEmpty) return _buildEmptyPrompt(c);
     if (!_hasAnyResults) {
@@ -240,13 +266,13 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 72, height: 72,
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
-                color:        c.accent.withAlpha(15),
+                color: c.accent.withAlpha(15),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Icon(Icons.search_off_rounded,
-                  color: c.accent, size: 36),
+              child: Icon(Icons.search_off_rounded, color: c.accent, size: 36),
             ),
             const SizedBox(height: 16),
             Text(
@@ -261,22 +287,18 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
       children: [
         if (_filteredDoctors.isNotEmpty) ...[
-          _SectionHeader(
-            title: 'Doctors',
-            icon:  Icons.person_rounded,
-            c: c,
-          ),
+          _SectionHeader(title: 'Doctors', icon: Icons.person_rounded, c: c),
           const SizedBox(height: 8),
           ..._filteredDoctors.take(4).map((d) {
             final isLinked = _linkedIds.contains(d['id'] as String?);
             return _DoctorResultTile(
-              name:       'Dr. ${d['full_name'] ?? "Unknown"}',
-              specialty:  null,
-              hospital:   d['hospital']   as String?,
-              imageUrl:   d['avatar_url'] as String?,
-              badge:      isLinked ? 'My Doctor' : 'Doctor',
+              name: 'Dr. ${d['full_name'] ?? "Unknown"}',
+              specialty: d['specialty'] as String?,
+              hospital: d['hospital'] as String?,
+              imageUrl: d['avatar_url'] as String?,
+              badge: isLinked ? 'My Doctor' : 'Doctor',
               badgeColor: isLinked ? c.green : c.accent,
-              onTap:      () => _showDoctorSheet(d, isLinked),
+              onTap: () => _showDoctorSheet(d, isLinked),
               c: c,
             );
           }),
@@ -284,42 +306,50 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         ],
         if (_filteredPrescriptions.isNotEmpty) ...[
           _SectionHeader(
-            title:    'Prescriptions',
-            icon:     Icons.receipt_long_rounded,
+            title: 'Prescriptions',
+            icon: Icons.receipt_long_rounded,
             c: c,
           ),
           const SizedBox(height: 8),
-          ..._filteredPrescriptions.take(4).map((p) => _ResultTile(
-                icon:     Icons.receipt_long_rounded,
-                iconColor: c.accent,
-                title:    p.diagnosis ?? p.doctorName ?? 'Prescription',
-                subtitle: [
-                  if (p.doctorName != null) 'Dr. ${p.doctorName}',
-                  _fmt(p.prescriptionDate),
-                ].join('  ·  '),
-                onTap: () => _openPrescription(p),
-                c: c,
-              )),
+          ..._filteredPrescriptions
+              .take(4)
+              .map(
+                (p) => _ResultTile(
+                  icon: Icons.receipt_long_rounded,
+                  iconColor: c.accent,
+                  title: p.diagnosis ?? p.doctorName ?? 'Prescription',
+                  subtitle: [
+                    if (p.doctorName != null) 'Dr. ${p.doctorName}',
+                    _fmt(p.prescriptionDate),
+                  ].join('  ·  '),
+                  onTap: () => _openPrescription(p),
+                  c: c,
+                ),
+              ),
           const SizedBox(height: 20),
         ],
         if (_filteredLabReports.isNotEmpty) ...[
           _SectionHeader(
-            title:    'Lab Reports',
-            icon:     Icons.science_rounded,
+            title: 'Lab Reports',
+            icon: Icons.science_rounded,
             c: c,
           ),
           const SizedBox(height: 8),
-          ..._filteredLabReports.take(4).map((r) => _ResultTile(
-                icon:     Icons.science_rounded,
-                iconColor: c.accent,
-                title:    r.testName,
-                subtitle: [
-                  if (r.category != null) r.category!,
-                  if (r.testDate != null) _fmt(r.testDate!),
-                ].join('  ·  '),
-                onTap: () => _openLabReport(r),
-                c: c,
-              )),
+          ..._filteredLabReports
+              .take(4)
+              .map(
+                (r) => _ResultTile(
+                  icon: Icons.science_rounded,
+                  iconColor: c.accent,
+                  title: r.testName,
+                  subtitle: [
+                    if (r.category != null) r.category!,
+                    if (r.testDate != null) _fmt(r.testDate!),
+                  ].join('  ·  '),
+                  onTap: () => _openLabReport(r),
+                  c: c,
+                ),
+              ),
         ],
       ],
     );
@@ -328,17 +358,20 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   Widget _buildEmptyPrompt(ThemeColors c) {
     final shortcuts = [
       _Shortcut(
-          icon: Icons.person_rounded,
-          label: 'My Doctors',
-          onTap: () => Navigator.of(context).pop()),
+        icon: Icons.person_rounded,
+        label: 'My Doctors',
+        onTap: () => Navigator.of(context).pop(),
+      ),
       _Shortcut(
-          icon: Icons.receipt_long_rounded,
-          label: 'Prescriptions',
-          onTap: () => Navigator.of(context).pop()),
+        icon: Icons.receipt_long_rounded,
+        label: 'Prescriptions',
+        onTap: () => Navigator.of(context).pop(),
+      ),
       _Shortcut(
-          icon: Icons.science_rounded,
-          label: 'Lab Reports',
-          onTap: () => Navigator.of(context).pop()),
+        icon: Icons.science_rounded,
+        label: 'Lab Reports',
+        onTap: () => Navigator.of(context).pop(),
+      ),
     ];
 
     return SingleChildScrollView(
@@ -349,18 +382,18 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           Text(
             'Search across',
             style: GoogleFonts.poppins(
-              fontSize:   14,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
-              color:      c.textSec,
+              color: c.textSec,
             ),
           ),
           const SizedBox(height: 12),
           GridView.count(
-            shrinkWrap:       true,
-            physics:          const NeverScrollableScrollPhysics(),
-            crossAxisCount:   2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
             crossAxisSpacing: 12,
-            mainAxisSpacing:  12,
+            mainAxisSpacing: 12,
             childAspectRatio: 2.4,
             children: shortcuts
                 .map((s) => _ShortcutChip(shortcut: s, c: c))
@@ -369,28 +402,36 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           const SizedBox(height: 28),
           Text(
             'Type anything to search…',
-            style: GoogleFonts.poppins(
-                fontSize: 12, color: c.textMuted),
+            style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
           ),
         ],
       ),
     ).animate().fadeIn(duration: 250.ms);
   }
 
-  String _fmt(DateTime d) =>
-      '${d.day} ${_months[d.month - 1]} ${d.year}';
+  String _fmt(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
 
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 }
 
 // ── Section header ────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
-  final String      title;
-  final IconData    icon;
+  final String title;
+  final IconData icon;
   final ThemeColors c;
 
   const _SectionHeader({
@@ -408,9 +449,9 @@ class _SectionHeader extends StatelessWidget {
         Text(
           title,
           style: GoogleFonts.poppins(
-            fontSize:   13,
+            fontSize: 13,
             fontWeight: FontWeight.w700,
-            color:      c.textPrimary,
+            color: c.textPrimary,
           ),
         ),
       ],
@@ -421,12 +462,12 @@ class _SectionHeader extends StatelessWidget {
 // ── Doctor result tile (with photo) ──────────────────────────────────────────
 
 class _DoctorResultTile extends StatelessWidget {
-  final String      name;
-  final String?     specialty;
-  final String?     hospital;
-  final String?     imageUrl;
-  final String      badge;
-  final Color       badgeColor;
+  final String name;
+  final String? specialty;
+  final String? hospital;
+  final String? imageUrl;
+  final String badge;
+  final Color badgeColor;
   final VoidCallback onTap;
   final ThemeColors c;
 
@@ -455,20 +496,21 @@ class _DoctorResultTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color:        c.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(14),
-          border:       Border.all(color: c.border),
+          border: Border.all(color: c.border),
         ),
         child: Row(
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: SizedBox(
-                width: 46, height: 46,
+                width: 46,
+                height: 46,
                 child: imageUrl != null
                     ? Image.network(
                         imageUrl!,
-                        fit:          BoxFit.cover,
+                        fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => _initialsBox,
                       )
                     : _initialsBox,
@@ -485,9 +527,9 @@ class _DoctorResultTile extends StatelessWidget {
                         child: Text(
                           name,
                           style: GoogleFonts.poppins(
-                            fontSize:   13,
+                            fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color:      c.textPrimary,
+                            color: c.textPrimary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -495,19 +537,21 @@ class _DoctorResultTile extends StatelessWidget {
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color:        badgeColor.withAlpha(20),
+                          color: badgeColor.withAlpha(20),
                           borderRadius: BorderRadius.circular(6),
-                          border:       Border.all(
-                              color: badgeColor.withAlpha(60)),
+                          border: Border.all(color: badgeColor.withAlpha(60)),
                         ),
                         child: Text(
                           badge,
                           style: GoogleFonts.poppins(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: badgeColor),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: badgeColor,
+                          ),
                         ),
                       ),
                     ],
@@ -516,15 +560,16 @@ class _DoctorResultTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       specialty!,
-                      style: GoogleFonts.poppins(
-                          fontSize: 11, color: c.accent),
+                      style: GoogleFonts.poppins(fontSize: 11, color: c.accent),
                     ),
                   ],
                   if (hospital != null) ...[
                     Text(
                       hospital!,
                       style: GoogleFonts.poppins(
-                          fontSize: 10, color: c.textMuted),
+                        fontSize: 10,
+                        color: c.textMuted,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -540,26 +585,26 @@ class _DoctorResultTile extends StatelessWidget {
   }
 
   Widget get _initialsBox => Container(
-        color: c.accent.withAlpha(20),
-        alignment: Alignment.center,
-        child: Text(
-          _initials,
-          style: GoogleFonts.poppins(
-            fontSize:   16,
-            fontWeight: FontWeight.w700,
-            color:      c.accent,
-          ),
-        ),
-      );
+    color: c.accent.withAlpha(20),
+    alignment: Alignment.center,
+    child: Text(
+      _initials,
+      style: GoogleFonts.poppins(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: c.accent,
+      ),
+    ),
+  );
 }
 
 // ── Generic result tile ───────────────────────────────────────────────────────
 
 class _ResultTile extends StatelessWidget {
-  final IconData    icon;
-  final Color       iconColor;
-  final String      title;
-  final String      subtitle;
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
   final ThemeColors c;
 
@@ -580,16 +625,17 @@ class _ResultTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color:        c.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(14),
-          border:       Border.all(color: c.border),
+          border: Border.all(color: c.border),
         ),
         child: Row(
           children: [
             Container(
-              width: 40, height: 40,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color:        iconColor.withAlpha(18),
+                color: iconColor.withAlpha(18),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: iconColor, size: 20),
@@ -602,9 +648,9 @@ class _ResultTile extends StatelessWidget {
                   Text(
                     title,
                     style: GoogleFonts.poppins(
-                      fontSize:   13,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color:      c.textPrimary,
+                      color: c.textPrimary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -613,7 +659,9 @@ class _ResultTile extends StatelessWidget {
                     Text(
                       subtitle,
                       style: GoogleFonts.poppins(
-                          fontSize: 11, color: c.textMuted),
+                        fontSize: 11,
+                        color: c.textMuted,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -631,8 +679,8 @@ class _ResultTile extends StatelessWidget {
 // ── Shortcut chip ─────────────────────────────────────────────────────────────
 
 class _Shortcut {
-  final IconData    icon;
-  final String      label;
+  final IconData icon;
+  final String label;
   final VoidCallback onTap;
   const _Shortcut({
     required this.icon,
@@ -642,7 +690,7 @@ class _Shortcut {
 }
 
 class _ShortcutChip extends StatelessWidget {
-  final _Shortcut   shortcut;
+  final _Shortcut shortcut;
   final ThemeColors c;
   const _ShortcutChip({required this.shortcut, required this.c});
 
@@ -652,17 +700,18 @@ class _ShortcutChip extends StatelessWidget {
       onTap: shortcut.onTap,
       child: Container(
         decoration: BoxDecoration(
-          color:        c.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(14),
-          border:       Border.all(color: c.border),
+          border: Border.all(color: c.border),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 30, height: 30,
+              width: 30,
+              height: 30,
               decoration: BoxDecoration(
-                color:        c.accent.withAlpha(18),
+                color: c.accent.withAlpha(18),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(shortcut.icon, color: c.accent, size: 16),
@@ -671,9 +720,9 @@ class _ShortcutChip extends StatelessWidget {
             Text(
               shortcut.label,
               style: GoogleFonts.poppins(
-                fontSize:   12,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color:      c.textPrimary,
+                color: c.textPrimary,
               ),
             ),
           ],
@@ -687,7 +736,7 @@ class _ShortcutChip extends StatelessWidget {
 
 class _DoctorProfileSheet extends StatefulWidget {
   final Map<String, dynamic> doctorData;
-  final bool                 isLinked;
+  final bool isLinked;
   const _DoctorProfileSheet({required this.doctorData, required this.isLinked});
 
   @override
@@ -695,41 +744,111 @@ class _DoctorProfileSheet extends StatefulWidget {
 }
 
 class _DoctorProfileSheetState extends State<_DoctorProfileSheet> {
-  final _svc   = DoctorService();
-  bool _saving = false;
+  final _doctorSvc = DoctorService();
+  bool _openingAppointment = false;
+  bool _checkingMyDoctor = true;
+  bool _addingMyDoctor = false;
+  bool _alreadyInMyDoctors = false;
 
-  Future<void> _save() async {
-    setState(() => _saving = true);
+  @override
+  void initState() {
+    super.initState();
+    _checkAlreadyInMyDoctors();
+  }
+
+  void _takeAppointment() {
+    if (_openingAppointment) return;
+    setState(() => _openingAppointment = true);
+    Navigator.of(context).pop(true);
+  }
+
+  Future<void> _checkAlreadyInMyDoctors() async {
+    try {
+      final all = await _doctorSvc.fetchAll();
+      final sourceId = widget.doctorData['id'] as String?;
+      final fullName = (widget.doctorData['full_name'] as String?)
+          ?.trim()
+          .toLowerCase();
+      final hospital = (widget.doctorData['hospital'] as String?)
+          ?.trim()
+          .toLowerCase();
+      final exists = all.any((d) {
+        if (sourceId != null && d.sourceId == sourceId) return true;
+        final dn = d.name.trim().toLowerCase();
+        final dh = d.hospital?.trim().toLowerCase();
+        return dn == fullName && dh == hospital;
+      });
+      if (!mounted) return;
+      setState(() {
+        _alreadyInMyDoctors = exists;
+        _checkingMyDoctor = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _checkingMyDoctor = false);
+    }
+  }
+
+  Future<void> _addToMyDoctors() async {
+    if (_addingMyDoctor || _alreadyInMyDoctors) return;
+    setState(() => _addingMyDoctor = true);
     try {
       final d = widget.doctorData;
-      final created = await _svc.create(Doctor(
-        id:        '',
-        userId:    '',
-        name:      d['full_name'] as String? ?? 'Unknown',
-        hospital:  d['hospital']   as String?,
-        imageUrl:  d['avatar_url'] as String?,
-        sourceId:  d['id']         as String?,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ));
-      if (mounted) Navigator.of(context).pop(created);
+      await _doctorSvc.create(
+        Doctor(
+          id: '',
+          userId: '',
+          name: (d['full_name'] as String?)?.trim().isNotEmpty == true
+              ? (d['full_name'] as String).trim()
+              : 'Unknown',
+          specialty: (d['specialty'] as String?)?.trim(),
+          hospital: (d['hospital'] as String?)?.trim(),
+          imageUrl: d['avatar_url'] as String?,
+          sourceId: d['id'] as String?,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _alreadyInMyDoctors = true;
+        _addingMyDoctor = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Doctor added to My Doctors.',
+            style: GoogleFonts.poppins(),
+          ),
+        ),
+      );
     } catch (_) {
-      if (mounted) setState(() => _saving = false);
+      if (!mounted) return;
+      setState(() => _addingMyDoctor = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to add doctor. Please try again.',
+            style: GoogleFonts.poppins(),
+          ),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final c        = context.colors;
-    final d        = widget.doctorData;
-    final name     = d['full_name']  as String? ?? 'Unknown';
-    final hospital = d['hospital']   as String?;
-    final avatar   = d['avatar_url'] as String?;
-    final botPad   = MediaQuery.of(context).padding.bottom;
+    final c = context.colors;
+    final d = widget.doctorData;
+    final name = d['full_name'] as String? ?? 'Unknown';
+    final specialty = d['specialty'] as String?;
+    final hospital = d['hospital'] as String?;
+    final avatar = d['avatar_url'] as String?;
+    final botPad = MediaQuery.of(context).padding.bottom;
 
     return Container(
       decoration: BoxDecoration(
-        color:        c.card,
+        color: c.card,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
       ),
       padding: EdgeInsets.fromLTRB(24, 8, 24, botPad + 28),
@@ -737,8 +856,12 @@ class _DoctorProfileSheetState extends State<_DoctorProfileSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 40, height: 4,
-            decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: c.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
           const SizedBox(height: 22),
           CircleAvatar(
@@ -746,55 +869,152 @@ class _DoctorProfileSheetState extends State<_DoctorProfileSheet> {
             backgroundColor: c.accent.withAlpha(20),
             backgroundImage: avatar != null ? NetworkImage(avatar) : null,
             child: avatar == null
-                ? Icon(Icons.medical_services_rounded, color: c.accent, size: 38)
+                ? Icon(
+                    Icons.medical_services_rounded,
+                    color: c.accent,
+                    size: 38,
+                  )
                 : null,
           ),
           const SizedBox(height: 14),
           Text(
             'Dr. $name',
-            style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: c.textPrimary),
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: c.textPrimary,
+            ),
           ),
+          if (specialty?.isNotEmpty == true) ...[
+            const SizedBox(height: 4),
+            Text(
+              specialty!,
+              style: GoogleFonts.poppins(fontSize: 13, color: c.accent),
+            ),
+          ],
           if (hospital != null) ...[
             const SizedBox(height: 4),
-            Text(hospital, style: GoogleFonts.poppins(fontSize: 13, color: c.textSec)),
+            Text(
+              hospital,
+              style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
+            ),
           ],
           const SizedBox(height: 12),
           if (widget.isLinked)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color:        c.green.withAlpha(20),
+                color: c.green.withAlpha(20),
                 borderRadius: BorderRadius.circular(20),
-                border:       Border.all(color: c.green.withAlpha(60)),
+                border: Border.all(color: c.green.withAlpha(60)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.check_circle_rounded, size: 14, color: c.green),
                   const SizedBox(width: 6),
-                  Text('Linked Doctor',
-                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: c.green)),
+                  Text(
+                    'Linked Doctor',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: c.green,
+                    ),
+                  ),
                 ],
               ),
             ),
+          if (widget.isLinked) ...[const SizedBox(height: 10)],
           const SizedBox(height: 28),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _saving ? null : _save,
-              icon: _saving
-                  ? const SizedBox(width: 16, height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.person_add_rounded, size: 18),
-              label: Text(_saving ? 'Saving…' : 'Save to My Doctors',
-                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor:         c.accent,
-                foregroundColor:         Colors.white,
-                disabledBackgroundColor: c.accent.withAlpha(120),
-                shape:   RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                padding: const EdgeInsets.symmetric(vertical: 15),
-              ),
+            child: Column(
+              children: [
+                ElevatedButton.icon(
+                  onPressed:
+                      _checkingMyDoctor ||
+                          _addingMyDoctor ||
+                          _alreadyInMyDoctors
+                      ? null
+                      : _addToMyDoctors,
+                  icon: _checkingMyDoctor || _addingMyDoctor
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          _alreadyInMyDoctors
+                              ? Icons.check_circle_rounded
+                              : Icons.person_add_rounded,
+                          size: 18,
+                        ),
+                  label: Text(
+                    _alreadyInMyDoctors
+                        ? 'Added to My Doctors'
+                        : 'Add to My Doctors',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _alreadyInMyDoctors ? c.green : c.green,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: _alreadyInMyDoctors
+                        ? c.green.withAlpha(170)
+                        : c.green.withAlpha(120),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  onPressed: _openingAppointment ? null : _takeAppointment,
+                  icon: const Icon(Icons.event_available_rounded, size: 18),
+                  label: Text(
+                    'Take Appointment',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: c.accent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: c.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Close',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: c.textSec,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

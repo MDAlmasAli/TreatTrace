@@ -16,8 +16,7 @@ import '../../profile/screens/profile_screen.dart';
 import '../../test_report/screens/lab_reports_screen.dart';
 import '../../appointment/screens/appointments_screen.dart';
 import '../../search/screens/global_search_screen.dart';
-import '../../doctor_home/services/doctor_patient_link_service.dart';
-import '../../doctor_home/screens/linked_doctors_screen.dart';
+import '../../doctor/screens/doctors_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // HomeScreen
@@ -42,26 +41,18 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _authService  = AuthService();
-  final _linkSvc      = DoctorPatientLinkService();
   final _searchCtrl   = TextEditingController();
   String? _avatarUrl;
-  int     _pendingDoctorRequests = 0;
 
   @override
   void initState() {
     super.initState();
     _loadAvatar();
-    _loadPendingCount();
   }
 
   Future<void> _loadAvatar() async {
     final profile = await _authService.fetchProfile();
     if (mounted) setState(() => _avatarUrl = profile?['avatar_url'] as String?);
-  }
-
-  Future<void> _loadPendingCount() async {
-    final count = await _linkSvc.countPendingIncoming();
-    if (mounted) setState(() => _pendingDoctorRequests = count);
   }
 
   String get _firstName {
@@ -98,9 +89,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _goToDoctors() async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const LinkedDoctorsScreen()),
+      MaterialPageRoute(builder: (_) => const DoctorsScreen()),
     );
-    _loadPendingCount();
   }
 
   Future<void> _goToSearch() async {
@@ -244,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             label:        s.myDoctors,
                             onTap:        _goToDoctors,
                             animDelay:    250,
-                            pendingCount: _pendingDoctorRequests,
+                            pendingCount: 0,
                           ),
                         ),
                         const SizedBox(width: 14),

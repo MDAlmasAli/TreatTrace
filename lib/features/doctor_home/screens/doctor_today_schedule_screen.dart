@@ -1,0 +1,414 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../../core/theme/theme_colors.dart';
+import '../../appointment/models/appointment.dart';
+import '../../appointment/services/appointment_service.dart';
+import 'patient_detail_screen.dart';
+
+class DoctorTodayScheduleScreen extends StatefulWidget {
+  const DoctorTodayScheduleScreen({super.key});
+
+  @override
+  State<DoctorTodayScheduleScreen> createState() =>
+      _DoctorTodayScheduleScreenState();
+}
+
+class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
+  final _apptSvc = AppointmentService();
+  final _client = Supabase.instance.client;
+
+  List<Appointment> _appointments = [];
+  Map<String, Map<String, dynamic>> _patientById = {};
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final appts = await _apptSvc.fetchForCurrentDoctor(day: DateTime.now());
+      final sorted = [...appts]..sort(_sortByTimeThenCreated);
+      final ids = sorted.map((a) => a.userId).toSet().toList();
+      Map<String, Map<String, dynamic>> patientMap = {};
+      if (ids.isNotEmpty) {
+        final rows =
+            await _client
+                    .from('profiles')
+                    .select('id, full_name, phone, avatar_url')
+                    .inFilter('id', ids)
+                as List;
+        patientMap = {
+          for (final row in rows)
+            (row['id'] as String): row as Map<String, dynamic>,
+        };
+      }
+      if (!mounted) return;
+      setState(() {
+        _appointments = sorted;
+        _patientById = patientMap;
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  int _sortByTimeThenCreated(Appointment a, Appointment b) {
+    final ta = _minutesFrom12h(a.appointmentTime);
+    final tb = _minutesFrom12h(b.appointmentTime);
+    if (ta == null && tb == null) return b.createdAt.compareTo(a.createdAt);
+    if (ta == null) return 1;
+    if (tb == null) return -1;
+    final cmp = ta.compareTo(tb);
+    if (cmp != 0) return cmp;
+    return b.createdAt.compareTo(a.createdAt);
+  }
+
+  int? _minutesFrom12h(String? text) {
+    if (text == null) return null;
+    final raw = text.trim().toUpperCase();
+    final re = RegExp(r'^(\d{1,2}):(\d{2})\s?(AM|PM)$');
+    final m = re.firstMatch(raw);
+    if (m == null) return null;
+    final hourRaw = int.tryParse(m.group(1)!);
+    final minute = int.tryParse(m.group(2)!);
+    final period = m.group(3)!;
+    if (hourRaw == null || minute == null) return null;
+    var hour = hourRaw % 12;
+    if (period == 'PM') hour += 12;
+    return hour * 60 + minute;
+  }
+
+  Future<void> _openPatient(Appointment appt) async {
+    final prof = _patientById[appt.userId];
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PatientDetailScreen(
+          patientId: appt.userId,
+          patientName:
+              (prof?['full_name'] as String?)?.trim().isNotEmpty == true
+              ? (prof!['full_name'] as String)
+              : 'Patient',
+          patientPhone: prof?['phone'] as String?,
+          patientAvatarUrl: prof?['avatar_url'] as String?,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: c.statusBarIconBrightness,
+      ),
+    );
+
+    return Scaffold(
+      backgroundColor: c.bg,
+      body: Column(
+        children: [
+          _buildHeader(c),
+          Expanded(
+            child: _loading
+                ? Center(
+                    child: CircularProgressIndicator(
+                      color: c.accent,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : RefreshIndicator(
+                    color: c.accent,
+                    onRefresh: _load,
+                    child: _appointments.isEmpty
+                        ? _EmptyState()
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+                            itemCount: _appointments.length,
+                            itemBuilder: (context, i) {
+                              final appt = _appointments[i];
+                              final prof = _patientById[appt.userId];
+                              return _ScheduleTile(
+                                appointment: appt,
+                                patientName:
+                                    (prof?['full_name'] as String?) ??
+                                    'Patient',
+                                patientPhone: prof?['phone'] as String?,
+                                onTapPatient: () => _openPatient(appt),
+                              ).animate().fadeIn(
+                                delay: Duration(milliseconds: i * 60),
+                              );
+                            },
+                          ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(ThemeColors c) {
+    final topPad = MediaQuery.of(context).padding.top;
+    final now = DateTime.now();
+    final months = const [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+        border: Border(bottom: BorderSide(color: c.border, width: 1)),
+      ),
+      padding: EdgeInsets.only(
+        top: topPad + 16,
+        left: 20,
+        right: 20,
+        bottom: 18,
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(true),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: c.border),
+              ),
+              child: Icon(Icons.arrow_back_rounded, color: c.textSec, size: 20),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Today's Schedule",
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: c.textPrimary,
+                  ),
+                ),
+                Text(
+                  '${now.day} ${months[now.month - 1]} ${now.year}',
+                  style: GoogleFonts.poppins(fontSize: 12, color: c.textSec),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: c.accent.withAlpha(20),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '${_appointments.length}',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: c.accent,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 300.ms);
+  }
+}
+
+class _ScheduleTile extends StatelessWidget {
+  final Appointment appointment;
+  final String patientName;
+  final String? patientPhone;
+  final VoidCallback onTapPatient;
+
+  const _ScheduleTile({
+    required this.appointment,
+    required this.patientName,
+    required this.patientPhone,
+    required this.onTapPatient,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final statusColor = appointment.status == AppointmentStatus.scheduled
+        ? c.accent
+        : appointment.status == AppointmentStatus.completed
+        ? c.green
+        : c.red;
+    final statusText = appointment.status == AppointmentStatus.scheduled
+        ? 'Scheduled'
+        : appointment.status == AppointmentStatus.completed
+        ? 'Completed'
+        : 'Cancelled';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: c.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: statusColor.withAlpha(70)),
+                ),
+                child: Text(
+                  statusText,
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if ((appointment.appointmentTime ?? '').isNotEmpty)
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time_rounded,
+                      size: 13,
+                      color: c.textMuted,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      appointment.appointmentTime!,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: c.textSec,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            patientName,
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: c.textPrimary,
+            ),
+          ),
+          if ((patientPhone ?? '').isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              patientPhone!,
+              style: GoogleFonts.poppins(fontSize: 12, color: c.textSec),
+            ),
+          ],
+          if ((appointment.visitReason ?? '').isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              appointment.visitReason!,
+              style: GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 40,
+            child: OutlinedButton.icon(
+              onPressed: onTapPatient,
+              icon: Icon(
+                Icons.person_search_rounded,
+                size: 16,
+                color: c.accent,
+              ),
+              label: Text(
+                'Open Patient',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: c.accent,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: c.accent.withAlpha(90)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return ListView(
+      children: [
+        const SizedBox(height: 90),
+        Center(
+          child: Column(
+            children: [
+              Icon(Icons.event_busy_rounded, size: 66, color: c.textMuted),
+              const SizedBox(height: 14),
+              Text(
+                'No schedule for today',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: c.textSec,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Today has no appointments yet.',
+                style: GoogleFonts.poppins(fontSize: 13, color: c.textMuted),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

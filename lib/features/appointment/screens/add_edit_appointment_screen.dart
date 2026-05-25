@@ -18,11 +18,16 @@ class AddEditAppointmentScreen extends StatefulWidget {
   final Appointment? existing;
   // Pre-fill doctor when opened from DoctorDetailScreen
   final Doctor?      preselectedDoctor;
+  // Pre-fill doctor snapshot when opened from global search doctor profile.
+  final String?      prefilledDoctorName;
+  final String?      prefilledDoctorHospital;
 
   const AddEditAppointmentScreen({
     super.key,
     this.existing,
     this.preselectedDoctor,
+    this.prefilledDoctorName,
+    this.prefilledDoctorHospital,
   });
 
   @override
@@ -58,12 +63,16 @@ class _AddEditAppointmentScreenState
   AppointmentStatus _status = AppointmentStatus.scheduled;
 
   bool _saving = false;
+  String? _fixedDoctorName;
+  String? _fixedDoctorHospital;
 
   bool get _isEdit => widget.existing != null;
 
   @override
   void initState() {
     super.initState();
+    _fixedDoctorName = widget.prefilledDoctorName?.trim().nullIfEmpty;
+    _fixedDoctorHospital = widget.prefilledDoctorHospital?.trim().nullIfEmpty;
     _loadDoctors();
     _loadPrescriptions();
     if (_isEdit) _populate();
@@ -83,10 +92,16 @@ class _AddEditAppointmentScreenState
       _doctors = await _doctorSvc.fetchAll();
       // Apply preselected doctor if provided
       if (widget.preselectedDoctor != null && !_isEdit) {
-        _selectedDoctor = _doctors.firstWhere(
-          (d) => d.id == widget.preselectedDoctor!.id,
-          orElse: () => widget.preselectedDoctor!,
-        );
+        final match = _doctors
+            .where((d) => d.id == widget.preselectedDoctor!.id)
+            .toList();
+        if (match.isNotEmpty) {
+          _selectedDoctor = match.first;
+        } else {
+          _fixedDoctorName ??= widget.preselectedDoctor!.name.trim().nullIfEmpty;
+          _fixedDoctorHospital ??=
+              widget.preselectedDoctor!.hospital?.trim().nullIfEmpty;
+        }
       }
     } finally {
       if (mounted) setState(() => _loadingDoctors = false);
@@ -152,13 +167,16 @@ class _AddEditAppointmentScreenState
 
     setState(() => _saving = true);
     try {
-      final doctorName = _selectedDoctor?.name ??
-          (_isEdit ? widget.existing!.doctorNameSnapshot : 'Unknown');
+      final useFixedDoctor = (_fixedDoctorName?.isNotEmpty ?? false);
+      final doctorName = useFixedDoctor
+          ? _fixedDoctorName!
+          : (_selectedDoctor?.name ??
+              (_isEdit ? widget.existing!.doctorNameSnapshot : 'Unknown'));
 
       final draft = Appointment(
         id:                 _isEdit ? widget.existing!.id : '',
         userId:             '',
-        doctorId:           _selectedDoctor?.id,
+        doctorId:           useFixedDoctor ? null : _selectedDoctor?.id,
         doctorNameSnapshot: doctorName,
         appointmentDate:    _date!,
         appointmentTime:    _timeCtrl.text.trim().nullIfEmpty,
@@ -221,13 +239,19 @@ class _AddEditAppointmentScreenState
                     // ── Doctor ────────────────────────────────────────────
                     _SectionLabel(text: s.selectDoctor),
                     const SizedBox(height: 12),
-                    _DoctorPicker(
-                      doctors:  _doctors,
-                      selected: _selectedDoctor,
-                      loading:  _loadingDoctors,
-                      onChanged: (d) =>
-                          setState(() => _selectedDoctor = d),
-                    ),
+                    if (_fixedDoctorName != null)
+                      _FixedDoctorCard(
+                        name: _fixedDoctorName!,
+                        hospital: _fixedDoctorHospital,
+                      )
+                    else
+                      _DoctorPicker(
+                        doctors:  _doctors,
+                        selected: _selectedDoctor,
+                        loading:  _loadingDoctors,
+                        onChanged: (d) =>
+                            setState(() => _selectedDoctor = d),
+                      ),
 
                     // ── Date & Time ───────────────────────────────────────
                     const SizedBox(height: 24),
@@ -412,6 +436,53 @@ class _DoctorPicker extends StatelessWidget {
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _FixedDoctorCard extends StatelessWidget {
+  final String name;
+  final String? hospital;
+
+  const _FixedDoctorCard({required this.name, this.hospital});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border, width: 1),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Icon(Icons.medical_services_rounded, size: 18, color: c.amber),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Dr. $name',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: c.textPrimary,
+                  ),
+                ),
+                if (hospital?.isNotEmpty == true)
+                  Text(
+                    hospital!,
+                    style: GoogleFonts.poppins(fontSize: 11, color: c.textMuted),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

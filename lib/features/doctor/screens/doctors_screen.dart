@@ -7,9 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../search/screens/global_search_screen.dart';
 import '../models/doctor.dart';
 import '../services/doctor_service.dart';
-import 'add_edit_doctor_screen.dart';
 import 'doctor_detail_screen.dart';
 
 class DoctorsScreen extends StatefulWidget {
@@ -80,11 +80,11 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
 
   // ── Navigation ────────────────────────────────────────────────────────────
 
-  Future<void> _openAdd() async {
-    final added = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const AddEditDoctorScreen()),
+  Future<void> _openDoctorSearch() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const GlobalSearchScreen()),
     );
-    if (added == true) _load();
+    _load();
   }
 
   Future<void> _openDetail(Doctor d) async {
@@ -132,7 +132,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                             : s.noDoctors,
                         onAdd: _query.isNotEmpty || _selectedSpecialty != null
                             ? null
-                            : _openAdd,
+                            : _openDoctorSearch,
                       )
                     : RefreshIndicator(
                         color: c.accent,
@@ -154,7 +154,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed:       _openAdd,
+        onPressed:       _openDoctorSearch,
         backgroundColor: c.accent,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(

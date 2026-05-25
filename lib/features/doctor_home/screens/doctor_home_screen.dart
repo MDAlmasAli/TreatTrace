@@ -5,8 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/auth_service.dart';
+import '../../appointment/services/appointment_service.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../profile/screens/profile_screen.dart';
+import '../services/doctor_patient_link_service.dart';
+import 'doctor_today_schedule_screen.dart';
 import 'my_patients_screen.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
@@ -31,12 +34,18 @@ class DoctorHomeScreen extends StatefulWidget {
 
 class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   final _authService = AuthService();
+  final _apptSvc = AppointmentService();
+  final _linkSvc = DoctorPatientLinkService();
   String? _avatarUrl;
+  int _todayAppointments = 0;
+  int _totalPatients = 0;
+  int _pendingTasks = 0;
 
   @override
   void initState() {
     super.initState();
     _loadAvatar();
+    _loadDashboardStats();
   }
 
   Future<void> _loadAvatar() async {
@@ -58,9 +67,46 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   }
 
   Future<void> _goMyPatients() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const MyPatientsScreen()));
+    _loadDashboardStats();
+  }
+
+  Future<void> _goTodaySchedule() async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const MyPatientsScreen()),
+      MaterialPageRoute(builder: (_) => const DoctorTodayScheduleScreen()),
     );
+    _loadDashboardStats();
+  }
+
+  Future<void> _loadDashboardStats() async {
+    try {
+      final results = await Future.wait([
+        _apptSvc.countTodayForCurrentDoctor(),
+        _linkSvc.fetchLinkedPatients(),
+        _linkSvc.fetchOutgoingRequests(),
+      ]);
+      final today = results[0] as int;
+      final linked = results[1] as List;
+      final outgoing = results[2] as List;
+      final pending = outgoing
+          .where((row) => (row as dynamic).status == 'pending')
+          .length;
+      if (!mounted) return;
+      setState(() {
+        _todayAppointments = today;
+        _totalPatients = linked.length;
+        _pendingTasks = pending;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _todayAppointments = 0;
+        _totalPatients = 0;
+        _pendingTasks = 0;
+      });
+    }
   }
 
   Future<void> _goToProfile() async {
@@ -77,40 +123,37 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     _loadAvatar();
   }
 
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature — Coming soon!',
-            style: GoogleFonts.poppins(fontSize: 13)),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
   Future<void> _confirmLogout() async {
     final c = context.colors;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Log Out',
-            style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: c.textPrimary)),
-        content: Text('Are you sure you want to log out?',
-            style: GoogleFonts.poppins(fontSize: 13, color: c.textSec)),
+        title: Text(
+          'Log Out',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: c.textPrimary,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to log out?',
+          style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child:
-                Text('Cancel', style: GoogleFonts.poppins(color: c.textSec)),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: c.textSec)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Log Out',
-                style: GoogleFonts.poppins(
-                    color: c.red, fontWeight: FontWeight.w700)),
+            child: Text(
+              'Log Out',
+              style: GoogleFonts.poppins(
+                color: c.red,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -130,10 +173,12 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: c.statusBarIconBrightness,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: c.statusBarIconBrightness,
+      ),
+    );
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -153,7 +198,11 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _StatsRow().animate().fadeIn(delay: 100.ms),
+                        _StatsRow(
+                          todayAppointments: _todayAppointments,
+                          totalPatients: _totalPatients,
+                          pendingTasks: _pendingTasks,
+                        ).animate().fadeIn(delay: 100.ms),
 
                         const SizedBox(height: 28),
 
@@ -173,23 +222,31 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Expanded(
-                                child: _ActionCard(
-                                  icon: Icons.calendar_today_rounded,
-                                  label: "Today's Schedule",
-                                  subtitle: 'View appointments',
-                                  accentColor: c.accent,
-                                  onTap: () => _showComingSoon("Today's Schedule"),
-                                ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.08),
+                                child:
+                                    _ActionCard(
+                                          icon: Icons.calendar_today_rounded,
+                                          label: "Today's Schedule",
+                                          subtitle: 'View appointments',
+                                          accentColor: c.accent,
+                                          onTap: _goTodaySchedule,
+                                        )
+                                        .animate()
+                                        .fadeIn(delay: 180.ms)
+                                        .slideY(begin: 0.08),
                               ),
                               const SizedBox(width: 14),
                               Expanded(
-                                child: _ActionCard(
-                                  icon: Icons.people_alt_rounded,
-                                  label: 'My Patients',
-                                  subtitle: 'Patient records',
-                                  accentColor: c.green,
-                                  onTap: _goMyPatients,
-                                ).animate().fadeIn(delay: 220.ms).slideY(begin: 0.08),
+                                child:
+                                    _ActionCard(
+                                          icon: Icons.people_alt_rounded,
+                                          label: 'My Patients',
+                                          subtitle: 'Patient records',
+                                          accentColor: c.green,
+                                          onTap: _goMyPatients,
+                                        )
+                                        .animate()
+                                        .fadeIn(delay: 220.ms)
+                                        .slideY(begin: 0.08),
                               ),
                             ],
                           ),
@@ -202,23 +259,31 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Expanded(
-                                child: _ActionCard(
-                                  icon: Icons.edit_document,
-                                  label: 'Write Prescription',
-                                  subtitle: 'Select a patient',
-                                  accentColor: c.amber,
-                                  onTap: _goMyPatients,
-                                ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.08),
+                                child:
+                                    _ActionCard(
+                                          icon: Icons.edit_document,
+                                          label: 'Write Prescription',
+                                          subtitle: 'Select a patient',
+                                          accentColor: c.amber,
+                                          onTap: _goMyPatients,
+                                        )
+                                        .animate()
+                                        .fadeIn(delay: 260.ms)
+                                        .slideY(begin: 0.08),
                               ),
                               const SizedBox(width: 14),
                               Expanded(
-                                child: _ActionCard(
-                                  icon: Icons.science_rounded,
-                                  label: 'Test Reports',
-                                  subtitle: 'Lab results',
-                                  accentColor: c.red,
-                                  onTap: () => _showComingSoon('Test Reports'),
-                                ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.08),
+                                child:
+                                    _ActionCard(
+                                          icon: Icons.science_rounded,
+                                          label: 'Test Reports',
+                                          subtitle: 'Lab results',
+                                          accentColor: c.red,
+                                          onTap: _goMyPatients,
+                                        )
+                                        .animate()
+                                        .fadeIn(delay: 300.ms)
+                                        .slideY(begin: 0.08),
                               ),
                             ],
                           ),
@@ -261,70 +326,70 @@ class _DoctorHeader extends StatelessWidget {
     final topPad = MediaQuery.of(context).padding.top;
 
     return Container(
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-        border: Border(bottom: BorderSide(color: c.border, width: 1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(10),
-            blurRadius: 16,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: EdgeInsets.only(
-        top: topPad + 18,
-        left: 24,
-        right: 24,
-        bottom: 28,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      greeting,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: c.textSec,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Dr. $firstName',
-                      style: GoogleFonts.poppins(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w700,
-                        color: c.textPrimary,
-                        height: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
+          decoration: BoxDecoration(
+            color: c.card,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(28),
+              bottomRight: Radius.circular(28),
+            ),
+            border: Border(bottom: BorderSide(color: c.border, width: 1)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(10),
+                blurRadius: 16,
+                offset: const Offset(0, 2),
               ),
-              const SizedBox(width: 12),
-              _HeaderIcon(icon: Icons.notifications_outlined),
-              const SizedBox(width: 10),
-              _HeaderIcon(icon: Icons.logout_rounded, onTap: onLogout),
             ],
           ),
-          const SizedBox(height: 20),
-          // Verification status badge
-          _VerificationBadge(status: verificationStatus),
-        ],
-      ),
-    )
+          padding: EdgeInsets.only(
+            top: topPad + 18,
+            left: 24,
+            right: 24,
+            bottom: 28,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          greeting,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: c.textSec,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Dr. $firstName',
+                          style: GoogleFonts.poppins(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700,
+                            color: c.textPrimary,
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  _HeaderIcon(icon: Icons.notifications_outlined),
+                  const SizedBox(width: 10),
+                  _HeaderIcon(icon: Icons.logout_rounded, onTap: onLogout),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Verification status badge
+              _VerificationBadge(status: verificationStatus),
+            ],
+          ),
+        )
         .animate()
         .fadeIn(duration: 500.ms)
         .slideY(begin: -0.06, end: 0, duration: 500.ms);
@@ -338,11 +403,15 @@ class _VerificationBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final isPending  = status == 'pending';
+    final isPending = status == 'pending';
     final badgeColor = isPending ? c.amber : c.green;
-    final icon       = isPending ? Icons.hourglass_top_rounded : Icons.verified_rounded;
-    final label      = isPending ? 'Pending Verification' : 'Verified Healthcare Professional';
-    final badge      = isPending ? 'Pending' : 'Doctor';
+    final icon = isPending
+        ? Icons.hourglass_top_rounded
+        : Icons.verified_rounded;
+    final label = isPending
+        ? 'Pending Verification'
+        : 'Verified Healthcare Professional';
+    final badge = isPending ? 'Pending' : 'Doctor';
 
     return Container(
       width: double.infinity,
@@ -355,14 +424,20 @@ class _VerificationBadge extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(color: badgeColor.withAlpha(20), shape: BoxShape.circle),
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: badgeColor.withAlpha(20),
+              shape: BoxShape.circle,
+            ),
             child: Icon(icon, color: badgeColor, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(label,
-                style: GoogleFonts.poppins(fontSize: 13, color: c.textSec)),
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
+            ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -370,9 +445,14 @@ class _VerificationBadge extends StatelessWidget {
               color: badgeColor.withAlpha(20),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text(badge,
-                style: GoogleFonts.poppins(
-                    fontSize: 11, fontWeight: FontWeight.w600, color: badgeColor)),
+            child: Text(
+              badge,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: badgeColor,
+              ),
+            ),
           ),
         ],
       ),
@@ -391,24 +471,38 @@ class _PendingBody extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 80, height: 80,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 color: c.amber.withAlpha(15),
                 shape: BoxShape.circle,
                 border: Border.all(color: c.amber.withAlpha(50)),
               ),
-              child: Icon(Icons.hourglass_top_rounded, color: c.amber, size: 38),
+              child: Icon(
+                Icons.hourglass_top_rounded,
+                color: c.amber,
+                size: 38,
+              ),
             ),
             const SizedBox(height: 24),
-            Text('Verification Pending',
-                style: GoogleFonts.poppins(
-                    fontSize: 20, fontWeight: FontWeight.w700, color: c.textPrimary)),
+            Text(
+              'Verification Pending',
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: c.textPrimary,
+              ),
+            ),
             const SizedBox(height: 10),
             Text(
               'Your medical credentials are under review by our admin team. '
               'You will get full access once approved.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(fontSize: 13, color: c.textSec, height: 1.6),
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: c.textSec,
+                height: 1.6,
+              ),
             ),
           ],
         ),
@@ -446,6 +540,16 @@ class _HeaderIcon extends StatelessWidget {
 // _StatsRow
 // ══════════════════════════════════════════════════════════════════════════════
 class _StatsRow extends StatelessWidget {
+  final int todayAppointments;
+  final int totalPatients;
+  final int pendingTasks;
+
+  const _StatsRow({
+    required this.todayAppointments,
+    required this.totalPatients,
+    required this.pendingTasks,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -454,7 +558,7 @@ class _StatsRow extends StatelessWidget {
           child: _StatPill(
             icon: Icons.event_available_rounded,
             label: "Today's\nAppointments",
-            value: '0',
+            value: '$todayAppointments',
             color: context.colors.accent,
           ),
         ),
@@ -463,7 +567,7 @@ class _StatsRow extends StatelessWidget {
           child: _StatPill(
             icon: Icons.people_alt_rounded,
             label: 'Total\nPatients',
-            value: '0',
+            value: '$totalPatients',
             color: context.colors.green,
           ),
         ),
@@ -472,7 +576,7 @@ class _StatsRow extends StatelessWidget {
           child: _StatPill(
             icon: Icons.pending_actions_rounded,
             label: 'Pending\nTasks',
-            value: '0',
+            value: '$pendingTasks',
             color: context.colors.amber,
           ),
         ),
@@ -599,8 +703,10 @@ class _ActionCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: accentColor.withAlpha(20),
                   borderRadius: BorderRadius.circular(14),
-                  border:
-                      Border.all(color: accentColor.withAlpha(40), width: 1),
+                  border: Border.all(
+                    color: accentColor.withAlpha(40),
+                    width: 1,
+                  ),
                 ),
                 child: Icon(icon, color: accentColor, size: 26),
               ),
@@ -616,8 +722,7 @@ class _ActionCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: GoogleFonts.poppins(
-                    fontSize: 11, color: c.textSec),
+                style: GoogleFonts.poppins(fontSize: 11, color: c.textSec),
               ),
               const Spacer(),
               Align(
@@ -629,8 +734,11 @@ class _ActionCard extends StatelessWidget {
                     color: accentColor.withAlpha(20),
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: Icon(Icons.arrow_forward_rounded,
-                      size: 16, color: accentColor),
+                  child: Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 16,
+                    color: accentColor,
+                  ),
                 ),
               ),
             ],
@@ -682,8 +790,7 @@ class _DoctorBottomBar extends StatelessWidget {
           // Doctor badge
           Expanded(
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: c.card,
                 borderRadius: BorderRadius.circular(14),
@@ -691,8 +798,11 @@ class _DoctorBottomBar extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.medical_services_rounded,
-                      color: c.green, size: 20),
+                  Icon(
+                    Icons.medical_services_rounded,
+                    color: c.green,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Text(
                     'Doctor Portal',
