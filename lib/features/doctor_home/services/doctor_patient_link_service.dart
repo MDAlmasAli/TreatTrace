@@ -182,6 +182,70 @@ class DoctorPatientLinkService {
         .toList();
   }
 
+  // ── Doctor: patients who booked appointments but aren't linked yet ────────
+  // Returns each patient with their current link status:
+  //   link_status == null    → no request sent yet → show "Send Request"
+  //   link_status == 'pending'  → request sent, waiting → show "Pending"
+  //   link_status == 'rejected' → patient rejected → show "Resend"
+
+  Future<List<Map<String, dynamic>>> fetchPatientRequests() async {
+    final uid = _uid;
+    if (uid == null) return [];
+
+    // 1. All patients who booked appointments with this doctor
+    final apptRows = await _client
+        .from('appointments')
+        .select('user_id')
+        .eq('doctor_user_id', uid) as List;
+
+    final patientIds = apptRows
+        .map((r) => r['user_id'] as String?)
+        .where((id) => id != null && id.isNotEmpty)
+        .cast<String>()
+        .toSet()
+        .toList();
+
+    if (patientIds.isEmpty) return [];
+
+    // 2. Existing link statuses for those patients
+    final linkRows = await _client
+        .from('doctor_patient_links')
+        .select('patient_id, status, id')
+        .eq('doctor_id', uid)
+        .inFilter('patient_id', patientIds) as List;
+
+    final linkMap = <String, Map<String, dynamic>>{
+      for (final l in linkRows)
+        l['patient_id'] as String: l as Map<String, dynamic>,
+    };
+
+    // 3. Exclude already-accepted patients
+    final visibleIds = patientIds
+        .where((id) => (linkMap[id]?['status'] as String?) != 'accepted')
+        .toList();
+
+    if (visibleIds.isEmpty) return [];
+
+    // 4. Fetch profiles
+    final profiles = await _client
+        .from('profiles')
+        .select('id, full_name, phone, avatar_url')
+        .inFilter('id', visibleIds) as List;
+
+    return profiles.map((p) {
+      final id = p['id'] as String;
+      final link = linkMap[id];
+      return {
+        'id':          id,
+        'full_name':   p['full_name'],
+        'phone':       p['phone'],
+        'avatar_url':  p['avatar_url'],
+        'link_id':     link?['id'],
+        'link_status': link?['status'], // null | 'pending' | 'rejected'
+      };
+    }).toList();
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────────
 
   Future<List<DoctorPatientLink>> _attachPatientProfiles(

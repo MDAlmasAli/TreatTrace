@@ -10,7 +10,6 @@ import '../../../core/services/reminder_service.dart';
 import '../../appointment/services/appointment_service.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../profile/screens/profile_screen.dart';
-import '../models/doctor_patient_link.dart';
 import '../services/doctor_patient_link_service.dart';
 import 'doctor_today_schedule_screen.dart';
 import 'my_patients_screen.dart';
@@ -46,7 +45,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   int _totalPatients = 0;
   int _pendingTasks = 0;
 
-  List<DoctorPatientLink> _pendingRequests = [];
+  List<Map<String, dynamic>> _patientRequests = [];
   RealtimeChannel? _apptChannel;
 
   @override
@@ -139,14 +138,73 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     );
   }
 
-  // ── Patient Requests (pending outgoing link requests) ─────────────────────
+  // ── Patient Requests: patients who booked appointments but aren't linked ──
 
   Future<void> _loadPendingRequests() async {
     try {
-      final all = await _linkSvc.fetchOutgoingRequests();
-      final pending = all.where((r) => r.isPending).toList();
-      if (mounted) setState(() => _pendingRequests = pending);
+      final requests = await _linkSvc.fetchPatientRequests();
+      if (mounted) setState(() => _patientRequests = requests);
     } catch (_) {}
+  }
+
+  Future<void> _handlePatientRequestAction(
+      BuildContext ctx, Map<String, dynamic> data) async {
+    final c = ctx.colors;
+    final name = (data['full_name'] as String?) ?? 'this patient';
+    final patientId = data['id'] as String;
+    final linkStatus = data['link_status'] as String?;
+    final linkId = data['link_id'] as String?;
+
+    // Already sent — show status sheet with cancel option
+    if (linkStatus == 'pending') {
+      await showModalBottomSheet<void>(
+        context: ctx,
+        backgroundColor: Colors.transparent,
+        builder: (_) => _RequestStatusSheet(
+          name: name,
+          avatarUrl: data['avatar_url'] as String?,
+          onCancel: () async {
+            Navigator.of(ctx).pop();
+            if (linkId != null) await _linkSvc.revokeLink(linkId);
+            _loadPendingRequests();
+          },
+        ),
+      );
+      return;
+    }
+
+    // Not sent yet (or rejected) — confirm then send request
+    final send = await showDialog<bool>(
+      context: ctx,
+      builder: (dCtx) => AlertDialog(
+        title: Text('Send Link Request',
+            style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600, color: c.textPrimary)),
+        content: Text(
+          'Send a link request to $name?\n\nThey will be able to accept or reject it from their My Doctors page.',
+          style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dCtx).pop(false),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: c.textSec)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dCtx).pop(true),
+            child: Text('Send Request',
+                style: GoogleFonts.poppins(
+                    color: c.accent, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (send == true && mounted) {
+      try {
+        await _linkSvc.sendRequest(patientId);
+        _loadPendingRequests();
+      } catch (_) {}
+    }
   }
 
   String get _firstName {
@@ -372,7 +430,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                 color: c.textPrimary,
                               ),
                             ),
-                            if (_pendingRequests.isNotEmpty) ...[
+                            if (_patientRequests.isNotEmpty) ...[
                               const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -382,7 +440,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  '${_pendingRequests.length}',
+                                  '${_patientRequests.length}',
                                   style: GoogleFonts.poppins(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
@@ -396,19 +454,16 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
                         const SizedBox(height: 12),
 
-                        if (_pendingRequests.isEmpty)
+                        if (_patientRequests.isEmpty)
                           _EmptyRequests()
                               .animate()
                               .fadeIn(delay: 340.ms)
                         else
-                          ..._pendingRequests.asMap().entries.map((e) {
+                          ..._patientRequests.asMap().entries.map((e) {
                             return _PatientRequestTile(
-                              request: e.value,
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const SearchPatientScreen(),
-                                ),
-                              ),
+                              data: e.value,
+                              onAction: () => _handlePatientRequestAction(
+                                  context, e.value),
                             )
                                 .animate()
                                 .fadeIn(delay: (340 + e.key * 40).ms)
@@ -949,18 +1004,38 @@ class _EmptyRequests extends StatelessWidget {
 
 // ══════════════════════════════════════════════════════════════════════════════
 // _PatientRequestTile
+// data keys: id, full_name, phone, avatar_url, link_status, link_id
+// link_status: null = not sent, 'pending' = sent, 'rejected' = rejected
 // ══════════════════════════════════════════════════════════════════════════════
 class _PatientRequestTile extends StatelessWidget {
-  final DoctorPatientLink request;
-  final VoidCallback onTap;
+  final Map<String, dynamic> data;
+  final VoidCallback onAction;
 
-  const _PatientRequestTile({required this.request, required this.onTap});
+  const _PatientRequestTile({required this.data, required this.onAction});
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final name = (data['full_name'] as String?) ?? 'Unknown Patient';
+    final phone = data['phone'] as String?;
+    final avatarUrl = data['avatar_url'] as String?;
+    final linkStatus = data['link_status'] as String?;
+
+    final Color badgeColor;
+    final String badgeLabel;
+    if (linkStatus == 'pending') {
+      badgeColor = c.amber;
+      badgeLabel = 'Pending';
+    } else if (linkStatus == 'rejected') {
+      badgeColor = c.red;
+      badgeLabel = 'Resend';
+    } else {
+      badgeColor = c.accent;
+      badgeLabel = 'Link';
+    }
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: onAction,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -978,7 +1053,6 @@ class _PatientRequestTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Avatar
             Container(
               width: 44,
               height: 44,
@@ -987,61 +1061,52 @@ class _PatientRequestTile extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: c.accent.withAlpha(40)),
               ),
-              child: request.patientAvatarUrl != null
+              child: avatarUrl != null
                   ? ClipOval(
                       child: Image.network(
-                        request.patientAvatarUrl!,
+                        avatarUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, e, s) => Icon(
-                          Icons.person_rounded,
-                          color: c.accent,
-                          size: 22,
-                        ),
+                        errorBuilder: (_, e, s) =>
+                            Icon(Icons.person_rounded, color: c.accent, size: 22),
                       ),
                     )
                   : Icon(Icons.person_rounded, color: c.accent, size: 22),
             ),
             const SizedBox(width: 12),
-            // Name + phone
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    request.patientName ?? 'Unknown Patient',
+                    name,
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: c.textPrimary,
                     ),
                   ),
-                  if (request.patientPhone != null) ...[
+                  if (phone != null) ...[
                     const SizedBox(height: 2),
-                    Text(
-                      request.patientPhone!,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: c.textSec,
-                      ),
-                    ),
+                    Text(phone,
+                        style:
+                            GoogleFonts.poppins(fontSize: 11, color: c.textSec)),
                   ],
                 ],
               ),
             ),
-            // Pending badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: c.amber.withAlpha(20),
+                color: badgeColor.withAlpha(20),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: c.amber.withAlpha(60)),
+                border: Border.all(color: badgeColor.withAlpha(60)),
               ),
               child: Text(
-                'Pending',
+                badgeLabel,
                 style: GoogleFonts.poppins(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: c.amber,
+                  color: badgeColor,
                 ),
               ),
             ),
@@ -1049,6 +1114,90 @@ class _PatientRequestTile extends StatelessWidget {
             Icon(Icons.chevron_right_rounded, color: c.textSec, size: 18),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// _RequestStatusSheet — shown when doctor taps a 'pending' request
+// ══════════════════════════════════════════════════════════════════════════════
+class _RequestStatusSheet extends StatelessWidget {
+  final String name;
+  final String? avatarUrl;
+  final VoidCallback onCancel;
+
+  const _RequestStatusSheet({
+    required this.name,
+    required this.avatarUrl,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: c.amber.withAlpha(15),
+              shape: BoxShape.circle,
+              border: Border.all(color: c.amber.withAlpha(50)),
+            ),
+            child: avatarUrl != null
+                ? ClipOval(
+                    child: Image.network(avatarUrl!, fit: BoxFit.cover,
+                        errorBuilder: (_, e, s) =>
+                            Icon(Icons.person_rounded, color: c.amber, size: 30)),
+                  )
+                : Icon(Icons.person_rounded, color: c.amber, size: 30),
+          ),
+          const SizedBox(height: 14),
+          Text(name,
+              style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: c.textPrimary)),
+          const SizedBox(height: 6),
+          Text(
+            'Link request sent. Waiting for $name to accept from their My Doctors page.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(fontSize: 12, color: c.textSec, height: 1.5),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: onCancel,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: c.red,
+                side: BorderSide(color: c.red.withAlpha(120)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+              ),
+              child: Text('Cancel Request',
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600, fontSize: 13)),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Close',
+                style: GoogleFonts.poppins(color: c.textSec, fontSize: 13)),
+          ),
+        ],
       ),
     );
   }
