@@ -272,6 +272,127 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ctrl.dispose();
   }
 
+  Future<void> _showChangeUsernameDialog() async {
+    final c = context.colors;
+    final ctrl = TextEditingController(
+        text: _account?['username'] as String? ?? '');
+    bool? available;
+    bool checking = false;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) {
+          void checkAvailability(String val) async {
+            final clean = val.trim().toLowerCase();
+            if (clean.length < 3) {
+              setDlg(() { available = null; checking = false; });
+              return;
+            }
+            final current = _account?['username'] as String?;
+            if (clean == current) {
+              setDlg(() { available = null; checking = false; });
+              return;
+            }
+            setDlg(() { checking = true; available = null; });
+            final result = await _accountService.checkUsernameAvailable(clean);
+            setDlg(() { checking = false; available = result; });
+          }
+
+          return AlertDialog(
+            backgroundColor: c.card,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text('Change Username',
+                style: GoogleFonts.poppins(
+                    color: c.textPrimary, fontWeight: FontWeight.w600)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Username must be 3–20 characters: letters, numbers, underscore.',
+                  style: GoogleFonts.poppins(fontSize: 12, color: c.textSec, height: 1.4),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: ctrl,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-z0-9_]')),
+                    LengthLimitingTextInputFormatter(20),
+                  ],
+                  onChanged: checkAvailability,
+                  style: GoogleFonts.poppins(color: c.textPrimary, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'new_username',
+                    hintStyle: GoogleFonts.poppins(color: c.textMuted),
+                    prefixIcon: Icon(Icons.alternate_email_rounded, color: c.textMuted, size: 18),
+                    suffixIcon: checking
+                        ? Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: SizedBox(width: 16, height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: c.accent)))
+                        : available == true
+                            ? Icon(Icons.check_circle_rounded, color: c.green, size: 20)
+                            : available == false
+                                ? Icon(Icons.cancel_rounded, color: c.red, size: 20)
+                                : null,
+                    errorText: available == false ? 'Username already taken' : null,
+                    filled: true,
+                    fillColor: c.surface,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: c.border)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: c.border)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: c.accent, width: 1.5)),
+                    errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: c.red)),
+                    focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: c.red, width: 1.5)),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: Text('Cancel', style: GoogleFonts.poppins(color: c.textSec))),
+              TextButton(
+                  onPressed: available == false
+                      ? null
+                      : () => Navigator.of(ctx).pop(true),
+                  child: Text('Save',
+                      style: GoogleFonts.poppins(
+                          color: available == false ? c.textMuted : c.accent,
+                          fontWeight: FontWeight.w600))),
+            ],
+          );
+        },
+      ),
+    );
+    if (ok == true) {
+      final clean = ctrl.text.trim().toLowerCase();
+      if (clean.isNotEmpty && clean.length >= 3) {
+        try {
+          await _accountService.updateUsername(clean);
+          setState(() {
+            _account = {...?_account, 'username': clean};
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Username updated to @$clean',
+                  style: GoogleFonts.poppins()),
+              backgroundColor: context.colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ));
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text('Error: $e')));
+          }
+        }
+      }
+    }
+    ctrl.dispose();
+  }
+
   Future<void> _showChangePhoneDialog() async {
     final c = context.colors;
     final ctrl = TextEditingController(
@@ -527,6 +648,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onChangePassword: _showChangePasswordDialog,
                           onChangeEmail:    _showChangeEmailDialog,
                           onChangePhone:    _showChangePhoneDialog,
+                          onChangeUsername: _showChangeUsernameDialog,
                           onDeleteAccount:  _confirmDeleteAccount,
                         ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.06),
 
@@ -672,6 +794,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: c.textSec,
             ),
           ),
+
+          if ((_account?['username'] as String?)?.isNotEmpty == true) ...[
+            const SizedBox(height: 2),
+            Text(
+              '@${_account!['username']}',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: c.accent,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ],
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.05);
@@ -1262,12 +1396,14 @@ class _AccountSettingsCard extends StatelessWidget {
   final VoidCallback onChangePassword;
   final VoidCallback onChangeEmail;
   final VoidCallback onChangePhone;
+  final VoidCallback onChangeUsername;
   final VoidCallback onDeleteAccount;
 
   const _AccountSettingsCard({
     required this.onChangePassword,
     required this.onChangeEmail,
     required this.onChangePhone,
+    required this.onChangeUsername,
     required this.onDeleteAccount,
   });
 
@@ -1299,6 +1435,13 @@ class _AccountSettingsCard extends StatelessWidget {
             iconColor: c.amber,
             title:     'Change Phone Number',
             onTap:     onChangePhone,
+          ),
+          Divider(height: 1, indent: 16, endIndent: 16, color: c.border, thickness: 1),
+          _SettingsTile(
+            icon:      Icons.alternate_email_rounded,
+            iconColor: c.accent,
+            title:     'Change Username',
+            onTap:     onChangeUsername,
           ),
           Divider(height: 1, indent: 16, endIndent: 16, color: c.border, thickness: 1),
           _SettingsTile(

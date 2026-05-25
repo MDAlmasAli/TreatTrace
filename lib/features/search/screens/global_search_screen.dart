@@ -7,11 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../doctor/models/doctor.dart';
-import '../../doctor/models/public_doctor.dart';
 import '../../doctor/services/doctor_service.dart';
-import '../../doctor/services/public_doctor_service.dart';
 import '../../doctor/screens/doctor_detail_screen.dart';
-import '../../doctor/screens/discover_doctors_screen.dart';
 import '../../prescription/models/prescription.dart';
 import '../../prescription/services/prescription_service.dart';
 import '../../prescription/screens/prescription_detail_screen.dart';
@@ -30,19 +27,16 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   final _searchCtrl = TextEditingController();
   final _focusNode  = FocusNode();
 
-  final _doctorSvc      = DoctorService();
-  final _publicSvc      = PublicDoctorService();
+  final _doctorSvc       = DoctorService();
   final _prescriptionSvc = PrescriptionService();
-  final _labReportSvc   = LabReportService();
+  final _labReportSvc    = LabReportService();
 
-  bool                _loading      = true;
-  String              _query        = '';
+  bool               _loading       = true;
+  String             _query         = '';
 
-  List<Doctor>        _myDoctors    = [];
-  List<PublicDoctor>  _pubDoctors   = [];
-  Set<String>         _savedIds     = {};
-  List<Prescription>  _prescriptions = [];
-  List<LabReport>     _labReports   = [];
+  List<Doctor>       _myDoctors     = [];
+  List<Prescription> _prescriptions = [];
+  List<LabReport>    _labReports    = [];
 
   @override
   void initState() {
@@ -63,16 +57,12 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     try {
       final results = await Future.wait([
         _doctorSvc.fetchAll(),
-        _publicSvc.fetchAll(),
-        _publicSvc.fetchSavedSourceIds(),
         _prescriptionSvc.fetchAll(),
         _labReportSvc.fetchAll(),
       ]);
       _myDoctors     = results[0] as List<Doctor>;
-      _pubDoctors    = results[1] as List<PublicDoctor>;
-      _savedIds      = results[2] as Set<String>;
-      _prescriptions = results[3] as List<Prescription>;
-      _labReports    = results[4] as List<LabReport>;
+      _prescriptions = results[1] as List<Prescription>;
+      _labReports    = results[2] as List<LabReport>;
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -87,19 +77,6 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         d.name.toLowerCase().contains(q) ||
         (d.specialty?.toLowerCase().contains(q) ?? false) ||
         (d.hospital?.toLowerCase().contains(q) ?? false)).toList();
-  }
-
-  // Public doctors not yet saved to My Doctors
-  List<PublicDoctor> get _filteredPublicDoctors {
-    if (_query.isEmpty) return [];
-    final q = _query.toLowerCase();
-    return _pubDoctors
-        .where((pd) => !_savedIds.contains(pd.id))
-        .where((pd) =>
-            pd.name.toLowerCase().contains(q) ||
-            (pd.specialty?.toLowerCase().contains(q) ?? false) ||
-            (pd.hospital?.toLowerCase().contains(q) ?? false))
-        .toList();
   }
 
   List<Prescription> get _filteredPrescriptions {
@@ -124,7 +101,6 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
   bool get _hasAnyResults =>
       _filteredMyDoctors.isNotEmpty ||
-      _filteredPublicDoctors.isNotEmpty ||
       _filteredPrescriptions.isNotEmpty ||
       _filteredLabReports.isNotEmpty;
 
@@ -133,12 +109,6 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   void _openDoctor(Doctor d) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => DoctorDetailScreen(doctor: d)),
-    );
-  }
-
-  void _openDiscover() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const DiscoverDoctorsScreen()),
     );
   }
 
@@ -292,26 +262,6 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               )),
           const SizedBox(height: 20),
         ],
-        if (_filteredPublicDoctors.isNotEmpty) ...[
-          _SectionHeader(
-            title:    'Discover Doctors',
-            icon:     Icons.explore_rounded,
-            onSeeAll: _openDiscover,
-            c: c,
-          ),
-          const SizedBox(height: 8),
-          ..._filteredPublicDoctors.take(4).map((pd) => _DoctorResultTile(
-                name:      pd.displayName,
-                specialty: pd.specialty,
-                hospital:  pd.hospital,
-                imageUrl:  pd.imageUrl,
-                badge:     'Catalog',
-                badgeColor: c.accent,
-                onTap:     _openDiscover,
-                c: c,
-              )),
-          const SizedBox(height: 20),
-        ],
         if (_filteredPrescriptions.isNotEmpty) ...[
           _SectionHeader(
             title:    'Prescriptions',
@@ -361,10 +311,6 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           icon: Icons.person_rounded,
           label: 'My Doctors',
           onTap: () => Navigator.of(context).pop()),
-      _Shortcut(
-          icon: Icons.explore_rounded,
-          label: 'Discover',
-          onTap: _openDiscover),
       _Shortcut(
           icon: Icons.receipt_long_rounded,
           label: 'Prescriptions',

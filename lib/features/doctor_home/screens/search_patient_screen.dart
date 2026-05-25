@@ -100,7 +100,7 @@ class _SearchPatientScreenState extends State<SearchPatientScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Search by phone number or User ID.',
+                    'Search by phone number, @username, or User ID.',
                     style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
                   ).animate().fadeIn(delay: 100.ms),
 
@@ -120,7 +120,7 @@ class _SearchPatientScreenState extends State<SearchPatientScreen> {
                             controller: _ctrl,
                             style: GoogleFonts.poppins(fontSize: 14, color: c.textPrimary),
                             decoration: InputDecoration(
-                              hintText: 'Phone number or User ID',
+                              hintText: 'Phone, @username, or User ID',
                               hintStyle: GoogleFonts.poppins(fontSize: 13, color: c.textMuted),
                               prefixIcon: Icon(Icons.search_rounded, color: c.accent, size: 20),
                               border: InputBorder.none,
@@ -163,7 +163,7 @@ class _SearchPatientScreenState extends State<SearchPatientScreen> {
                           const SizedBox(height: 16),
                           Text('No patient found.', style: GoogleFonts.poppins(fontSize: 15, color: c.textSec, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 6),
-                          Text('Try the exact phone number\nor the patient\'s user ID.',
+                          Text('Try the exact phone number,\n@username, or the patient\'s user ID.',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted)),
                         ],
@@ -234,10 +234,11 @@ class _PatientResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c    = context.colors;
-    final name = result['full_name'] as String? ?? 'Unknown';
-    final phone = result['phone'] as String? ?? '—';
-    final avatar = result['avatar_url'] as String?;
+    final c        = context.colors;
+    final name     = result['full_name'] as String? ?? 'Unknown';
+    final phone    = result['phone']     as String? ?? '—';
+    final username = result['username']  as String?;
+    final avatar   = result['avatar_url'] as String?;
 
     final link = existingLink;
     final isPending  = link?.isPending  ?? false;
@@ -268,6 +269,10 @@ class _PatientResultCard extends StatelessWidget {
                     Text(name, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: c.textPrimary)),
                     const SizedBox(height: 2),
                     Text(phone, style: GoogleFonts.poppins(fontSize: 13, color: c.textSec)),
+                    if (username?.isNotEmpty == true) ...[
+                      const SizedBox(height: 1),
+                      Text('@$username', style: GoogleFonts.poppins(fontSize: 12, color: c.accent, fontWeight: FontWeight.w500)),
+                    ],
                   ],
                 ),
               ),

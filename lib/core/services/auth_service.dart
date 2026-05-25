@@ -51,15 +51,16 @@ class AuthService {
     required String password,
     required String fullName,
     String? phone,
+    String? username,
   }) async {
     final response = await _client.auth.signUp(
       email: email.trim(),
       password: password,
       data: {
         'full_name': fullName.trim(),
-        // phone is picked up by the handle_new_user() DB trigger and saved
-        // to the profiles table automatically on sign-up.
         if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+        if (username != null && username.trim().isNotEmpty)
+          'username': username.trim().toLowerCase(),
       },
     );
     return response;

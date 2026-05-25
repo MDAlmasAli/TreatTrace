@@ -26,7 +26,7 @@ class AccountService {
 
     final data = await _client
         .from('profiles')
-        .select('full_name, email, avatar_url, phone, role')
+        .select('full_name, email, avatar_url, phone, role, username')
         .eq('id', uid)
         .maybeSingle();
 
@@ -72,6 +72,23 @@ class AccountService {
   /// Updates the user's password via Supabase Auth.
   Future<void> updatePassword(String newPassword) async {
     await _client.auth.updateUser(UserAttributes(password: newPassword));
+  }
+
+  // ── Update username ───────────────────────────────────────────────────────
+
+  Future<void> updateUsername(String username) async {
+    final uid = _uid;
+    if (uid == null) return;
+    final clean = username.trim().toLowerCase();
+    await _client.from('profiles').update({'username': clean}).eq('id', uid);
+  }
+
+  Future<bool> checkUsernameAvailable(String username) async {
+    final result = await _client.rpc(
+      'check_username_available',
+      params: {'uname': username.trim().toLowerCase()},
+    );
+    return result as bool;
   }
 
   // ── Upload avatar ─────────────────────────────────────────────────────────

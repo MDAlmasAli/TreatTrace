@@ -19,15 +19,49 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.11 — Active Development |
-| **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal |
-| **Backend Status** | Auth · Profile · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links |
+| **Stage** | v0.13 — Active Development |
+| **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System |
+| **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links |
 | **Platform** | Android · iOS |
-| **Last Updated** | 2026-05-23 |
+| **Last Updated** | 2026-05-25 |
 
 ---
 
-## Latest Updates (2026-05-23)
+## Latest Updates (2026-05-25)
+
+**v0.13 — Username System + Signup Fix + Codebase Cleanup**
+
+- **Unique username for all users** — every account (patient & doctor) has a `@username`:
+  - `profiles.username` column: unique, format `[a-z0-9_]`, 3–20 characters, nullable (existing accounts)
+  - `check_username_available(uname)` Supabase RPC (SECURITY DEFINER) — bypasses RLS for safe availability check
+  - `search_patient_by_query` RPC updated to return `username` in results
+- **Signup screen** — username field added with 500 ms real-time availability check (green ✓ / red ✗ indicator); `FilteringTextInputFormatter` restricts input to allowed characters; username saved to `profiles` via auth metadata trigger
+- **Profile screen** — `@username` shown below email in the profile header; "Change Username" tile added to Account Settings with in-dialog availability check
+- **Search Patient screen** — hint text and no-result message updated to mention @username; result card shows `@username` below phone
+- **Signup "Failed to fetch" fix** — SMTP delay (3–4 s) caused the Flutter client to timeout before the server responded, showing "Failed to fetch"; catch block now detects network errors and shows a "Check your email" confirmation dialog instead of retrying (which previously invalidated the OTP token)
+- **RLS circular dependency fix** — previous "Doctor profiles readable" policy queried `doctor_verifications`, which had a policy querying `profiles` → infinite recursion → `fetchProfile()` threw → `_role` stayed null → role picker reappeared after restart; fixed by using `USING (role = 'doctor')` with no cross-table joins
+- **Removed `public_doctors`** — dropped dead `public_doctors` Supabase table (12 stale rows never read by the app); deleted `PublicDoctor` model, `PublicDoctorService`, `DiscoverDoctorsScreen`; removed all references from `global_search_screen`, `doctors_screen`, `linked_doctors_screen`
+- `dart analyze` passes clean across all changed files
+
+---
+
+## v0.12 Updates (2026-05-24)
+
+**v0.12 — Doctor Prescription Images + Linked Doctor Picker + Bug Fixes**
+
+- **Doctor prescription image upload** — doctor-written prescriptions now support image attachments (camera + gallery); images stored in Supabase Storage `prescriptions` bucket and shown in prescription detail
+- **Full timing labels in doctor prescription** — dose slot labels use full words (Morning / Afternoon / Evening / Night) instead of icon-only, matching the patient-side prescription form
+- **Patient image visibility** — patients can now view prescription images written by their linked doctor; previously images were visible only to the writer
+- **Linked doctor picker in prescription form** — "Doctor Name" field in patient's Add/Edit Prescription now shows autocomplete suggestions from accepted linked doctors (fetched from `doctor_patient_links`); selecting a doctor auto-fills name, specialty, and hospital from their verified `doctor_verifications` record
+- **Linked doctor picker in test report form** — same autocomplete behaviour in patient's Add/Edit Test Report; selecting a doctor fills name and stores `ordered_by_doctor_id`
+- **New medicine added at top of list** — in the doctor prescription screen, newly added medicines appear at position 0 (top of list) instead of appended at the bottom
+- **Doctor credentials edit** — fixed RLS policy that blocked updates to `doctor_verifications`; fixed `_saving` state not resetting after save, preventing the save button from re-enabling
+- **Test report bug fixes** — MIME type detection corrected for HEIC/WebP images; camera permission granted flow fixed; `test_date` now required before saving; doctor portal image upload error resolved
+- `dart analyze` passes clean across all changed files
+
+---
+
+## v0.11 Updates (2026-05-23)
 
 **v0.11 — Doctor-Linked Test Reports + Full Doctor View Access**
 
@@ -121,6 +155,18 @@
 
 ## Update History
 
+- `[2026-05-25]` Username system — `profiles.username` column (unique, `[a-z0-9_]`, 3–20 chars); `check_username_available` RPC; signup field with real-time check; `@username` shown in profile header and account settings change dialog
+- `[2026-05-25]` Signup "Failed to fetch" fix — network timeout on SMTP delay now shows confirmation dialog instead of error, preventing double-request OTP invalidation
+- `[2026-05-25]` RLS circular dependency fix — `profiles` policy no longer cross-references `doctor_verifications`; role picker no longer reappears after restart
+- `[2026-05-25]` Removed `public_doctors` table and all Discover Doctors code (`PublicDoctor` model, `PublicDoctorService`, `DiscoverDoctorsScreen`) — feature was dead (code read `doctor_verifications`, not `public_doctors`)
+- `[2026-05-25]` Search Patient screen — hint text and result card updated to show `@username`
+- `[2026-05-24]` Doctor prescription image upload — camera + gallery; images stored in Supabase Storage and shown in detail view
+- `[2026-05-24]` Full timing labels (Morning / Afternoon / Evening / Night) in doctor prescription form
+- `[2026-05-24]` Patient can view images on doctor-written prescriptions
+- `[2026-05-24]` Linked doctor picker in prescription and test report forms — autocomplete from accepted `doctor_patient_links`; auto-fills name, specialty, hospital
+- `[2026-05-24]` New medicine added at top of list in doctor prescription screen
+- `[2026-05-24]` Doctor credentials edit — RLS policy fix + `_saving` state reset fix
+- `[2026-05-24]` Test report bugs fixed — MIME type, camera permission, `test_date` required, doctor portal upload error
 - `[2026-05-23]` Doctor-linked test reports — patient can link a doctor from their accepted list to a test report; doctor gains edit access via `ordered_by_doctor_id`
 - `[2026-05-23]` Doctor patient view: all test reports tappable with full read-only detail (images, notes); edit button shown only for own reports
 - `[2026-05-23]` Test name field removed from patient add/edit form; category auto-used as test name
@@ -262,6 +308,15 @@ Built as a portfolio project demonstrating real-world Flutter + Supabase integra
 - Edit access scoped by `ordered_by_doctor_id` (test reports) and `written_by_doctor_id` (prescriptions) at both the UI layer and Supabase RLS layer
 - RLS ensures doctors only see their own linked patients; patients see only their own links
 
+### Username System
+- Every account (patient & doctor) has a unique `@username`
+- Format: lowercase letters, numbers, underscore only (`[a-z0-9_]`); 3–20 characters
+- Set at sign-up with real-time availability indicator (500 ms debounce, green ✓ / red ✗)
+- Displayed below email on the Profile screen header
+- Changeable from Account Settings with in-dialog availability check
+- Searchable in Search Patient screen (doctors find patients by @username)
+- Stored in `profiles.username` with a unique index; `check_username_available` RPC enforces SECURITY DEFINER to bypass RLS
+
 ### Role-Based Routing
 - **Role Selection screen** — shown once on first login; user picks Patient or Doctor
 - Role saved to `profiles.role`; `_RoleAwareRouter` in `main.dart` routes accordingly
@@ -397,7 +452,7 @@ lib/
 │   │   ├── models/
 │   │   │   └── doctor.dart
 │   │   ├── screens/
-│   │   │   ├── doctors_screen.dart
+│   │   │   ├── doctors_screen.dart         # Patient's personal doctor book
 │   │   │   ├── add_edit_doctor_screen.dart
 │   │   │   └── doctor_detail_screen.dart
 │   │   └── services/
@@ -525,6 +580,8 @@ Auto-created for every new user via a Supabase trigger.
 | `email` | TEXT | |
 | `phone` | TEXT | Optional |
 | `avatar_url` | TEXT | Signed Storage URL |
+| `username` | TEXT | Unique, nullable; format `[a-z0-9_]`, 3–20 chars |
+| `role` | TEXT | `patient` / `doctor`; set on first login |
 | `created_at` | TIMESTAMPTZ | |
 
 ### `public.health_profiles`

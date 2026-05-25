@@ -3,12 +3,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'dart:async';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/account_service.dart';
 import '../../../core/utils/validators.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -23,24 +26,51 @@ class _SignupScreenState extends State<SignupScreen> {
   final _nameController            = TextEditingController();
   final _emailController           = TextEditingController();
   final _phoneController           = TextEditingController();
+  final _usernameController        = TextEditingController();
   final _passwordController        = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _authService               = AuthService();
+  final _accountService            = AccountService();
 
-  bool    _isLoading       = false;
-  bool    _termsAccepted   = false;
-  bool    _obscurePassword = true;
-  bool    _obscureConfirm  = true;
+  bool    _isLoading        = false;
+  bool    _termsAccepted    = false;
+  bool    _obscurePassword  = true;
+  bool    _obscureConfirm   = true;
   String? _errorMessage;
+
+  // username availability check
+  Timer?  _usernameDebounce;
+  bool?   _usernameAvailable;   // null = not checked yet
+  bool    _checkingUsername = false;
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _usernameDebounce?.cancel();
     super.dispose();
+  }
+
+  void _onUsernameChanged(String value) {
+    _usernameDebounce?.cancel();
+    final trimmed = value.trim().toLowerCase();
+    if (trimmed.length < 3) {
+      setState(() { _usernameAvailable = null; _checkingUsername = false; });
+      return;
+    }
+    setState(() { _checkingUsername = true; _usernameAvailable = null; });
+    _usernameDebounce = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        final available = await _accountService.checkUsernameAvailable(trimmed);
+        if (mounted) setState(() { _usernameAvailable = available; _checkingUsername = false; });
+      } catch (_) {
+        if (mounted) setState(() { _checkingUsername = false; });
+      }
+    });
   }
 
   Future<void> _handleSignUp() async {
@@ -52,6 +82,10 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
+    if (_usernameAvailable == false) {
+      setState(() => _errorMessage = 'Username is already taken. Choose another.');
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       await _authService.signUp(
@@ -59,12 +93,28 @@ class _SignupScreenState extends State<SignupScreen> {
         password: _passwordController.text,
         fullName: _nameController.text,
         phone:    _phoneController.text,
+        username: _usernameController.text,
       );
       if (mounted) await _showConfirmationDialog();
     } on AuthException catch (e) {
-      setState(() => _errorMessage = _friendlyError(e.message));
-    } catch (_) {
-      setState(() => _errorMessage = 'Something went wrong. Please try again.');
+      if (mounted) setState(() => _errorMessage = _friendlyError(e.message));
+    } catch (e) {
+      // Network/fetch errors (e.g. "Failed to fetch") mean the signup request
+      // likely reached Supabase but the response timed out client-side.
+      // Show the confirmation dialog so the user doesn't submit again.
+      final msg = e.toString().toLowerCase();
+      final isNetworkError = msg.contains('failed to fetch') ||
+          msg.contains('xmlhttprequest') ||
+          msg.contains('network') ||
+          msg.contains('socket') ||
+          msg.contains('connection');
+      if (mounted) {
+        if (isNetworkError) {
+          await _showConfirmationDialog();
+        } else {
+          setState(() => _errorMessage = 'Something went wrong. Please try again.');
+        }
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -101,7 +151,8 @@ class _SignupScreenState extends State<SignupScreen> {
         content: Text(
           'A confirmation link has been sent to\n'
           '${_emailController.text.trim()}.\n\n'
-          'Click the link to activate your account, then log in.',
+          'Click the link in the email to activate your account, then log in.\n\n'
+          'If the email hasn\'t arrived, wait a few seconds — it may be on its way.',
           style: GoogleFonts.poppins(
               fontSize: 13, color: c.textSec),
         ),
@@ -197,6 +248,16 @@ class _SignupScreenState extends State<SignupScreen> {
                           keyboardType:TextInputType.name,
                           validator:   Validators.fullName,
                         ).animate().fadeIn(delay: 220.ms).slideY(begin: 0.1),
+
+                        const SizedBox(height: 16),
+
+                        // Username
+                        _UsernameField(
+                          controller:  _usernameController,
+                          available:   _usernameAvailable,
+                          checking:    _checkingUsername,
+                          onChanged:   _onUsernameChanged,
+                        ).animate().fadeIn(delay: 240.ms).slideY(begin: 0.1),
 
                         const SizedBox(height: 16),
 
@@ -647,6 +708,107 @@ class _TermsCheckbox extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+// ── Username field with availability indicator ────────────────────────────────
+class _UsernameField extends StatelessWidget {
+  final TextEditingController controller;
+  final bool?                 available;
+  final bool                  checking;
+  final void Function(String) onChanged;
+
+  const _UsernameField({
+    required this.controller,
+    required this.available,
+    required this.checking,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+
+    Widget? suffix;
+    if (checking) {
+      suffix = Padding(
+        padding: const EdgeInsets.all(14),
+        child: SizedBox(
+          width: 16, height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2, color: c.textMuted),
+        ),
+      );
+    } else if (available == true) {
+      suffix = Icon(Icons.check_circle_rounded, color: c.green, size: 20);
+    } else if (available == false) {
+      suffix = Icon(Icons.cancel_rounded, color: c.red, size: 20);
+    }
+
+    Color borderColor = c.border;
+    if (available == true)  borderColor = c.green;
+    if (available == false) borderColor = c.red;
+
+    String? hint;
+    if (available == true)  hint = 'Username available!';
+    if (available == false) hint = 'Username already taken.';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Username',
+            style: GoogleFonts.poppins(
+                fontSize: 12, fontWeight: FontWeight.w600, color: c.textSec)),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller:  controller,
+          onChanged:   onChanged,
+          style: GoogleFonts.poppins(fontSize: 14, color: c.textPrimary),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[a-z0-9_]')),
+          ],
+          validator: (v) {
+            final val = v?.trim() ?? '';
+            if (val.isEmpty) return 'Username is required.';
+            if (val.length < 3) return 'At least 3 characters.';
+            if (!RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(val)) {
+              return 'Only lowercase letters, numbers & underscores.';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            hintText:  'e.g. john_smith',
+            hintStyle: GoogleFonts.poppins(fontSize: 13, color: c.textMuted),
+            prefixIcon:  Icon(Icons.alternate_email_rounded, color: c.textMuted, size: 20),
+            suffixIcon:  suffix,
+            filled:      true,
+            fillColor:   c.surface,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: borderColor, width: 1)),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: borderColor, width: available != null ? 1.5 : 1)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: available == false ? c.red : c.purpleBright, width: 1.5)),
+            errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: c.red, width: 1)),
+            focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: c.red, width: 1.5)),
+          ),
+        ),
+        if (hint != null) ...[
+          const SizedBox(height: 4),
+          Text(hint,
+              style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: available == true ? c.green : c.red)),
+        ],
       ],
     );
   }

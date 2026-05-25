@@ -10,7 +10,6 @@ import '../../../core/l10n/app_strings.dart';
 import '../models/doctor.dart';
 import '../services/doctor_service.dart';
 import 'add_edit_doctor_screen.dart';
-import 'discover_doctors_screen.dart';
 import 'doctor_detail_screen.dart';
 
 class DoctorsScreen extends StatefulWidget {
@@ -81,13 +80,6 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
 
   // ── Navigation ────────────────────────────────────────────────────────────
 
-  Future<void> _openDiscover() async {
-    final added = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const DiscoverDoctorsScreen()),
-    );
-    if (added == true) _load();
-  }
-
   Future<void> _openAdd() async {
     final added = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => const AddEditDoctorScreen()),
@@ -138,6 +130,9 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                         message: _query.isNotEmpty || _selectedSpecialty != null
                             ? 'No results found'
                             : s.noDoctors,
+                        onAdd: _query.isNotEmpty || _selectedSpecialty != null
+                            ? null
+                            : _openAdd,
                       )
                     : RefreshIndicator(
                         color: c.accent,
@@ -158,13 +153,16 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed:       _openAdd,
         backgroundColor: c.accent,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
-        child: const Icon(Icons.add_rounded, size: 28),
+        icon:  const Icon(Icons.add_rounded, size: 22),
+        label: Text('Add Doctor',
+            style: GoogleFonts.poppins(
+                fontSize: 13, fontWeight: FontWeight.w700)),
       ),
     );
   }
@@ -207,33 +205,6 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
               ),
             ),
           ),
-          GestureDetector(
-            onTap: _openDiscover,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color:        c.accent.withAlpha(20),
-                borderRadius: BorderRadius.circular(12),
-                border:       Border.all(color: c.accent.withAlpha(60)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.explore_rounded, color: c.accent, size: 16),
-                  const SizedBox(width: 5),
-                  Text(
-                    'Discover',
-                    style: GoogleFonts.poppins(
-                      fontSize:   12,
-                      fontWeight: FontWeight.w700,
-                      color:      c.accent,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
@@ -554,8 +525,9 @@ class _FilterChip extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  final String message;
-  const _EmptyState({required this.message});
+  final String        message;
+  final VoidCallback? onAdd;
+  const _EmptyState({required this.message, this.onAdd});
 
   @override
   Widget build(BuildContext context) {
@@ -579,6 +551,24 @@ class _EmptyState extends StatelessWidget {
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
           ),
+          if (onAdd != null) ...[
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed:  onAdd,
+              icon:       const Icon(Icons.add_rounded, size: 18),
+              label:      Text('Add Doctor',
+                  style: GoogleFonts.poppins(
+                      fontSize: 13, fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: c.accent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
         ],
       ),
     );

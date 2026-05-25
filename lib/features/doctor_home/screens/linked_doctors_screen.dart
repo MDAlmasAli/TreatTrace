@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../models/doctor_patient_link.dart';
 import '../services/doctor_patient_link_service.dart';
-
 class LinkedDoctorsScreen extends StatefulWidget {
   const LinkedDoctorsScreen({super.key});
 
