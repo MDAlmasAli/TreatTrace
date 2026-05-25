@@ -372,6 +372,10 @@ class _VerificationCardState extends State<_VerificationCard> {
           _InfoRow(icon: Icons.medical_services_rounded, label: 'Specialty', value: d['specialty'] ?? '-'),
           _InfoRow(icon: Icons.local_hospital_rounded,  label: 'Hospital',  value: d['hospital'] ?? '-'),
           _InfoRow(icon: Icons.perm_identity_rounded,   label: 'NID/Pass.', value: d['nid_passport'] ?? '-'),
+          if ((d['degree'] as String?)?.isNotEmpty == true)
+            _InfoRow(icon: Icons.school_rounded, label: 'Degree', value: d['degree']!),
+          if ((d['about'] as String?)?.isNotEmpty == true)
+            _InfoRow(icon: Icons.person_outline_rounded, label: 'About', value: d['about']!),
           if ((d['additional_info'] as String?)?.isNotEmpty == true)
             _InfoRow(icon: Icons.notes_rounded, label: 'Other', value: d['additional_info']!),
 
@@ -544,10 +548,12 @@ class _EditCardState extends State<_EditCard> {
 
     // pairs of (label, icon, approved value, pending value)
     final fields = [
-      ('BMDC No.',  Icons.badge_rounded,            d['bmdc_number'],  d['pending_bmdc']),
-      ('Specialty', Icons.medical_services_rounded,  d['specialty'],    d['pending_specialty']),
-      ('Hospital',  Icons.local_hospital_rounded,    d['hospital'],     d['pending_hospital']),
-      ('NID/Pass.', Icons.perm_identity_rounded,     d['nid_passport'], d['pending_nid_passport']),
+      ('BMDC No.',  Icons.badge_rounded,             d['bmdc_number'],     d['pending_bmdc']),
+      ('Specialty', Icons.medical_services_rounded,  d['specialty'],       d['pending_specialty']),
+      ('Hospital',  Icons.local_hospital_rounded,    d['hospital'],        d['pending_hospital']),
+      ('NID/Pass.', Icons.perm_identity_rounded,     d['nid_passport'],    d['pending_nid_passport']),
+      ('Degree',    Icons.school_rounded,            d['degree'],          d['pending_degree']),
+      ('About',     Icons.person_outline_rounded,    d['about'],           d['pending_about']),
       ('Other',     Icons.notes_rounded,             d['additional_info'], d['pending_additional']),
     ];
 

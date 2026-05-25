@@ -24,6 +24,8 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
   final _specialtyCtrl  = TextEditingController();
   final _hospitalCtrl   = TextEditingController();
   final _nidCtrl        = TextEditingController();
+  final _degreeCtrl     = TextEditingController();
+  final _aboutCtrl      = TextEditingController();
   final _additionalCtrl = TextEditingController();
   final _formKey        = GlobalKey<FormState>();
 
@@ -39,6 +41,8 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
     _specialtyCtrl.dispose();
     _hospitalCtrl.dispose();
     _nidCtrl.dispose();
+    _degreeCtrl.dispose();
+    _aboutCtrl.dispose();
     _additionalCtrl.dispose();
     super.dispose();
   }
@@ -55,10 +59,12 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
 
   void _startEdit() {
     final d = _data!;
-    _bmdcCtrl.text       = d['bmdc_number']   ?? '';
-    _specialtyCtrl.text  = d['specialty']      ?? '';
-    _hospitalCtrl.text   = d['hospital']       ?? '';
-    _nidCtrl.text        = d['nid_passport']   ?? '';
+    _bmdcCtrl.text       = d['bmdc_number']    ?? '';
+    _specialtyCtrl.text  = d['specialty']       ?? '';
+    _hospitalCtrl.text   = d['hospital']        ?? '';
+    _nidCtrl.text        = d['nid_passport']    ?? '';
+    _degreeCtrl.text     = d['degree']          ?? '';
+    _aboutCtrl.text      = d['about']           ?? '';
     _additionalCtrl.text = d['additional_info'] ?? '';
     setState(() { _editing = true; _error = null; });
   }
@@ -72,6 +78,8 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
         specialty:      _specialtyCtrl.text.trim(),
         hospital:       _hospitalCtrl.text.trim(),
         nidPassport:    _nidCtrl.text.trim(),
+        degree:         _degreeCtrl.text.trim(),
+        about:          _aboutCtrl.text.trim(),
         additionalInfo: _additionalCtrl.text.trim(),
       );
       if (mounted) setState(() => _saving = false);
@@ -181,6 +189,18 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
                 current: d['nid_passport'] ?? '-',
                 pending: hasPending ? d['pending_nid_passport'] : null,
               ),
+              _FieldRow(
+                label: 'Degree',
+                icon: Icons.school_rounded,
+                current: d['degree'] ?? '-',
+                pending: hasPending ? d['pending_degree'] : null,
+              ),
+              _FieldRow(
+                label: 'About Myself',
+                icon: Icons.person_outline_rounded,
+                current: d['about'] ?? '-',
+                pending: hasPending ? d['pending_about'] : null,
+              ),
               if ((d['additional_info'] as String?)?.isNotEmpty == true ||
                   (hasPending && (d['pending_additional'] as String?)?.isNotEmpty == true))
                 _FieldRow(
@@ -264,6 +284,15 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
             const SizedBox(height: 14),
             _EditField(label: 'NID / Passport No.', hint: 'ID number',
                 controller: _nidCtrl, icon: Icons.perm_identity_rounded,
+                validator: (v) => v?.trim().isEmpty == true ? 'Required' : null),
+            const SizedBox(height: 14),
+            _EditField(label: 'Degree', hint: 'e.g. MBBS, MD, BDS',
+                controller: _degreeCtrl, icon: Icons.school_rounded,
+                validator: (v) => v?.trim().isEmpty == true ? 'Required' : null),
+            const SizedBox(height: 14),
+            _EditField(label: 'About Myself', hint: 'Brief professional introduction…',
+                controller: _aboutCtrl, icon: Icons.person_outline_rounded,
+                maxLines: 4,
                 validator: (v) => v?.trim().isEmpty == true ? 'Required' : null),
             const SizedBox(height: 14),
             _EditField(label: 'Additional Info (Optional)', hint: 'Any other notes',

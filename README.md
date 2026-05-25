@@ -19,15 +19,24 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.16 — Active Development |
+| **Stage** | v0.17 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search |
-| **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS |
+| **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree & About |
 | **Platform** | Android · iOS |
 | **Last Updated** | 2026-05-25 |
 
 ---
 
 ## Latest Updates (2026-05-25)
+
+**v0.17 — Doctor Degree & About Myself Fields**
+
+- **Degree field added** — required field on both the initial verification submit screen and the credentials edit screen; stored in `doctor_verifications.degree`; pending edit stored in `pending_degree`
+- **About Myself field added** — required field on both forms; multi-line; stored in `doctor_verifications.about`; pending edit stored in `pending_about`
+- **Admin panel updated** — Degree and About now shown in both the verification review card and the pending-edit diff view
+- **Database migration v08** — added `degree`, `about`, `pending_degree`, `pending_about` columns to `doctor_verifications`
+
+---
 
 **v0.16 — Doctor Appointment Notifications + Patient Requests Section**
 

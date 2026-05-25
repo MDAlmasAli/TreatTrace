@@ -28,6 +28,8 @@ class _DoctorVerificationSubmitScreenState
   final _specialtyCtrl  = TextEditingController();
   final _hospitalCtrl   = TextEditingController();
   final _nidCtrl        = TextEditingController();
+  final _degreeCtrl     = TextEditingController();
+  final _aboutCtrl      = TextEditingController();
   final _additionalCtrl = TextEditingController();
 
   bool _loading = false;
@@ -39,6 +41,8 @@ class _DoctorVerificationSubmitScreenState
     _specialtyCtrl.dispose();
     _hospitalCtrl.dispose();
     _nidCtrl.dispose();
+    _degreeCtrl.dispose();
+    _aboutCtrl.dispose();
     _additionalCtrl.dispose();
     super.dispose();
   }
@@ -52,6 +56,8 @@ class _DoctorVerificationSubmitScreenState
         specialty:      _specialtyCtrl.text.trim(),
         hospital:       _hospitalCtrl.text.trim(),
         nidPassport:    _nidCtrl.text.trim(),
+        degree:         _degreeCtrl.text.trim(),
+        about:          _aboutCtrl.text.trim(),
         additionalInfo: _additionalCtrl.text.trim(),
       );
       if (mounted) widget.onSubmitted();
@@ -171,6 +177,23 @@ class _DoctorVerificationSubmitScreenState
                     hint: 'National ID or passport number',
                     controller: _nidCtrl,
                     icon: Icons.perm_identity_rounded,
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _Field(
+                    label: 'Degree',
+                    hint: 'e.g. MBBS, MD, BDS',
+                    controller: _degreeCtrl,
+                    icon: Icons.school_rounded,
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _Field(
+                    label: 'About Myself',
+                    hint: 'Brief professional introduction…',
+                    controller: _aboutCtrl,
+                    icon: Icons.person_outline_rounded,
+                    maxLines: 4,
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                   ),
                   const SizedBox(height: 16),

@@ -18,6 +18,8 @@ class DoctorVerificationService {
     required String specialty,
     required String hospital,
     required String nidPassport,
+    required String degree,
+    required String about,
     String? additionalInfo,
   }) async {
     final userId = _client.auth.currentUser?.id;
@@ -28,6 +30,8 @@ class DoctorVerificationService {
       'specialty': specialty,
       'hospital': hospital,
       'nid_passport': nidPassport,
+      'degree': degree,
+      'about': about,
       'additional_info': additionalInfo?.isEmpty == true ? null : additionalInfo,
       'status': 'pending',
       'rejection_reason': null,
@@ -68,6 +72,8 @@ class DoctorVerificationService {
     required String specialty,
     required String hospital,
     required String nidPassport,
+    required String degree,
+    required String about,
     String? additionalInfo,
   }) async {
     final userId = _client.auth.currentUser?.id;
@@ -77,6 +83,8 @@ class DoctorVerificationService {
       'pending_specialty':  specialty,
       'pending_hospital':   hospital,
       'pending_nid_passport': nidPassport,
+      'pending_degree':     degree,
+      'pending_about':      about,
       'pending_additional': additionalInfo?.isEmpty == true ? null : additionalInfo,
       'edit_status':        'pending',
       'edit_rejection_reason': null,
@@ -103,6 +111,8 @@ class DoctorVerificationService {
       'pending_specialty':      null,
       'pending_hospital':       null,
       'pending_nid_passport':   null,
+      'pending_degree':         null,
+      'pending_about':          null,
       'pending_additional':     null,
       'edit_status':            'rejected',
       'edit_rejection_reason':  reason,
