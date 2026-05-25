@@ -19,7 +19,7 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.20 — Active Development |
+| **Stage** | v0.21 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About & Visiting Fee |
 | **Platform** | Android · iOS |
@@ -28,6 +28,12 @@
 ---
 
 ## Latest Updates (2026-05-25)
+
+**v0.21 — Fix doctor RLS for appointment patients**
+
+- **Fixed patient name showing "Patient"** in Today's Schedule — `profiles` RLS was blocking doctors from reading profiles of patients who booked appointments without being linked; new policy `doctor_reads_appt_patient_profile` added
+- **Fixed Patient Details all-empty** — added RLS policies on `health_profiles`, `prescriptions`, `lab_reports` so doctors can read data for appointment-based patients (not just linked ones)
+- **Database migration v10** — 4 new SELECT policies covering `profiles`, `health_profiles`, `prescriptions`, `lab_reports` for any patient with an appointment with the doctor
 
 **v0.20 — Patient Details UI fix**
 
