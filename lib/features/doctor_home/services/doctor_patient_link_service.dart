@@ -164,7 +164,7 @@ class DoctorPatientLinkService {
     final ids = profiles.map((p) => p['id'] as String).toList();
     final verifs = await _client
         .from('doctor_verifications')
-        .select('id, specialty, hospital')
+        .select('id, specialty, hospital, visiting_fee, degree')
         .eq('status', 'approved')
         .inFilter('id', ids) as List;
 
@@ -173,11 +173,13 @@ class DoctorPatientLinkService {
     return profiles
         .where((p) => approvedMap.containsKey(p['id'] as String))
         .map((p) => {
-              'id':         p['id'],
-              'full_name':  p['full_name'],
-              'avatar_url': p['avatar_url'],
-              'specialty':  approvedMap[p['id'] as String]?['specialty'],
-              'hospital':   approvedMap[p['id'] as String]?['hospital'],
+              'id':           p['id'],
+              'full_name':    p['full_name'],
+              'avatar_url':   p['avatar_url'],
+              'specialty':    approvedMap[p['id'] as String]?['specialty'],
+              'hospital':     approvedMap[p['id'] as String]?['hospital'],
+              'visiting_fee': approvedMap[p['id'] as String]?['visiting_fee'],
+              'degree':       approvedMap[p['id'] as String]?['degree'],
             })
         .toList();
   }

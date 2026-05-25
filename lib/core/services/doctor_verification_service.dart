@@ -20,6 +20,7 @@ class DoctorVerificationService {
     required String nidPassport,
     required String degree,
     required String about,
+    int? visitingFee,
     String? additionalInfo,
   }) async {
     final userId = _client.auth.currentUser?.id;
@@ -32,6 +33,7 @@ class DoctorVerificationService {
       'nid_passport': nidPassport,
       'degree': degree,
       'about': about,
+      'visiting_fee': visitingFee,
       'additional_info': additionalInfo?.isEmpty == true ? null : additionalInfo,
       'status': 'pending',
       'rejection_reason': null,
@@ -74,31 +76,50 @@ class DoctorVerificationService {
     required String nidPassport,
     required String degree,
     required String about,
+    int? visitingFee,
     String? additionalInfo,
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('Not logged in');
     await _client.from('doctor_verifications').update({
-      'pending_bmdc':       bmdcNumber,
-      'pending_specialty':  specialty,
-      'pending_hospital':   hospital,
-      'pending_nid_passport': nidPassport,
-      'pending_degree':     degree,
-      'pending_about':      about,
-      'pending_additional': additionalInfo?.isEmpty == true ? null : additionalInfo,
-      'edit_status':        'pending',
+      'pending_bmdc':          bmdcNumber,
+      'pending_specialty':     specialty,
+      'pending_hospital':      hospital,
+      'pending_nid_passport':  nidPassport,
+      'pending_degree':        degree,
+      'pending_about':         about,
+      'pending_visiting_fee':  visitingFee,
+      'pending_additional':    additionalInfo?.isEmpty == true ? null : additionalInfo,
+      'edit_status':           'pending',
       'edit_rejection_reason': null,
-      'edit_submitted_at':  DateTime.now().toIso8601String(),
+      'edit_submitted_at':     DateTime.now().toIso8601String(),
     }).eq('id', userId);
   }
 
   Future<List<Map<String, dynamic>>> fetchPendingEdits() async {
-    final result = await _client
+    final rows = await _client
         .from('doctor_verifications')
-        .select('*, profiles(full_name, email, phone)')
+        .select()
         .eq('edit_status', 'pending')
-        .order('edit_submitted_at', ascending: true);
-    return List<Map<String, dynamic>>.from(result as List);
+        .order('edit_submitted_at', ascending: true) as List;
+
+    if (rows.isEmpty) return [];
+
+    final ids = rows.map((r) => (r as Map)['id'] as String).toList();
+    final profiles = await _client
+        .from('profiles')
+        .select('id, full_name, email, phone')
+        .inFilter('id', ids) as List;
+
+    final profMap = {
+      for (final p in profiles) (p as Map)['id'] as String: p as Map<String, dynamic>,
+    };
+
+    return rows.map((r) {
+      final map = Map<String, dynamic>.from(r as Map);
+      map['profiles'] = profMap[map['id'] as String];
+      return map;
+    }).toList();
   }
 
   Future<void> approveEdit(String doctorId) async {
@@ -113,6 +134,7 @@ class DoctorVerificationService {
       'pending_nid_passport':   null,
       'pending_degree':         null,
       'pending_about':          null,
+      'pending_visiting_fee':   null,
       'pending_additional':     null,
       'edit_status':            'rejected',
       'edit_rejection_reason':  reason,

@@ -296,6 +296,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               name: 'Dr. ${d['full_name'] ?? "Unknown"}',
               specialty: d['specialty'] as String?,
               hospital: d['hospital'] as String?,
+              visitingFee: d['visiting_fee'] as int?,
               imageUrl: d['avatar_url'] as String?,
               badge: isLinked ? 'My Doctor' : 'Doctor',
               badgeColor: isLinked ? c.green : c.accent,
@@ -466,6 +467,7 @@ class _DoctorResultTile extends StatelessWidget {
   final String name;
   final String? specialty;
   final String? hospital;
+  final int? visitingFee;
   final String? imageUrl;
   final String badge;
   final Color badgeColor;
@@ -476,6 +478,7 @@ class _DoctorResultTile extends StatelessWidget {
     required this.name,
     required this.specialty,
     required this.hospital,
+    this.visitingFee,
     required this.imageUrl,
     required this.badge,
     required this.badgeColor,
@@ -573,6 +576,17 @@ class _DoctorResultTile extends StatelessWidget {
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  if (visitingFee != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'BDT $visitingFee',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: c.green,
+                      ),
                     ),
                   ],
                 ],
@@ -844,6 +858,7 @@ class _DoctorProfileSheetState extends State<_DoctorProfileSheet> {
     final name = d['full_name'] as String? ?? 'Unknown';
     final specialty = d['specialty'] as String?;
     final hospital = d['hospital'] as String?;
+    final visitingFee = d['visiting_fee'] as int?;
     final avatar = d['avatar_url'] as String?;
     final botPad = MediaQuery.of(context).padding.bottom;
 
@@ -898,6 +913,29 @@ class _DoctorProfileSheetState extends State<_DoctorProfileSheet> {
             Text(
               hospital,
               style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
+            ),
+          ],
+          if (visitingFee != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: c.green.withAlpha(15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: c.green.withAlpha(50)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.payments_rounded, size: 14, color: c.green),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Visiting Fee: BDT $visitingFee',
+                    style: GoogleFonts.poppins(
+                        fontSize: 12, fontWeight: FontWeight.w600, color: c.green),
+                  ),
+                ],
+              ),
             ),
           ],
           const SizedBox(height: 12),

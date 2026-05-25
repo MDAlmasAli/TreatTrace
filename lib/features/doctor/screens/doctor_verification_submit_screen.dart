@@ -29,6 +29,7 @@ class _DoctorVerificationSubmitScreenState
   final _hospitalCtrl   = TextEditingController();
   final _nidCtrl        = TextEditingController();
   final _degreeCtrl     = TextEditingController();
+  final _feeCtrl        = TextEditingController();
   final _aboutCtrl      = TextEditingController();
   final _additionalCtrl = TextEditingController();
 
@@ -42,6 +43,7 @@ class _DoctorVerificationSubmitScreenState
     _hospitalCtrl.dispose();
     _nidCtrl.dispose();
     _degreeCtrl.dispose();
+    _feeCtrl.dispose();
     _aboutCtrl.dispose();
     _additionalCtrl.dispose();
     super.dispose();
@@ -57,6 +59,7 @@ class _DoctorVerificationSubmitScreenState
         hospital:       _hospitalCtrl.text.trim(),
         nidPassport:    _nidCtrl.text.trim(),
         degree:         _degreeCtrl.text.trim(),
+        visitingFee:    int.tryParse(_feeCtrl.text.trim()),
         about:          _aboutCtrl.text.trim(),
         additionalInfo: _additionalCtrl.text.trim(),
       );
@@ -189,6 +192,19 @@ class _DoctorVerificationSubmitScreenState
                   ),
                   const SizedBox(height: 16),
                   _Field(
+                    label: 'Visiting Fee (BDT)',
+                    hint: 'e.g. 800',
+                    controller: _feeCtrl,
+                    icon: Icons.payments_rounded,
+                    keyboardType: TextInputType.number,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Required';
+                      if (int.tryParse(v.trim()) == null) return 'Enter a valid number';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _Field(
                     label: 'About Myself',
                     hint: 'Brief professional introduction…',
                     controller: _aboutCtrl,
@@ -251,6 +267,7 @@ class _Field extends StatelessWidget {
   final TextEditingController controller;
   final IconData icon;
   final int maxLines;
+  final TextInputType? keyboardType;
   final String? Function(String?)? validator;
 
   const _Field({
@@ -259,6 +276,7 @@ class _Field extends StatelessWidget {
     required this.controller,
     required this.icon,
     this.maxLines = 1,
+    this.keyboardType,
     this.validator,
   });
 
@@ -275,6 +293,7 @@ class _Field extends StatelessWidget {
         TextFormField(
           controller: controller,
           maxLines: maxLines,
+          keyboardType: keyboardType,
           validator: validator,
           style: GoogleFonts.poppins(fontSize: 14, color: c.textPrimary),
           decoration: InputDecoration(

@@ -37,20 +37,16 @@ class _AdminHomeScreenState extends State<AdminHomeScreen>
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    try {
-      final results = await Future.wait([
-        _service.fetchAllVerifications(),
-        _service.fetchPendingEdits(),
-      ]);
-      if (mounted) {
-        setState(() {
-          _all   = results[0];
-          _edits = results[1];
-          _loading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    final results = await Future.wait([
+      _service.fetchAllVerifications().onError((e, s) => []),
+      _service.fetchPendingEdits().onError((e, s) => []),
+    ]);
+    if (mounted) {
+      setState(() {
+        _all   = results[0];
+        _edits = results[1];
+        _loading = false;
+      });
     }
   }
 
@@ -374,6 +370,8 @@ class _VerificationCardState extends State<_VerificationCard> {
           _InfoRow(icon: Icons.perm_identity_rounded,   label: 'NID/Pass.', value: d['nid_passport'] ?? '-'),
           if ((d['degree'] as String?)?.isNotEmpty == true)
             _InfoRow(icon: Icons.school_rounded, label: 'Degree', value: d['degree']!),
+          if (d['visiting_fee'] != null)
+            _InfoRow(icon: Icons.payments_rounded, label: 'Visiting Fee', value: 'BDT ${d['visiting_fee']}'),
           if ((d['about'] as String?)?.isNotEmpty == true)
             _InfoRow(icon: Icons.person_outline_rounded, label: 'About', value: d['about']!),
           if ((d['additional_info'] as String?)?.isNotEmpty == true)
@@ -546,15 +544,17 @@ class _EditCardState extends State<_EditCard> {
     final prof = d['profiles'] as Map<String, dynamic>? ?? {};
     final id   = d['id'] as String;
 
+    String? feeStr(dynamic v) => v == null ? null : 'BDT $v';
     // pairs of (label, icon, approved value, pending value)
     final fields = [
-      ('BMDC No.',  Icons.badge_rounded,             d['bmdc_number'],     d['pending_bmdc']),
-      ('Specialty', Icons.medical_services_rounded,  d['specialty'],       d['pending_specialty']),
-      ('Hospital',  Icons.local_hospital_rounded,    d['hospital'],        d['pending_hospital']),
-      ('NID/Pass.', Icons.perm_identity_rounded,     d['nid_passport'],    d['pending_nid_passport']),
-      ('Degree',    Icons.school_rounded,            d['degree'],          d['pending_degree']),
-      ('About',     Icons.person_outline_rounded,    d['about'],           d['pending_about']),
-      ('Other',     Icons.notes_rounded,             d['additional_info'], d['pending_additional']),
+      ('BMDC No.',     Icons.badge_rounded,             d['bmdc_number'],                  d['pending_bmdc']),
+      ('Specialty',    Icons.medical_services_rounded,  d['specialty'],                    d['pending_specialty']),
+      ('Hospital',     Icons.local_hospital_rounded,    d['hospital'],                     d['pending_hospital']),
+      ('NID/Pass.',    Icons.perm_identity_rounded,     d['nid_passport'],                 d['pending_nid_passport']),
+      ('Degree',       Icons.school_rounded,            d['degree'],                       d['pending_degree']),
+      ('Visiting Fee', Icons.payments_rounded,          feeStr(d['visiting_fee']),         feeStr(d['pending_visiting_fee'])),
+      ('About',        Icons.person_outline_rounded,    d['about'],                        d['pending_about']),
+      ('Other',        Icons.notes_rounded,             d['additional_info'],              d['pending_additional']),
     ];
 
     return Container(
