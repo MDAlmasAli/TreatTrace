@@ -611,15 +611,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(height: 24),
                         ],
 
-                        // 2. Medical Identity
-                        _SectionLabel(text: s.medicalIdentity),
-                        const SizedBox(height: 12),
-                        _MedicalIdentityCard(
-                          profile:  _health,
-                          onAddTap: _goToEdit,
-                        ).animate().fadeIn(delay: 80.ms).slideY(begin: 0.06),
-
-                        const SizedBox(height: 24),
+                        // 2. Medical Identity (patients only)
+                        if (_account?['role'] != 'doctor') ...[
+                          _SectionLabel(text: s.medicalIdentity),
+                          const SizedBox(height: 12),
+                          _MedicalIdentityCard(
+                            profile:  _health,
+                            onAddTap: _goToEdit,
+                          ).animate().fadeIn(delay: 80.ms).slideY(begin: 0.06),
+                          const SizedBox(height: 24),
+                        ],
 
                         // 3. Health Records
                         _SectionLabel(text: s.healthRecords),
