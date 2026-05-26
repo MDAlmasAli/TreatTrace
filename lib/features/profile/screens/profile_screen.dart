@@ -622,15 +622,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(height: 24),
                         ],
 
-                        // 3. Health Records
-                        _SectionLabel(text: s.healthRecords),
-                        const SizedBox(height: 12),
-                        _HealthRecordsCard(
-                          profile:   _health,
-                          onEditTap: _goToEdit,
-                        ).animate().fadeIn(delay: 140.ms).slideY(begin: 0.06),
-
-                        const SizedBox(height: 24),
+                        // 3. Health Records (patients only)
+                        if (_account?['role'] != 'doctor') ...[
+                          _SectionLabel(text: s.healthRecords),
+                          const SizedBox(height: 12),
+                          _HealthRecordsCard(
+                            profile:   _health,
+                            onEditTap: _goToEdit,
+                          ).animate().fadeIn(delay: 140.ms).slideY(begin: 0.06),
+                          const SizedBox(height: 24),
+                        ],
 
                         // 4. Emergency Contact
                         _SectionLabel(text: s.emergencyContact),
