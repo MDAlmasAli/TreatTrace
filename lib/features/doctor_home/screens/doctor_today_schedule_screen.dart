@@ -506,6 +506,7 @@ class _ScheduleTile extends StatelessWidget {
           ],
           const SizedBox(height: 12),
           SizedBox(
+            width: double.infinity,
             height: 40,
             child: OutlinedButton.icon(
               onPressed: onTapPatient,
@@ -515,7 +516,7 @@ class _ScheduleTile extends StatelessWidget {
                 color: c.accent,
               ),
               label: Text(
-                'Open Patient',
+                'Open',
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
