@@ -268,6 +268,34 @@ class PrescriptionService {
     await replaceMedicines(prescriptionId, medicines);
   }
 
+  // ── Edit log (one row per prescription per day) ───────────────────────────
+
+  Future<void> logEdit(String prescriptionId, {String action = 'edited'}) async {
+    final uid = _uid;
+    if (uid == null) return;
+    try {
+      await _client.from('prescription_edit_logs').upsert(
+        {
+          'prescription_id': prescriptionId,
+          'doctor_id':       uid,
+          'action_date':     DateTime.now().toIso8601String().substring(0, 10),
+          'action':          action,
+        },
+        onConflict:       'prescription_id,action_date',
+        ignoreDuplicates: true,
+      );
+    } catch (_) {}
+  }
+
+  Future<List<Map<String, dynamic>>> fetchEditLogs(String prescriptionId) async {
+    final rows = await _client
+        .from('prescription_edit_logs')
+        .select()
+        .eq('prescription_id', prescriptionId)
+        .order('action_date', ascending: false);
+    return rows.cast<Map<String, dynamic>>();
+  }
+
   // ── Allergy cross-check ───────────────────────────────────────────────────
   // Returns a list of medicine names that appear in the user's allergy string.
 

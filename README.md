@@ -19,15 +19,24 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.26 — Active Development |
+| **Stage** | v0.27 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-26 (v0.26) |
+| **Last Updated** | 2026-05-26 (v0.27) |
 
 ---
 
 ## Latest Updates (2026-05-26)
+
+**v0.27 — Prescription View screen + Edit History + Show More**
+
+- **View button on every prescription** — doctors can now tap View (eye icon) to open a read-only Prescription screen showing diagnosis, medicines, notes, and images; Edit button in the header opens the edit screen from there
+- **Edit button stays** — green edit icon visible only for prescriptions the doctor wrote themselves; View is available for all prescriptions regardless of author
+- **Edit History section** — every prescription now shows a date-wise log at the bottom; each unique calendar day of create/edit appears once (same-day repeated edits collapse into one entry); entries show Created or Edited badge
+- **Auto-log on create/edit** — `DoctorWritePrescriptionScreen._save()` now upserts a row in `prescription_edit_logs` with today's date; `ON CONFLICT (prescription_id, action_date) DO NOTHING` prevents duplicates
+- **Show More → All Prescriptions screen** — Patient Details shows the 5 most recent prescriptions; if there are more, a "Show X more →" button opens `AllPrescriptionsScreen` which loads and lists all prescriptions with View + Edit per tile
+- **Database migration v15** — `prescription_edit_logs` table with RLS; unique constraint on `(prescription_id, action_date)`
 
 **v0.26 — Auto-add patient to My Patients after prescription**
 

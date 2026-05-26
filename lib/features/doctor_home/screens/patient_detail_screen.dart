@@ -14,6 +14,8 @@ import '../../test_report/services/lab_report_service.dart';
 import '../../appointment/models/appointment.dart';
 import '../../appointment/services/appointment_service.dart';
 import '../../test_report/screens/lab_report_detail_screen.dart';
+import 'all_prescriptions_screen.dart';
+import 'doctor_prescription_view_screen.dart';
 import 'doctor_write_prescription_screen.dart';
 import 'doctor_lab_report_screen.dart';
 
@@ -78,6 +80,28 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _goViewRx(Prescription rx) async {
+    final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
+      builder: (_) => DoctorPrescriptionViewScreen(
+        rx:          rx,
+        canEdit:     rx.writtenByDoctorId == _currentDoctorId,
+        patientId:   widget.patientId,
+        patientName: widget.patientName,
+      ),
+    ));
+    if (result == true) _load();
+  }
+
+  Future<void> _goShowMoreRx() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => AllPrescriptionsScreen(
+        patientId:   widget.patientId,
+        patientName: widget.patientName,
+      ),
+    ));
+    _load();
   }
 
   Future<void> _goWriteRx() async {
@@ -179,7 +203,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         _PrescriptionsSection(
                           list:            _rxList,
                           currentDoctorId: _currentDoctorId,
+                          onView:          _goViewRx,
                           onEdit:          _goEditRx,
+                          onShowMore:      _goShowMoreRx,
                         ).animate().fadeIn(delay: 150.ms),
                         const SizedBox(height: 20),
                         _LabReportsSection(
@@ -472,19 +498,28 @@ class _ProfileRow extends StatelessWidget {
 // ── Prescriptions section ─────────────────────────────────────────────────────
 
 class _PrescriptionsSection extends StatelessWidget {
-  final List<Prescription>          list;
-  final String                      currentDoctorId;
+  final List<Prescription>               list;
+  final String                           currentDoctorId;
+  final Future<void> Function(Prescription) onView;
   final Future<void> Function(Prescription) onEdit;
+  final VoidCallback                     onShowMore;
+
+  static const _previewCount = 5;
 
   const _PrescriptionsSection({
     required this.list,
     required this.currentDoctorId,
+    required this.onView,
     required this.onEdit,
+    required this.onShowMore,
   });
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
+    final c       = context.colors;
+    final visible = list.take(_previewCount).toList();
+    final hasMore = list.length > _previewCount;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -497,12 +532,37 @@ class _PrescriptionsSection extends StatelessWidget {
         const SizedBox(height: 12),
         if (list.isEmpty)
           _EmptySection(message: 'No prescriptions found.')
-        else
-          ...list.take(5).map((rx) => _RxTile(
-            rx:             rx,
-            canEdit:        rx.writtenByDoctorId == currentDoctorId,
-            onEdit:         () => onEdit(rx),
+        else ...[
+          ...visible.map((rx) => _RxTile(
+            rx:      rx,
+            canEdit: rx.writtenByDoctorId == currentDoctorId,
+            onView:  () => onView(rx),
+            onEdit:  () => onEdit(rx),
           )),
+          if (hasMore)
+            GestureDetector(
+              onTap: onShowMore,
+              child: Container(
+                margin: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color:        c.accent.withAlpha(10),
+                  borderRadius: BorderRadius.circular(14),
+                  border:       Border.all(color: c.accent.withAlpha(40)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Show ${list.length - _previewCount} more',
+                        style: GoogleFonts.poppins(
+                            fontSize: 13, fontWeight: FontWeight.w600, color: c.accent)),
+                    const SizedBox(width: 6),
+                    Icon(Icons.arrow_forward_rounded, size: 15, color: c.accent),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ],
     );
   }
@@ -511,11 +571,13 @@ class _PrescriptionsSection extends StatelessWidget {
 class _RxTile extends StatelessWidget {
   final Prescription rx;
   final bool         canEdit;
+  final VoidCallback onView;
   final VoidCallback onEdit;
 
   const _RxTile({
     required this.rx,
     required this.canEdit,
+    required this.onView,
     required this.onEdit,
   });
 
@@ -534,89 +596,60 @@ class _RxTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border:       Border.all(color: c.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(color: c.accent.withAlpha(15), borderRadius: BorderRadius.circular(12)),
-                child: Icon(Icons.medication_rounded, color: c.accent, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      rx.diagnosis ?? (rx.medicines.isNotEmpty ? rx.medicines.first.medicineName : 'Prescription'),
-                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(dateStr, style: GoogleFonts.poppins(fontSize: 11, color: c.textSec)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color:        (rx.medicines.isEmpty || rx.isActive ? c.green : c.textMuted).withAlpha(15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${rx.medicines.length} med${rx.medicines.length == 1 ? '' : 's'}',
-                  style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600,
-                      color: rx.medicines.isEmpty || rx.isActive ? c.green : c.textMuted),
-                ),
-              ),
-              if (canEdit) ...[
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: onEdit,
-                  child: Container(
-                    width: 32, height: 32,
-                    decoration: BoxDecoration(
-                      color:        c.accent.withAlpha(15),
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: Icon(Icons.edit_rounded, size: 15, color: c.accent),
-                  ),
-                ),
-              ],
-            ],
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color:        c.accent.withAlpha(15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.medication_rounded, color: c.accent, size: 20),
           ),
-          if (rx.imageUrls.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: rx.imageUrls.map((url) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () => showDialog(
-                      context: context,
-                      builder: (ctx) => Dialog(
-                        backgroundColor: Colors.transparent,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(url, fit: BoxFit.contain),
-                        ),
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(url, width: 64, height: 64, fit: BoxFit.cover,
-                          errorBuilder: (ctx, err, st) => Container(
-                            width: 64, height: 64,
-                            decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.broken_image_rounded, color: c.textMuted, size: 20),
-                          )),
-                    ),
-                  ),
-                )).toList(),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  rx.diagnosis ?? (rx.medicines.isNotEmpty
+                      ? rx.medicines.first.medicineName : 'Prescription'),
+                  style: GoogleFonts.poppins(
+                      fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(dateStr,
+                    style: GoogleFonts.poppins(fontSize: 11, color: c.textSec)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // View button — always visible
+          GestureDetector(
+            onTap: onView,
+            child: Container(
+              width: 32, height: 32,
+              decoration: BoxDecoration(
+                color:        c.accent.withAlpha(12),
+                borderRadius: BorderRadius.circular(9),
+                border:       Border.all(color: c.accent.withAlpha(40)),
+              ),
+              child: Icon(Icons.visibility_rounded, size: 15, color: c.accent),
+            ),
+          ),
+          if (canEdit) ...[
+            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: onEdit,
+              child: Container(
+                width: 32, height: 32,
+                decoration: BoxDecoration(
+                  color:        c.green.withAlpha(12),
+                  borderRadius: BorderRadius.circular(9),
+                  border:       Border.all(color: c.green.withAlpha(40)),
+                ),
+                child: Icon(Icons.edit_rounded, size: 15, color: c.green),
               ),
             ),
           ],

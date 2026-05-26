@@ -189,6 +189,8 @@ class _DoctorWritePrescriptionScreenState
     try {
       final medicines = validMeds.map((e) => e.toMedicine()).toList();
 
+      String? logPrescriptionId;
+
       if (_isEdit) {
         await _svc.updateForDoctor(
           prescriptionId: widget.existing!.id,
@@ -198,6 +200,7 @@ class _DoctorWritePrescriptionScreenState
           imageUrls:      _imageUrls,
           medicines:      medicines,
         );
+        logPrescriptionId = widget.existing!.id;
       } else {
         final doctorId = Supabase.instance.client.auth.currentUser?.id;
         final rx = Prescription(
@@ -214,12 +217,15 @@ class _DoctorWritePrescriptionScreenState
           createdAt:        DateTime.now(),
           writtenByDoctorId: doctorId,
         );
-        await _svc.createForPatient(
+        final saved = await _svc.createForPatient(
           patientId:    widget.patientId,
           prescription: rx,
           medicines:    medicines,
         );
+        logPrescriptionId = saved.id;
       }
+
+      await _svc.logEdit(logPrescriptionId, action: _isEdit ? 'edited' : 'created');
 
       if (!_isEdit && widget.appointmentId != null) {
         try {
