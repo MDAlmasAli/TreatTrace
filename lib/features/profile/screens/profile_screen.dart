@@ -797,6 +797,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
 
+          if ((_account?['phone'] as String?)?.isNotEmpty == true) ...[
+            const SizedBox(height: 2),
+            Text(
+              _account!['phone'] as String,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: c.textSec,
+              ),
+            ),
+          ],
+
           if ((_account?['username'] as String?)?.isNotEmpty == true) ...[
             const SizedBox(height: 2),
             Text(
