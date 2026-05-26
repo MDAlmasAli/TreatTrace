@@ -8,6 +8,7 @@ class DoctorPatientLink {
 
   // Joined from profiles (populated separately by the service)
   final String? patientName;
+  final String? patientUsername;
   final String? patientPhone;
   final String? patientAvatarUrl;
   final String? doctorName;
@@ -22,6 +23,7 @@ class DoctorPatientLink {
     required this.requestedAt,
     this.acceptedAt,
     this.patientName,
+    this.patientUsername,
     this.patientPhone,
     this.patientAvatarUrl,
     this.doctorName,
@@ -47,6 +49,7 @@ class DoctorPatientLink {
 
   DoctorPatientLink copyWith({
     String? patientName,
+    String? patientUsername,
     String? patientPhone,
     String? patientAvatarUrl,
     String? doctorName,
@@ -54,17 +57,18 @@ class DoctorPatientLink {
     String? doctorHospital,
   }) =>
       DoctorPatientLink(
-        id:              id,
-        doctorId:        doctorId,
-        patientId:       patientId,
-        status:          status,
-        requestedAt:     requestedAt,
-        acceptedAt:      acceptedAt,
-        patientName:     patientName     ?? this.patientName,
-        patientPhone:    patientPhone    ?? this.patientPhone,
+        id:               id,
+        doctorId:         doctorId,
+        patientId:        patientId,
+        status:           status,
+        requestedAt:      requestedAt,
+        acceptedAt:       acceptedAt,
+        patientName:      patientName      ?? this.patientName,
+        patientUsername:  patientUsername  ?? this.patientUsername,
+        patientPhone:     patientPhone     ?? this.patientPhone,
         patientAvatarUrl: patientAvatarUrl ?? this.patientAvatarUrl,
-        doctorName:      doctorName      ?? this.doctorName,
-        doctorAvatarUrl: doctorAvatarUrl ?? this.doctorAvatarUrl,
-        doctorHospital:  doctorHospital  ?? this.doctorHospital,
+        doctorName:       doctorName       ?? this.doctorName,
+        doctorAvatarUrl:  doctorAvatarUrl  ?? this.doctorAvatarUrl,
+        doctorHospital:   doctorHospital   ?? this.doctorHospital,
       );
 }

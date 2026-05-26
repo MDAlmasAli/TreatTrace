@@ -302,15 +302,16 @@ class DoctorPatientLinkService {
     final ids = links.map((l) => l.patientId).toList();
     final profiles = await _client
         .from('profiles')
-        .select('id, full_name, phone, avatar_url')
+        .select('id, full_name, username, phone, avatar_url')
         .inFilter('id', ids) as List;
 
     final map = {for (final p in profiles) p['id'] as String: p};
     return links.map((l) {
       final prof = map[l.patientId] as Map<String, dynamic>?;
       return l.copyWith(
-        patientName:     prof?['full_name'] as String?,
-        patientPhone:    prof?['phone']     as String?,
+        patientName:      prof?['full_name']  as String?,
+        patientUsername:  prof?['username']   as String?,
+        patientPhone:     prof?['phone']      as String?,
         patientAvatarUrl: prof?['avatar_url'] as String?,
       );
     }).toList();

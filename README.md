@@ -19,15 +19,24 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.30 — Active Development |
+| **Stage** | v0.31 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-26 (v0.30) |
+| **Last Updated** | 2026-05-26 (v0.31) |
 
 ---
 
 ## Latest Updates (2026-05-26)
+
+**v0.31 — Search bar in My Patients screen**
+
+- **Live search bar** — filters the patient list in real-time as the doctor types; matches against full name, username (`@handle`), and phone number
+- **Match highlighting** — the matching portion of the name/username/phone is highlighted in accent colour with a subtle background tint
+- **Username shown on tile** — `@username` now appears alongside the phone number on each patient card (fetched from `profiles.username`)
+- **Filtered count** — header badge shows `matched / total` when a search is active
+- **No-results state** — distinct empty state with search-off icon when the query returns nothing
+- `DoctorPatientLink` model and `_attachPatientProfiles` updated to carry `patientUsername`
 
 **v0.30 — Search & sort in All Prescriptions screen**
 
