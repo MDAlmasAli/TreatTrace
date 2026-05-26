@@ -401,10 +401,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildAccountSection(),
-                    const SizedBox(height: 24),
-                    _buildMedicalSection(),
-                    const SizedBox(height: 24),
-                    _buildHealthSection(),
+                    if (widget.accountData?['role'] != 'doctor') ...[
+                      const SizedBox(height: 24),
+                      _buildMedicalSection(),
+                      const SizedBox(height: 24),
+                      _buildHealthSection(),
+                    ],
                     const SizedBox(height: 24),
                     _buildEmergencySection(),
                     const SizedBox(height: 32),
