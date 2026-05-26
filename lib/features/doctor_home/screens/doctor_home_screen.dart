@@ -167,7 +167,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   }
 
   Future<void> _showVisitingInfoSheet() async {
-    final c = context.colors;
     final feeCtrl     = TextEditingController(text: _visitingFee?.toString() ?? '');
     final hoursCtrl   = TextEditingController(text: _visitingHours ?? '');
     final chamberCtrl = TextEditingController(text: _chamber ?? '');
@@ -176,96 +175,101 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) {
-          bool saving = false;
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 40, height: 40,
-                        decoration: BoxDecoration(
-                          color: c.accent.withAlpha(15),
-                          borderRadius: BorderRadius.circular(12),
+      builder: (sheetCtx) {
+        // saving declared here — outside StatefulBuilder.builder so it is NOT
+        // reset to false on every setState-triggered rebuild
+        var saving = false;
+        return StatefulBuilder(
+          builder: (builderCtx, setS) {
+            final c = builderCtx.colors;
+            return Padding(
+              padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(builderCtx).viewInsets.bottom),
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: c.card,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 40, height: 40,
+                          decoration: BoxDecoration(
+                            color: c.accent.withAlpha(15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.schedule_rounded,
+                              color: c.accent, size: 20),
                         ),
-                        child: Icon(Icons.schedule_rounded, color: c.accent, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Text('Visiting Information',
-                          style: GoogleFonts.poppins(
-                              fontSize: 16, fontWeight: FontWeight.w700, color: c.textPrimary)),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  _SheetField(
-                    label: 'Visiting Fee (BDT)',
-                    hint: 'e.g. 500',
-                    controller: feeCtrl,
-                    icon: Icons.payments_rounded,
-                    keyboardType: TextInputType.number,
-                    c: c,
-                  ),
-                  const SizedBox(height: 14),
-                  _SheetField(
-                    label: 'Visiting Hours',
-                    hint: 'e.g. Sat–Thu 9am–5pm',
-                    controller: hoursCtrl,
-                    icon: Icons.access_time_rounded,
-                    c: c,
-                  ),
-                  const SizedBox(height: 14),
-                  _SheetField(
-                    label: 'Chamber / Location',
-                    hint: 'e.g. Room 203, City Hospital',
-                    controller: chamberCtrl,
-                    icon: Icons.location_on_rounded,
-                    c: c,
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: StatefulBuilder(
-                      builder: (ctx2, setSave) => ElevatedButton(
+                        const SizedBox(width: 12),
+                        Text('Visiting Information',
+                            style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: c.textPrimary)),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    _SheetField(
+                      label: 'Visiting Fee (BDT)',
+                      hint: 'e.g. 500',
+                      controller: feeCtrl,
+                      icon: Icons.payments_rounded,
+                      keyboardType: TextInputType.number,
+                      c: c,
+                    ),
+                    const SizedBox(height: 14),
+                    _SheetField(
+                      label: 'Visiting Hours',
+                      hint: 'e.g. Sat–Thu 9am–5pm',
+                      controller: hoursCtrl,
+                      icon: Icons.access_time_rounded,
+                      c: c,
+                    ),
+                    const SizedBox(height: 14),
+                    _SheetField(
+                      label: 'Chamber / Location',
+                      hint: 'e.g. Room 203, City Hospital',
+                      controller: chamberCtrl,
+                      icon: Icons.location_on_rounded,
+                      c: c,
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
                         onPressed: saving
                             ? null
                             : () async {
-                                setSave(() => saving = true);
+                                setS(() => saving = true);
                                 try {
-                                  final fee = int.tryParse(feeCtrl.text.trim());
+                                  final fee =
+                                      int.tryParse(feeCtrl.text.trim());
                                   await _verifySvc.updateVisitingInfo(
                                     fee:     fee,
                                     hours:   hoursCtrl.text,
                                     chamber: chamberCtrl.text,
                                   );
-                                  if (!mounted) return;
-                                  setState(() {
-                                    _visitingFee   = fee;
-                                    _visitingHours = hoursCtrl.text.trim().isEmpty
-                                        ? null : hoursCtrl.text.trim();
-                                    _chamber       = chamberCtrl.text.trim().isEmpty
-                                        ? null : chamberCtrl.text.trim();
-                                  });
-                                  if (ctx.mounted) Navigator.of(ctx).pop();
+                                  if (sheetCtx.mounted) {
+                                    Navigator.of(sheetCtx).pop();
+                                  }
                                 } catch (_) {
-                                  if (ctx2.mounted) setSave(() => saving = false);
+                                  if (builderCtx.mounted) {
+                                    setS(() => saving = false);
+                                  }
                                 }
                               },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: c.accent,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         child: saving
@@ -275,17 +279,21 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                     color: Colors.white, strokeWidth: 2.5))
                             : Text('Save',
                                 style: GoogleFonts.poppins(
-                                    fontSize: 14, fontWeight: FontWeight.w600)),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600)),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
-      ),
+            );
+          },
+        );
+      },
     );
+
+    // Sheet closed — refresh visiting info on main screen
+    if (mounted) _loadVisitingInfo();
 
     feeCtrl.dispose();
     hoursCtrl.dispose();
