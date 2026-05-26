@@ -248,6 +248,15 @@ class DoctorPatientLinkService {
     }).toList();
   }
 
+  // ── Auto-link patient after prescription (appointment flow) ──────────────
+
+  Future<void> autoLinkPatient(String patientId) async {
+    await _client.rpc(
+      'auto_link_appointment_patient',
+      params: {'p_patient_id': patientId},
+    );
+  }
+
   // ── Fetch a single doctor's full public profile ───────────────────────────
 
   Future<Map<String, dynamic>?> fetchDoctorPublicProfile(String doctorId) async {

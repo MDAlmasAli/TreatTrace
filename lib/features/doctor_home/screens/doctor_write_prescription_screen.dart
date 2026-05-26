@@ -10,6 +10,7 @@ import '../../../core/services/doctor_verification_service.dart';
 import '../../appointment/models/appointment.dart';
 import '../../appointment/services/appointment_service.dart';
 import '../../prescription/models/prescription.dart';
+import '../services/doctor_patient_link_service.dart';
 import '../../prescription/models/prescription_medicine.dart';
 import '../../prescription/services/prescription_service.dart';
 
@@ -37,6 +38,7 @@ class _DoctorWritePrescriptionScreenState
   final _svc         = PrescriptionService();
   final _dvrSvc      = DoctorVerificationService();
   final _apptSvc     = AppointmentService();
+  final _linkSvc     = DoctorPatientLinkService();
   final _imagePicker = ImagePicker();
 
   final _diagnosisCtrl = TextEditingController();
@@ -223,6 +225,7 @@ class _DoctorWritePrescriptionScreenState
         try {
           await _apptSvc.updateStatus(
               widget.appointmentId!, AppointmentStatus.completed);
+          await _linkSvc.autoLinkPatient(widget.patientId);
         } catch (_) {}
       }
 

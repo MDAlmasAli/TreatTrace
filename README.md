@@ -19,15 +19,22 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.25 — Active Development |
+| **Stage** | v0.26 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-26 |
+| **Last Updated** | 2026-05-26 (v0.26) |
 
 ---
 
 ## Latest Updates (2026-05-26)
+
+**v0.26 — Auto-add patient to My Patients after prescription**
+
+- **Patient auto-linked after prescription save** — when a doctor writes a new prescription from Today's Schedule, the patient is automatically added to the doctor's "My Patients" list with `status = accepted` (no manual request/accept flow needed)
+- **Idempotent upsert** — if the link already exists as accepted, nothing changes; if it was pending/rejected, it is upgraded to accepted
+- **SECURITY DEFINER function** — `auto_link_appointment_patient(p_patient_id)` handles the upsert with elevated privileges; guards against abuse by verifying the caller has an appointment with the patient via `doctor_has_appointment_with()`
+- **Database migration v14** — adds the `auto_link_appointment_patient` function
 
 **v0.25 — Today's Schedule: Completed tab + auto-complete on Rx save**
 
