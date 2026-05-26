@@ -19,7 +19,7 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.23 — Active Development |
+| **Stage** | v0.24 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
@@ -28,6 +28,12 @@
 ---
 
 ## Latest Updates (2026-05-26)
+
+**v0.24 — Fix doctor prescription save RLS**
+
+- **Fixed "Failed to save" when doctor writes prescription from Today's Schedule** — the `doctor_inserts_patient_rx` INSERT policy only allowed doctors to write prescriptions for patients in their `doctor_patient_links` (accepted), but not for appointment-only patients; updated policy now also permits insert when `doctor_has_appointment_with(user_id)` is true
+- **Fixed doctor unable to edit prescriptions they wrote** — no UPDATE policy existed for doctors; added `doctor_updates_own_written_rx` policy so doctors can update any prescription where `written_by_doctor_id = auth.uid()`
+- **Database migration v13** — recreates `doctor_inserts_patient_rx` and adds `doctor_updates_own_written_rx` on `prescriptions` table
 
 **v0.23 — Visiting Information section (Doctor home + public profile)**
 
