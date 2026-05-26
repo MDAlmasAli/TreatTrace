@@ -224,7 +224,12 @@ class _RoleAwareRouterState extends State<_RoleAwareRouter> {
 
       Map<String, dynamic>? verification;
       if (role == 'doctor') {
-        verification = await _verifyService.fetchMyVerification();
+        try {
+          verification = await _verifyService.fetchMyVerification();
+        } catch (_) {
+          // Verification fetch failed — still route to doctor screen.
+          // The doctor home screen itself will retry or show pending state.
+        }
       }
 
       if (mounted) {
@@ -234,7 +239,8 @@ class _RoleAwareRouterState extends State<_RoleAwareRouter> {
           _loading      = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('_loadRole error: $e');
       if (mounted) setState(() => _loading = false);
     }
   }

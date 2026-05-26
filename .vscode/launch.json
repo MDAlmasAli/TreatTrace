@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "TreatTrace (Chrome)",
+            "type": "dart",
+            "request": "launch",
+            "program": "lib/main.dart",
+            "args": ["-d", "chrome"]
+        },
+        {
+            "name": "TreatTrace (Chrome - no debug)",
+            "type": "dart",
+            "request": "launch",
+            "program": "lib/main.dart",
+            "args": ["-d", "chrome", "--profile"]
+        }
+    ]
+}

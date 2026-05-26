@@ -19,15 +19,23 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.21 — Active Development |
+| **Stage** | v0.22 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About & Visiting Fee |
-| **Platform** | Android · iOS |
-| **Last Updated** | 2026-05-25 |
+| **Platform** | Android · iOS · Web (Chrome) |
+| **Last Updated** | 2026-05-26 |
 
 ---
 
-## Latest Updates (2026-05-25)
+## Latest Updates (2026-05-26)
+
+**v0.22 — Fix RLS circular reference (HTTP 500 on login)**
+
+- **Fixed HTTP 500 on `fetchProfile()`** — the v10 RLS policies created a circular reference: `profiles → appointments → profiles` (via `doctor_reads_by_name_snapshot`), causing a 500 error on every profile read for doctor accounts; this broke login routing and role selection on Chrome (web) and anywhere the doctor tried to log in
+- **Fix: SECURITY DEFINER function** — replaced the raw `EXISTS (SELECT ... FROM appointments)` subquery inside profiles/health_profiles/prescriptions/lab_reports policies with a call to `doctor_has_appointment_with(uuid)` — a `SECURITY DEFINER` function that reads `appointments` bypassing its own RLS, breaking the cycle
+- **Database migration v11** — creates `doctor_has_appointment_with()` function and recreates all 4 appointment-patient RLS policies to use it
+- **Fixed VS Code launch config** — replaced the generic Chrome URL launcher in `.vscode/launch.json` with proper `dart` type Flutter launch configs; "Run Without Debugging" now correctly starts the Flutter dev server instead of opening a dead `localhost:8080`
+- **Fixed `_loadRole` silent swallow** — `fetchMyVerification()` errors are now caught in their own inner try-catch so a verification fetch failure no longer incorrectly shows the role selection screen
 
 **v0.21 — Fix doctor RLS for appointment patients**
 
