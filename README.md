@@ -19,15 +19,24 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.22 — Active Development |
-| **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page |
-| **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About & Visiting Fee |
+| **Stage** | v0.23 — Active Development |
+| **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
+| **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-26 |
 
 ---
 
 ## Latest Updates (2026-05-26)
+
+**v0.23 — Visiting Information section (Doctor home + public profile)**
+
+- **New "Visiting Information" section on Doctor Home** — doctors can set Visiting Fee (BDT), Visiting Hours, and Chamber directly from their home screen via an Edit button; data is saved instantly with no admin review required
+- **Visiting Fee moved out of Credentials** — removed from the credential submit/edit form and from the admin-reviewed flow entirely; now lives only in the Visiting Information section
+- **Migration v12** — added `visiting_hours TEXT` and `chamber TEXT` columns to `doctor_verifications`; `visiting_fee` column already existed
+- **Visiting Information shown on patient-facing Doctor Profile** — patients viewing a doctor's public profile now see a "Visiting Information" card with Fee, Hours, and Chamber (when set)
+- **Swipe-to-delete on My Doctors list** — patients can swipe left on any doctor in their list to delete with a confirmation dialog
+- **Delete button on Doctor Public Profile** — "Remove from My Doctors" outlined red button appears below "Take Appointment" when the doctor is already in the patient's list
 
 **v0.22 — Fix RLS circular reference (HTTP 500 on login)**
 

@@ -112,6 +112,45 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
     _load();
   }
 
+  Future<bool?> _showDeleteConfirm(Doctor d) {
+    final c = context.colors;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.card,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Remove Doctor?',
+          style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: c.textPrimary),
+        ),
+        content: Text(
+          '${d.displayName} will be removed from your list.',
+          style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel',
+                style: GoogleFonts.poppins(
+                    fontSize: 13, color: c.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Remove',
+                style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: c.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -155,12 +194,25 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                           itemCount:        items.length,
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: 12),
-                          itemBuilder: (ctx, i) => _DoctorCard(
-                            doctor:          items[i],
-                            onTap:           () => _openDetail(items[i]),
-                            onFavorite:      () => _toggleFavorite(items[i]),
-                            delay:           i * 40,
-                          ),
+                          itemBuilder: (ctx, i) {
+                            final doc = items[i];
+                            return Dismissible(
+                              key:        ValueKey(doc.id),
+                              direction:  DismissDirection.endToStart,
+                              confirmDismiss: (_) => _showDeleteConfirm(doc),
+                              onDismissed: (_) async {
+                                await _service.delete(doc.id);
+                                _load();
+                              },
+                              background: const _DeleteBackground(),
+                              child: _DoctorCard(
+                                doctor:     doc,
+                                onTap:      () => _openDetail(doc),
+                                onFavorite: () => _toggleFavorite(doc),
+                                delay:      i * 40,
+                              ),
+                            );
+                          },
                         ),
                       ),
           ),
@@ -584,6 +636,25 @@ class _EmptyState extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _DeleteBackground extends StatelessWidget {
+  const _DeleteBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      margin:       const EdgeInsets.only(bottom: 0),
+      decoration: BoxDecoration(
+        color:        c.red,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      alignment: Alignment.centerRight,
+      padding:   const EdgeInsets.only(right: 24),
+      child: const Icon(Icons.delete_rounded, color: Colors.white, size: 26),
     );
   }
 }

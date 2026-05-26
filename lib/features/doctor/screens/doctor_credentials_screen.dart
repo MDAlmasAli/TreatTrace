@@ -25,7 +25,6 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
   final _hospitalCtrl   = TextEditingController();
   final _nidCtrl        = TextEditingController();
   final _degreeCtrl     = TextEditingController();
-  final _feeCtrl        = TextEditingController();
   final _aboutCtrl      = TextEditingController();
   final _additionalCtrl = TextEditingController();
   final _formKey        = GlobalKey<FormState>();
@@ -43,7 +42,6 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
     _hospitalCtrl.dispose();
     _nidCtrl.dispose();
     _degreeCtrl.dispose();
-    _feeCtrl.dispose();
     _aboutCtrl.dispose();
     _additionalCtrl.dispose();
     super.dispose();
@@ -66,7 +64,6 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
     _hospitalCtrl.text   = d['hospital']        ?? '';
     _nidCtrl.text        = d['nid_passport']    ?? '';
     _degreeCtrl.text     = d['degree']          ?? '';
-    _feeCtrl.text        = d['visiting_fee']?.toString() ?? '';
     _aboutCtrl.text      = d['about']           ?? '';
     _additionalCtrl.text = d['additional_info'] ?? '';
     setState(() { _editing = true; _error = null; });
@@ -82,7 +79,6 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
         hospital:       _hospitalCtrl.text.trim(),
         nidPassport:    _nidCtrl.text.trim(),
         degree:         _degreeCtrl.text.trim(),
-        visitingFee:    int.tryParse(_feeCtrl.text.trim()),
         about:          _aboutCtrl.text.trim(),
         additionalInfo: _additionalCtrl.text.trim(),
       );
@@ -200,14 +196,6 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
                 pending: hasPending ? d['pending_degree'] : null,
               ),
               _FieldRow(
-                label: 'Visiting Fee',
-                icon: Icons.payments_rounded,
-                current: d['visiting_fee'] != null ? 'BDT ${d['visiting_fee']}' : '-',
-                pending: hasPending && d['pending_visiting_fee'] != null
-                    ? 'BDT ${d['pending_visiting_fee']}'
-                    : null,
-              ),
-              _FieldRow(
                 label: 'About Myself',
                 icon: Icons.person_outline_rounded,
                 current: d['about'] ?? '-',
@@ -301,15 +289,6 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
             _EditField(label: 'Degree', hint: 'e.g. MBBS, MD, BDS',
                 controller: _degreeCtrl, icon: Icons.school_rounded,
                 validator: (v) => v?.trim().isEmpty == true ? 'Required' : null),
-            const SizedBox(height: 14),
-            _EditField(label: 'Visiting Fee (BDT)', hint: 'e.g. 800',
-                controller: _feeCtrl, icon: Icons.payments_rounded,
-                keyboardType: TextInputType.number,
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Required';
-                  if (int.tryParse(v.trim()) == null) return 'Enter a valid number';
-                  return null;
-                }),
             const SizedBox(height: 14),
             _EditField(label: 'About Myself', hint: 'Brief professional introduction…',
                 controller: _aboutCtrl, icon: Icons.person_outline_rounded,
@@ -564,7 +543,6 @@ class _EditField extends StatelessWidget {
   final TextEditingController controller;
   final IconData icon;
   final int maxLines;
-  final TextInputType? keyboardType;
   final String? Function(String?)? validator;
 
   const _EditField({
@@ -573,7 +551,6 @@ class _EditField extends StatelessWidget {
     required this.controller,
     required this.icon,
     this.maxLines = 1,
-    this.keyboardType,
     this.validator,
   });
 
@@ -590,7 +567,6 @@ class _EditField extends StatelessWidget {
         TextFormField(
           controller: controller,
           maxLines: maxLines,
-          keyboardType: keyboardType,
           validator: validator,
           style: GoogleFonts.poppins(fontSize: 14, color: c.textPrimary),
           decoration: InputDecoration(

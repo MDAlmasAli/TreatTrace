@@ -32,9 +32,10 @@ class _DoctorPublicProfileScreenState
   final _doctorSvc = DoctorService();
 
   Map<String, dynamic>? _profile;
-  bool _loading          = true;
-  bool _addingMyDoctor   = false;
-  bool _alreadyInMyDocs  = false;
+  bool    _loading          = true;
+  bool    _addingMyDoctor   = false;
+  bool    _alreadyInMyDocs  = false;
+  String? _myDoctorLocalId;
 
   @override
   void initState() {
@@ -51,13 +52,14 @@ class _DoctorPublicProfileScreenState
     final profile   = results[0] as Map<String, dynamic>?;
     final myDoctors = results[1] as List<Doctor>;
 
-    final alreadyIn = myDoctors.any((d) => d.sourceId == widget.doctorId);
+    final match = myDoctors.where((d) => d.sourceId == widget.doctorId).firstOrNull;
 
     if (mounted) {
       setState(() {
-        _profile        = profile;
-        _alreadyInMyDocs = alreadyIn;
-        _loading        = false;
+        _profile          = profile;
+        _alreadyInMyDocs  = match != null;
+        _myDoctorLocalId  = match?.id;
+        _loading          = false;
       });
     }
   }
@@ -100,6 +102,50 @@ class _DoctorPublicProfileScreenState
         content: Text('Failed to add doctor.', style: GoogleFonts.poppins()),
       ));
     }
+  }
+
+  Future<void> _removeFromMyDoctors() async {
+    final localId = _myDoctorLocalId;
+    if (localId == null) return;
+    final c    = context.colors;
+    final name = (_profile?['full_name'] as String?)?.trim() ?? 'this doctor';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Remove Doctor?',
+            style: GoogleFonts.poppins(
+                fontSize: 16, fontWeight: FontWeight.w700, color: c.textPrimary)),
+        content: Text('Dr. $name will be removed from your My Doctors list.',
+            style: GoogleFonts.poppins(fontSize: 13, color: c.textSec)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel',
+                style: GoogleFonts.poppins(fontSize: 13, color: c.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Remove',
+                style: GoogleFonts.poppins(
+                    fontSize: 13, fontWeight: FontWeight.w700, color: c.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _doctorSvc.delete(localId);
+    if (!mounted) return;
+    setState(() {
+      _alreadyInMyDocs = false;
+      _myDoctorLocalId = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Removed from My Doctors.', style: GoogleFonts.poppins()),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    ));
   }
 
   Future<void> _takeAppointment() async {
@@ -165,14 +211,16 @@ class _DoctorPublicProfileScreenState
       );
     }
 
-    final name        = d['full_name'] as String? ?? 'Unknown';
-    final specialty   = d['specialty'] as String?;
-    final hospital    = d['hospital']  as String?;
-    final degree      = d['degree']    as String?;
-    final visitingFee = d['visiting_fee'] as int?;
-    final about       = d['about']     as String?;
-    final email       = d['email']     as String?;
-    final avatar      = d['avatar_url'] as String?;
+    final name          = d['full_name'] as String? ?? 'Unknown';
+    final specialty     = d['specialty']     as String?;
+    final hospital      = d['hospital']      as String?;
+    final degree        = d['degree']        as String?;
+    final visitingFee   = d['visiting_fee']  as int?;
+    final visitingHours = d['visiting_hours'] as String?;
+    final chamber       = d['chamber']       as String?;
+    final about         = d['about']         as String?;
+    final email         = d['email']         as String?;
+    final avatar        = d['avatar_url']    as String?;
 
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
@@ -293,12 +341,28 @@ class _DoctorPublicProfileScreenState
           ),
         ),
 
+        // ── Visiting Information ──────────────────────────────────────────
+        if (visitingFee != null ||
+            visitingHours?.isNotEmpty == true ||
+            chamber?.isNotEmpty == true)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: _VisitingCard(
+                c:       c,
+                fee:     visitingFee,
+                hours:   visitingHours,
+                chamber: chamber,
+              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.04),
+            ),
+          ),
+
         // ── About ─────────────────────────────────────────────────────────
         if (about?.isNotEmpty == true)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: _AboutCard(c: c, about: about!).animate().fadeIn(delay: 200.ms).slideY(begin: 0.04),
+              child: _AboutCard(c: c, about: about!).animate().fadeIn(delay: 230.ms).slideY(begin: 0.04),
             ),
           ),
 
@@ -358,6 +422,26 @@ class _DoctorPublicProfileScreenState
                     ),
                   ),
                 ),
+                if (_alreadyInMyDocs) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _removeFromMyDoctors,
+                      icon: Icon(Icons.delete_outline_rounded, size: 18, color: c.red),
+                      label: Text(
+                        'Remove from My Doctors',
+                        style: GoogleFonts.poppins(
+                            fontSize: 14, fontWeight: FontWeight.w600, color: c.red),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: c.red.withAlpha(120)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ).animate().fadeIn(delay: 250.ms).slideY(begin: 0.04),
           ),
@@ -465,6 +549,117 @@ class _InfoCard extends StatelessWidget {
                       ],
                     );
                   }).toList(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Visiting Information card ─────────────────────────────────────────────────
+
+class _VisitingCard extends StatelessWidget {
+  final ThemeColors c;
+  final int?     fee;
+  final String?  hours;
+  final String?  chamber;
+
+  const _VisitingCard({required this.c, this.fee, this.hours, this.chamber});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <(IconData, String, String, Color)>[];
+    if (fee != null) {
+      items.add((Icons.payments_rounded, 'Visiting Fee', 'BDT $fee', c.green));
+    }
+    if (hours?.isNotEmpty == true) {
+      items.add((Icons.access_time_rounded, 'Visiting Hours', hours!, c.accent));
+    }
+    if (chamber?.isNotEmpty == true) {
+      items.add((Icons.location_on_rounded, 'Chamber', chamber!, c.amber));
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.border),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(19),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 4, color: c.green),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                      child: Text(
+                        'Visiting Information',
+                        style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: c.textPrimary),
+                      ),
+                    ),
+                    Divider(height: 1, color: c.border, thickness: 1),
+                    ...items.asMap().entries.map((e) {
+                      final (icon, label, value, color) = e.value;
+                      final isLast = e.key == items.length - 1;
+                      return Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 34, height: 34,
+                                  decoration: BoxDecoration(
+                                    color: color.withAlpha(15),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(icon, size: 17, color: color),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(label,
+                                          style: GoogleFonts.poppins(
+                                              fontSize: 11, color: c.textMuted)),
+                                      const SizedBox(height: 2),
+                                      Text(value,
+                                          style: GoogleFonts.poppins(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: c.textPrimary)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (!isLast)
+                            Divider(
+                                height: 1,
+                                indent: 16,
+                                endIndent: 16,
+                                color: c.border,
+                                thickness: 1),
+                        ],
+                      );
+                    }),
+                    const SizedBox(height: 2),
+                  ],
                 ),
               ),
             ],

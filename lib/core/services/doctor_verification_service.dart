@@ -20,7 +20,6 @@ class DoctorVerificationService {
     required String nidPassport,
     required String degree,
     required String about,
-    int? visitingFee,
     String? additionalInfo,
   }) async {
     final userId = _client.auth.currentUser?.id;
@@ -33,12 +32,25 @@ class DoctorVerificationService {
       'nid_passport': nidPassport,
       'degree': degree,
       'about': about,
-      'visiting_fee': visitingFee,
       'additional_info': additionalInfo?.isEmpty == true ? null : additionalInfo,
       'status': 'pending',
       'rejection_reason': null,
       'submitted_at': DateTime.now().toIso8601String(),
     }, onConflict: 'id');
+  }
+
+  Future<void> updateVisitingInfo({
+    int? fee,
+    String? hours,
+    String? chamber,
+  }) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not logged in');
+    await _client.from('doctor_verifications').update({
+      'visiting_fee':   fee,
+      'visiting_hours': hours?.trim().isEmpty == true ? null : hours?.trim(),
+      'chamber':        chamber?.trim().isEmpty == true ? null : chamber?.trim(),
+    }).eq('id', userId);
   }
 
   Future<List<Map<String, dynamic>>> fetchAllVerifications() async {
@@ -76,7 +88,6 @@ class DoctorVerificationService {
     required String nidPassport,
     required String degree,
     required String about,
-    int? visitingFee,
     String? additionalInfo,
   }) async {
     final userId = _client.auth.currentUser?.id;
@@ -88,7 +99,6 @@ class DoctorVerificationService {
       'pending_nid_passport':  nidPassport,
       'pending_degree':        degree,
       'pending_about':         about,
-      'pending_visiting_fee':  visitingFee,
       'pending_additional':    additionalInfo?.isEmpty == true ? null : additionalInfo,
       'edit_status':           'pending',
       'edit_rejection_reason': null,

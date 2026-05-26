@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/doctor_verification_service.dart';
 import '../../../core/services/reminder_service.dart';
 import '../../appointment/services/appointment_service.dart';
 import '../../auth/screens/login_screen.dart';
@@ -37,8 +38,9 @@ class DoctorHomeScreen extends StatefulWidget {
 
 class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   final _authService = AuthService();
-  final _apptSvc = AppointmentService();
-  final _linkSvc = DoctorPatientLinkService();
+  final _apptSvc     = AppointmentService();
+  final _linkSvc     = DoctorPatientLinkService();
+  final _verifySvc   = DoctorVerificationService();
 
   String? _avatarUrl;
   int _todayAppointments = 0;
@@ -46,6 +48,9 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   int _pendingTasks = 0;
 
   List<Map<String, dynamic>> _patientRequests = [];
+  int?    _visitingFee;
+  String? _visitingHours;
+  String? _chamber;
   RealtimeChannel? _apptChannel;
 
   @override
@@ -54,6 +59,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     _loadAvatar();
     _loadDashboardStats();
     _loadPendingRequests();
+    _loadVisitingInfo();
     _subscribeToAppointments();
     _handleLaunchNotification();
   }
@@ -140,6 +146,18 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
   // ── Patient Requests: patients who booked appointments but aren't linked ──
 
+  Future<void> _loadVisitingInfo() async {
+    try {
+      final data = await _verifySvc.fetchMyVerification();
+      if (!mounted || data == null) return;
+      setState(() {
+        _visitingFee   = data['visiting_fee']   as int?;
+        _visitingHours = data['visiting_hours'] as String?;
+        _chamber       = data['chamber']        as String?;
+      });
+    } catch (_) {}
+  }
+
   Future<void> _loadPendingRequests() async {
     try {
       final requests = await _linkSvc.fetchPatientRequests();
@@ -218,6 +236,132 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     if (h < 12) return 'Good Morning';
     if (h < 17) return 'Good Afternoon';
     return 'Good Evening';
+  }
+
+  Future<void> _showVisitingInfoSheet() async {
+    final c = context.colors;
+    final feeCtrl     = TextEditingController(text: _visitingFee?.toString() ?? '');
+    final hoursCtrl   = TextEditingController(text: _visitingHours ?? '');
+    final chamberCtrl = TextEditingController(text: _chamber ?? '');
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          bool saving = false;
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: c.card,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          color: c.accent.withAlpha(15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.schedule_rounded, color: c.accent, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Text('Visiting Information',
+                          style: GoogleFonts.poppins(
+                              fontSize: 16, fontWeight: FontWeight.w700, color: c.textPrimary)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  _SheetField(
+                    label: 'Visiting Fee (BDT)',
+                    hint: 'e.g. 500',
+                    controller: feeCtrl,
+                    icon: Icons.payments_rounded,
+                    keyboardType: TextInputType.number,
+                    c: c,
+                  ),
+                  const SizedBox(height: 14),
+                  _SheetField(
+                    label: 'Visiting Hours',
+                    hint: 'e.g. Sat–Thu 9am–5pm',
+                    controller: hoursCtrl,
+                    icon: Icons.access_time_rounded,
+                    c: c,
+                  ),
+                  const SizedBox(height: 14),
+                  _SheetField(
+                    label: 'Chamber / Location',
+                    hint: 'e.g. Room 203, City Hospital',
+                    controller: chamberCtrl,
+                    icon: Icons.location_on_rounded,
+                    c: c,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: StatefulBuilder(
+                      builder: (ctx2, setSave) => ElevatedButton(
+                        onPressed: saving
+                            ? null
+                            : () async {
+                                setSave(() => saving = true);
+                                try {
+                                  final fee = int.tryParse(feeCtrl.text.trim());
+                                  await _verifySvc.updateVisitingInfo(
+                                    fee:     fee,
+                                    hours:   hoursCtrl.text,
+                                    chamber: chamberCtrl.text,
+                                  );
+                                  if (!mounted) return;
+                                  setState(() {
+                                    _visitingFee   = fee;
+                                    _visitingHours = hoursCtrl.text.trim().isEmpty
+                                        ? null : hoursCtrl.text.trim();
+                                    _chamber       = chamberCtrl.text.trim().isEmpty
+                                        ? null : chamberCtrl.text.trim();
+                                  });
+                                  if (ctx.mounted) Navigator.of(ctx).pop();
+                                } catch (_) {
+                                  if (ctx2.mounted) setSave(() => saving = false);
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: c.accent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: saving
+                            ? const SizedBox(
+                                width: 20, height: 20,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2.5))
+                            : Text('Save',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 14, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    feeCtrl.dispose();
+    hoursCtrl.dispose();
+    chamberCtrl.dispose();
   }
 
   Future<void> _goMyPatients() async {
@@ -416,6 +560,56 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                           onTap: _goMyPatients,
                           fullWidth: true,
                         ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.08),
+
+                        const SizedBox(height: 32),
+
+                        // ── Visiting Information ──────────────────────────
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Visiting Information',
+                              style: GoogleFonts.poppins(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: c.textPrimary,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: _showVisitingInfoSheet,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: c.accent.withAlpha(15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: c.accent.withAlpha(40)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.edit_rounded, size: 13, color: c.accent),
+                                    const SizedBox(width: 4),
+                                    Text('Edit',
+                                        style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: c.accent)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ).animate().fadeIn(delay: 280.ms),
+
+                        const SizedBox(height: 12),
+
+                        _VisitingInfoCard(
+                          fee:     _visitingFee,
+                          hours:   _visitingHours,
+                          chamber: _chamber,
+                          onEdit:  _showVisitingInfoSheet,
+                        ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.06),
 
                         const SizedBox(height: 32),
 
@@ -1324,5 +1518,219 @@ class _DoctorBottomBar extends StatelessWidget {
         ],
       ),
     ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.06);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// _VisitingInfoCard
+// ══════════════════════════════════════════════════════════════════════════════
+class _VisitingInfoCard extends StatelessWidget {
+  final int?     fee;
+  final String?  hours;
+  final String?  chamber;
+  final VoidCallback onEdit;
+
+  const _VisitingInfoCard({
+    this.fee,
+    this.hours,
+    this.chamber,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final hasData = fee != null ||
+        (hours?.isNotEmpty == true) ||
+        (chamber?.isNotEmpty == true);
+
+    if (!hasData) {
+      return GestureDetector(
+        onTap: onEdit,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          decoration: BoxDecoration(
+            color: c.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: c.border),
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.schedule_rounded, size: 32,
+                  color: c.textSec.withAlpha(80)),
+              const SizedBox(height: 8),
+              Text('No visiting info yet',
+                  style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: c.textSec,
+                      fontWeight: FontWeight.w500)),
+              const SizedBox(height: 4),
+              Text('Tap Edit to add your visiting hours, fee, and chamber',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(fontSize: 11, color: c.textSec)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final rows = <Widget>[];
+    if (fee != null) {
+      rows.add(_InfoRow(
+        icon: Icons.payments_rounded,
+        label: 'Visiting Fee',
+        value: 'BDT $fee',
+        color: c.green,
+        c: c,
+      ));
+    }
+    if (hours?.isNotEmpty == true) {
+      if (rows.isNotEmpty) {
+        rows.add(Divider(height: 1, color: c.border, indent: 16, endIndent: 16));
+      }
+      rows.add(_InfoRow(
+        icon: Icons.access_time_rounded,
+        label: 'Visiting Hours',
+        value: hours!,
+        color: c.accent,
+        c: c,
+      ));
+    }
+    if (chamber?.isNotEmpty == true) {
+      if (rows.isNotEmpty) {
+        rows.add(Divider(height: 1, color: c.border, indent: 16, endIndent: 16));
+      }
+      rows.add(_InfoRow(
+        icon: Icons.location_on_rounded,
+        label: 'Chamber',
+        value: chamber!,
+        color: c.amber,
+        c: c,
+      ));
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withAlpha(6),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(children: rows),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData    icon;
+  final String      label;
+  final String      value;
+  final Color       color;
+  final ThemeColors c;
+
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.c,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: color.withAlpha(15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: color),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: GoogleFonts.poppins(fontSize: 11, color: c.textMuted)),
+                const SizedBox(height: 2),
+                Text(value,
+                    style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: c.textPrimary)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// _SheetField — text field used inside the visiting info bottom sheet
+// ══════════════════════════════════════════════════════════════════════════════
+class _SheetField extends StatelessWidget {
+  final String             label;
+  final String?            hint;
+  final TextEditingController controller;
+  final IconData           icon;
+  final TextInputType?     keyboardType;
+  final ThemeColors        c;
+
+  const _SheetField({
+    required this.label,
+    this.hint,
+    required this.controller,
+    required this.icon,
+    this.keyboardType,
+    required this.c,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: GoogleFonts.poppins(
+                fontSize: 12, fontWeight: FontWeight.w600, color: c.textPrimary)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: GoogleFonts.poppins(fontSize: 14, color: c.textPrimary),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.poppins(fontSize: 13, color: c.textMuted),
+            prefixIcon: Icon(icon, color: c.textMuted, size: 18),
+            filled: true,
+            fillColor: c.surface,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: c.border)),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: c.border)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: c.accent, width: 1.5)),
+          ),
+        ),
+      ],
+    );
   }
 }

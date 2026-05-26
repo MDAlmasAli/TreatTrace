@@ -259,7 +259,7 @@ class DoctorPatientLinkService {
           .maybeSingle(),
       _client
           .from('doctor_verifications')
-          .select('specialty, hospital, degree, visiting_fee, about')
+          .select('specialty, hospital, degree, visiting_fee, visiting_hours, chamber, about')
           .eq('id', doctorId)
           .eq('status', 'approved')
           .maybeSingle(),
@@ -278,8 +278,10 @@ class DoctorPatientLinkService {
       'specialty':    verif?['specialty'],
       'hospital':     verif?['hospital'],
       'degree':       verif?['degree'],
-      'visiting_fee': verif?['visiting_fee'],
-      'about':        verif?['about'],
+      'visiting_fee':   verif?['visiting_fee'],
+      'visiting_hours': verif?['visiting_hours'],
+      'chamber':        verif?['chamber'],
+      'about':          verif?['about'],
     };
   }
 
