@@ -17,7 +17,7 @@ class DoctorTodayScheduleScreen extends StatefulWidget {
       _DoctorTodayScheduleScreenState();
 }
 
-enum _ScheduleFilter { today, upcoming }
+enum _ScheduleFilter { today, upcoming, completed }
 
 class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
   final _apptSvc = AppointmentService();
@@ -69,9 +69,19 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
   List<Appointment> get _visibleAppointments {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+
+    if (_filter == _ScheduleFilter.completed) {
+      return _appointments
+          .where((a) => a.status == AppointmentStatus.completed)
+          .toList()
+        ..sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
+    }
+
     if (_filter == _ScheduleFilter.today) {
       return _appointments
-          .where((a) => _isSameDate(a.appointmentDate, today))
+          .where((a) =>
+              _isSameDate(a.appointmentDate, today) &&
+              a.status == AppointmentStatus.scheduled)
           .toList();
     }
 
@@ -81,7 +91,7 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
         a.appointmentDate.month,
         a.appointmentDate.day,
       );
-      return !d.isBefore(today);
+      return !d.isBefore(today) && a.status == AppointmentStatus.scheduled;
     }).toList();
 
     if (_selectedUpcomingDate != null) {
@@ -160,11 +170,15 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
               (prof?['full_name'] as String?)?.trim().isNotEmpty == true
               ? (prof!['full_name'] as String)
               : 'Patient',
-          patientPhone: prof?['phone'] as String?,
+          patientPhone:     prof?['phone']      as String?,
           patientAvatarUrl: prof?['avatar_url'] as String?,
+          appointmentId:    appt.status == AppointmentStatus.scheduled
+              ? appt.id
+              : null,
         ),
       ),
     );
+    if (mounted) _load();
   }
 
   @override
@@ -204,7 +218,7 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
                               final prof = _patientById[appt.userId];
                               return _ScheduleTile(
                                 appointment: appt,
-                                showDate: _filter == _ScheduleFilter.upcoming,
+                                showDate: _filter != _ScheduleFilter.today,
                                 patientName:
                                     (prof?['full_name'] as String?) ??
                                     'Patient',
@@ -244,7 +258,9 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
         : (_selectedUpcomingDate ?? now);
     final title = _filter == _ScheduleFilter.today
         ? "Today's Schedule"
-        : 'Upcoming Schedule';
+        : _filter == _ScheduleFilter.upcoming
+        ? 'Upcoming Schedule'
+        : 'Completed';
 
     return Container(
       decoration: BoxDecoration(
@@ -343,6 +359,15 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
                     : 'Upcoming: ${_selectedUpcomingDate!.day}/${_selectedUpcomingDate!.month}',
                 selected: _filter == _ScheduleFilter.upcoming,
                 onTap: () => setState(() => _filter = _ScheduleFilter.upcoming),
+              ),
+              const SizedBox(width: 8),
+              _FilterChip(
+                label: 'Completed',
+                selected: _filter == _ScheduleFilter.completed,
+                onTap: () => setState(() {
+                  _filter = _ScheduleFilter.completed;
+                  _selectedUpcomingDate = null;
+                }),
               ),
               const Spacer(),
               if (_filter == _ScheduleFilter.upcoming)
@@ -544,32 +569,24 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final isToday = filter == _ScheduleFilter.today;
+    final (icon, title, sub) = switch (filter) {
+      _ScheduleFilter.today     => (Icons.event_busy_rounded,     'No schedule for today',       'Today has no appointments yet.'),
+      _ScheduleFilter.upcoming  => (Icons.event_busy_rounded,     'No upcoming schedule found',  'No appointments found for upcoming dates.'),
+      _ScheduleFilter.completed => (Icons.check_circle_outline_rounded, 'No completed appointments', 'Prescriptions you write will appear here.'),
+    };
     return ListView(
       children: [
         const SizedBox(height: 90),
         Center(
           child: Column(
             children: [
-              Icon(Icons.event_busy_rounded, size: 66, color: c.textMuted),
+              Icon(icon, size: 66, color: c.textMuted),
               const SizedBox(height: 14),
-              Text(
-                isToday
-                    ? 'No schedule for today'
-                    : 'No upcoming schedule found',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: c.textSec,
-                ),
-              ),
+              Text(title,
+                  style: GoogleFonts.poppins(
+                      fontSize: 16, fontWeight: FontWeight.w600, color: c.textSec)),
               const SizedBox(height: 6),
-              Text(
-                isToday
-                    ? 'Today has no appointments yet.'
-                    : 'No appointments found for upcoming dates.',
-                style: GoogleFonts.poppins(fontSize: 13, color: c.textMuted),
-              ),
+              Text(sub, style: GoogleFonts.poppins(fontSize: 13, color: c.textMuted)),
             ],
           ),
         ),

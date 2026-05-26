@@ -22,6 +22,7 @@ class PatientDetailScreen extends StatefulWidget {
   final String  patientName;
   final String? patientPhone;
   final String? patientAvatarUrl;
+  final String? appointmentId; // if set, marks appointment completed on first Rx
 
   const PatientDetailScreen({
     super.key,
@@ -29,6 +30,7 @@ class PatientDetailScreen extends StatefulWidget {
     required this.patientName,
     this.patientPhone,
     this.patientAvatarUrl,
+    this.appointmentId,
   });
 
   @override
@@ -81,8 +83,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   Future<void> _goWriteRx() async {
     final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
       builder: (_) => DoctorWritePrescriptionScreen(
-        patientId:   widget.patientId,
-        patientName: widget.patientName,
+        patientId:     widget.patientId,
+        patientName:   widget.patientName,
+        appointmentId: widget.appointmentId,
       ),
     ));
     if (result == true) _load();

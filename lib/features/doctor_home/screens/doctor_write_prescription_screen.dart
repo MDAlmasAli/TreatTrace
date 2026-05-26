@@ -7,6 +7,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/doctor_verification_service.dart';
+import '../../appointment/models/appointment.dart';
+import '../../appointment/services/appointment_service.dart';
 import '../../prescription/models/prescription.dart';
 import '../../prescription/models/prescription_medicine.dart';
 import '../../prescription/services/prescription_service.dart';
@@ -14,13 +16,15 @@ import '../../prescription/services/prescription_service.dart';
 class DoctorWritePrescriptionScreen extends StatefulWidget {
   final String       patientId;
   final String       patientName;
-  final Prescription? existing; // null = new, non-null = edit
+  final Prescription? existing;    // null = new, non-null = edit
+  final String?      appointmentId; // if set, mark appointment completed on save
 
   const DoctorWritePrescriptionScreen({
     super.key,
     required this.patientId,
     required this.patientName,
     this.existing,
+    this.appointmentId,
   });
 
   @override
@@ -32,6 +36,7 @@ class _DoctorWritePrescriptionScreenState
     extends State<DoctorWritePrescriptionScreen> {
   final _svc         = PrescriptionService();
   final _dvrSvc      = DoctorVerificationService();
+  final _apptSvc     = AppointmentService();
   final _imagePicker = ImagePicker();
 
   final _diagnosisCtrl = TextEditingController();
@@ -212,6 +217,13 @@ class _DoctorWritePrescriptionScreenState
           prescription: rx,
           medicines:    medicines,
         );
+      }
+
+      if (!_isEdit && widget.appointmentId != null) {
+        try {
+          await _apptSvc.updateStatus(
+              widget.appointmentId!, AppointmentStatus.completed);
+        } catch (_) {}
       }
 
       if (mounted) {

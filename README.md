@@ -19,7 +19,7 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.24 — Active Development |
+| **Stage** | v0.25 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
@@ -28,6 +28,14 @@
 ---
 
 ## Latest Updates (2026-05-26)
+
+**v0.25 — Today's Schedule: Completed tab + auto-complete on Rx save**
+
+- **New "Completed" tab in Today's Schedule** — third filter chip alongside Today and Upcoming; shows all completed appointments sorted most-recent-first
+- **Auto-mark appointment as completed** — when a doctor writes and saves a new prescription for a patient opened from Today's Schedule, that appointment's status is automatically set to `completed` and moves out of the Today/Upcoming list into the Completed tab
+- **Today/Upcoming tabs now exclude completed** — only `scheduled` appointments appear in Today and Upcoming, so the list stays clean after each consultation
+- **Date shown on Completed tiles** — appointment date is displayed on each completed card (same as Upcoming)
+- **Schedule reloads on return** — navigating back from Patient Details always refreshes the list to reflect any status changes
 
 **v0.24 — Fix doctor prescription save RLS**
 
