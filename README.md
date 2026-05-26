@@ -19,15 +19,25 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.29 — Active Development |
+| **Stage** | v0.30 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-26 (v0.29) |
+| **Last Updated** | 2026-05-26 (v0.30) |
 
 ---
 
 ## Latest Updates (2026-05-26)
+
+**v0.30 — Search & sort in All Prescriptions screen**
+
+- **Search by diagnosis / medicine** — live text search bar filters the list as the doctor types; matches against diagnosis field and medicine names
+- **Filter by date** — date chip opens a date picker; selected date is shown as a highlighted chip with an inline × to clear; shows only prescriptions from that consultation date
+- **Sort toggle** — "Newest ↓ / Oldest ↑" chip toggles sort order with a single tap
+- **Clear all** — "Clear" link appears when any filter is active and resets everything at once
+- **Result count** — shows `filtered / total` when a filter is active so the doctor can see how many records match
+- **No-results state** — separate empty state for "no results" (search icon) vs "no prescriptions" (medication icon)
+- All filtering is client-side on the already-loaded list — no extra network calls
 
 **v0.29 — Multi-image select from Gallery for prescriptions and test reports**
 
