@@ -139,23 +139,38 @@ class _DoctorWritePrescriptionScreenState
     );
     if (source == null) return;
 
-    XFile? picked;
-    try {
-      picked = await _imagePicker.pickImage(source: source, imageQuality: 80, maxWidth: 1024);
-    } catch (e) {
-      if (mounted) _snack('Could not open camera: $e', isError: true);
-      return;
-    }
-    if (picked == null) return;
-
-    setState(() => _uploadingImage = true);
-    try {
-      final url = await _svc.uploadImage(picked);
-      if (url != null && mounted) setState(() => _imageUrls.add(url));
-    } catch (e) {
-      if (mounted) _snack('Image upload failed: $e', isError: true);
-    } finally {
-      if (mounted) setState(() => _uploadingImage = false);
+    if (source == ImageSource.gallery) {
+      final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
+      if (picked.isEmpty) return;
+      setState(() => _uploadingImage = true);
+      try {
+        for (final file in picked) {
+          final url = await _svc.uploadImage(file);
+          if (url != null && mounted) setState(() => _imageUrls.add(url));
+        }
+      } catch (e) {
+        if (mounted) _snack('Image upload failed: $e', isError: true);
+      } finally {
+        if (mounted) setState(() => _uploadingImage = false);
+      }
+    } else {
+      XFile? picked;
+      try {
+        picked = await _imagePicker.pickImage(source: source, imageQuality: 80, maxWidth: 1024);
+      } catch (e) {
+        if (mounted) _snack('Could not open camera: $e', isError: true);
+        return;
+      }
+      if (picked == null) return;
+      setState(() => _uploadingImage = true);
+      try {
+        final url = await _svc.uploadImage(picked);
+        if (url != null && mounted) setState(() => _imageUrls.add(url));
+      } catch (e) {
+        if (mounted) _snack('Image upload failed: $e', isError: true);
+      } finally {
+        if (mounted) setState(() => _uploadingImage = false);
+      }
     }
   }
 

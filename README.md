@@ -19,15 +19,21 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.28 — Active Development |
+| **Stage** | v0.29 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-26 (v0.28) |
+| **Last Updated** | 2026-05-26 (v0.29) |
 
 ---
 
 ## Latest Updates (2026-05-26)
+
+**v0.29 — Multi-image select from Gallery for prescriptions and test reports**
+
+- **Gallery now supports multi-select** — tapping Gallery opens the native multi-image picker; all selected images are uploaded sequentially and added to the form
+- **Camera remains single-shot** — camera path unchanged, still picks one photo at a time
+- Applies to all 4 upload screens: doctor prescription, doctor lab report, patient prescription, patient test report
 
 **v0.28 — Fix: appointment not moving to Completed after prescription save**
 

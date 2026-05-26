@@ -176,21 +176,39 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
   Future<void> _pickImage() async {
     final source = await _showSourceDialog();
     if (source == null) return;
-    final picked = await _imagePicker.pickImage(
-        source: source, imageQuality: 80, maxWidth: 1024);
-    if (picked == null) return;
 
-    setState(() => _uploadingImage = true);
-    try {
-      final url = await _reportService.uploadImage(picked);
-      if (url != null && mounted) setState(() => _imageUrls.add(url));
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Image upload failed: $e')));
+    if (source == ImageSource.gallery) {
+      final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
+      if (picked.isEmpty) return;
+      setState(() => _uploadingImage = true);
+      try {
+        for (final file in picked) {
+          final url = await _reportService.uploadImage(file);
+          if (url != null && mounted) setState(() => _imageUrls.add(url));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Image upload failed: $e')));
+        }
+      } finally {
+        if (mounted) setState(() => _uploadingImage = false);
       }
-    } finally {
-      if (mounted) setState(() => _uploadingImage = false);
+    } else {
+      final picked = await _imagePicker.pickImage(source: source, imageQuality: 80, maxWidth: 1024);
+      if (picked == null) return;
+      setState(() => _uploadingImage = true);
+      try {
+        final url = await _reportService.uploadImage(picked);
+        if (url != null && mounted) setState(() => _imageUrls.add(url));
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Image upload failed: $e')));
+        }
+      } finally {
+        if (mounted) setState(() => _uploadingImage = false);
+      }
     }
   }
 

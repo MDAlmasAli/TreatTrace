@@ -123,30 +123,47 @@ class _AddEditPrescriptionScreenState
     final source = await _showSourceDialog();
     if (source == null) return;
 
-    XFile? picked;
-    try {
-      picked = await _imagePicker.pickImage(
-          source: source, imageQuality: 80, maxWidth: 1024);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not open camera: $e')));
+    if (source == ImageSource.gallery) {
+      final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
+      if (picked.isEmpty) return;
+      setState(() => _uploadingImage = true);
+      try {
+        for (final file in picked) {
+          final url = await _prescService.uploadImage(file);
+          if (url != null && mounted) setState(() => _imageUrls.add(url));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Image upload failed: $e')));
+        }
+      } finally {
+        if (mounted) setState(() => _uploadingImage = false);
       }
-      return;
-    }
-    if (picked == null) return;
-
-    setState(() => _uploadingImage = true);
-    try {
-      final url = await _prescService.uploadImage(picked);
-      if (url != null && mounted) setState(() => _imageUrls.add(url));
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Image upload failed: $e')));
+    } else {
+      XFile? picked;
+      try {
+        picked = await _imagePicker.pickImage(source: source, imageQuality: 80, maxWidth: 1024);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not open camera: $e')));
+        }
+        return;
       }
-    } finally {
-      if (mounted) setState(() => _uploadingImage = false);
+      if (picked == null) return;
+      setState(() => _uploadingImage = true);
+      try {
+        final url = await _prescService.uploadImage(picked);
+        if (url != null && mounted) setState(() => _imageUrls.add(url));
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Image upload failed: $e')));
+        }
+      } finally {
+        if (mounted) setState(() => _uploadingImage = false);
+      }
     }
   }
 
