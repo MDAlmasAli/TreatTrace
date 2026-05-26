@@ -19,15 +19,21 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.27 — Active Development |
+| **Stage** | v0.28 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-26 (v0.27) |
+| **Last Updated** | 2026-05-26 (v0.28) |
 
 ---
 
 ## Latest Updates (2026-05-26)
+
+**v0.28 — Fix: appointment not moving to Completed after prescription save**
+
+- **Root cause**: `appointments` table had a SELECT policy for doctors (v07) but no UPDATE policy — `updateStatus()` was silently blocked by RLS; the `catch (_) {}` hid the error so the appointment stayed `scheduled`
+- **Fix**: Added `doctor_updates_own_appointment` UPDATE policy (USING + WITH CHECK on `doctor_user_id = auth.uid()`) and `patient_updates_own_appointment` policy for patient-side cancellations
+- **Database migration v16**
 
 **v0.27 — Prescription View screen + Edit History + Show More**
 
