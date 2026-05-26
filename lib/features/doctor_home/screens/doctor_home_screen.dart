@@ -552,14 +552,32 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
                         const SizedBox(height: 14),
 
-                        _ActionCard(
-                          icon: Icons.edit_document,
-                          label: 'Write Prescription',
-                          subtitle: 'Select a patient to write',
-                          accentColor: c.amber,
-                          onTap: _goMyPatients,
-                          fullWidth: true,
-                        ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.08),
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _ActionCard(
+                                  icon: Icons.edit_document,
+                                  label: 'Write Prescription',
+                                  subtitle: 'Select patient to write',
+                                  accentColor: c.amber,
+                                  onTap: _goMyPatients,
+                                ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.08),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: _ActionCard(
+                                  icon: Icons.schedule_rounded,
+                                  label: 'Visiting Info',
+                                  subtitle: 'Hours, fee & chamber',
+                                  accentColor: c.accent,
+                                  onTap: _showVisitingInfoSheet,
+                                ).animate().fadeIn(delay: 280.ms).slideY(begin: 0.08),
+                              ),
+                            ],
+                          ),
+                        ),
 
                         const SizedBox(height: 32),
 
@@ -1036,7 +1054,6 @@ class _ActionCard extends StatelessWidget {
   final String subtitle;
   final Color accentColor;
   final VoidCallback onTap;
-  final bool fullWidth;
 
   const _ActionCard({
     required this.icon,
@@ -1044,7 +1061,6 @@ class _ActionCard extends StatelessWidget {
     required this.subtitle,
     required this.accentColor,
     required this.onTap,
-    this.fullWidth = false,
   });
 
   Widget _arrowBox(Color color) => Container(
@@ -1072,62 +1088,31 @@ class _ActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
 
-    final inner = fullWidth
-        // Horizontal layout — no Spacer needed, works without bounded height
-        ? Row(
-            children: [
-              _iconBox(accentColor),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: c.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.poppins(
-                          fontSize: 11, color: c.textSec),
-                    ),
-                  ],
-                ),
-              ),
-              _arrowBox(accentColor),
-            ],
-          )
-        // Vertical layout — must be inside IntrinsicHeight for Spacer to work
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _iconBox(accentColor),
-              const SizedBox(height: 14),
-              Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: c.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: GoogleFonts.poppins(fontSize: 11, color: c.textSec),
-              ),
-              const Spacer(),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: _arrowBox(accentColor),
-              ),
-            ],
-          );
+    final inner = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _iconBox(accentColor),
+        const SizedBox(height: 14),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: c.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: GoogleFonts.poppins(fontSize: 11, color: c.textSec),
+        ),
+        const Spacer(),
+        Align(
+          alignment: Alignment.bottomRight,
+          child: _arrowBox(accentColor),
+        ),
+      ],
+    );
 
     return Material(
       color: c.card,
