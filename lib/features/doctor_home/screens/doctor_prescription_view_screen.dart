@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/theme_colors.dart';
+import '../../../core/utils/file_utils.dart';
 import '../../prescription/models/prescription.dart';
 import '../../prescription/services/prescription_service.dart';
 import 'doctor_write_prescription_screen.dart';
@@ -204,29 +206,52 @@ class _DoctorPrescriptionViewScreenState
                   ]),
                 ],
 
-                // ── Images ───────────────────────────────────────────────────
+                // ── Files ────────────────────────────────────────────────────
                 if (rx.imageUrls.isNotEmpty) ...[
                   const SizedBox(height: 24),
-                  _SectionLabel(label: 'Prescription Images', icon: Icons.image_rounded, color: c.textSec),
+                  _SectionLabel(label: 'Prescription Files', icon: Icons.attach_file_rounded, color: c.textSec),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
-                    children: rx.imageUrls.map((url) => GestureDetector(
-                      onTap: () => _showFullImage(context, url),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(url, width: 90, height: 90, fit: BoxFit.cover,
-                            errorBuilder: (ctx, err, st) => Container(
-                              width: 90, height: 90,
-                              decoration: BoxDecoration(
-                                color:        c.surface,
+                    children: rx.imageUrls.map((url) {
+                      final isImg = isImageUrl(url);
+                      return GestureDetector(
+                        onTap: () => isImg
+                            ? _showFullImage(context, url)
+                            : launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+                        child: isImg
+                            ? ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
+                                child: Image.network(url, width: 90, height: 90, fit: BoxFit.cover,
+                                    errorBuilder: (ctx, err, st) => Container(
+                                      width: 90, height: 90,
+                                      decoration: BoxDecoration(
+                                        color:        c.surface,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(Icons.broken_image_rounded, color: c.textMuted),
+                                    )),
+                              )
+                            : Container(
+                                width: 90, height: 90,
+                                decoration: BoxDecoration(
+                                  color:        Colors.orange.withAlpha(20),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border:       Border.all(color: Colors.orange.withAlpha(80)),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.picture_as_pdf_rounded, color: Colors.orange, size: 32),
+                                    const SizedBox(height: 4),
+                                    Text(extFromUrl(url).toUpperCase(),
+                                        style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.orange)),
+                                  ],
+                                ),
                               ),
-                              child: Icon(Icons.broken_image_rounded, color: c.textMuted),
-                            )),
-                      ),
-                    )).toList(),
+                      );
+                    }).toList(),
                   ),
                 ],
 

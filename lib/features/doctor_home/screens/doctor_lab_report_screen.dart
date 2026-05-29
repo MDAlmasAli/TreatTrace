@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
+import '../../../core/utils/file_utils.dart';
 import '../../test_report/models/lab_report.dart';
 import '../../test_report/services/lab_report_service.dart';
+
+enum _UploadSource { gallery, camera, document }
 
 class DoctorLabReportScreen extends StatefulWidget {
   final String     patientId;
@@ -76,60 +80,89 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
     if (picked != null) setState(() => _testDate = picked);
   }
 
-  Future<void> _pickImage() async {
-    final source = await showDialog<ImageSource>(
+  Future<void> _pickAttachment() async {
+    final c = context.colors;
+    final source = await showDialog<_UploadSource>(
       context: context,
-      builder: (ctx) {
-        final c = ctx.colors;
-        return AlertDialog(
-          backgroundColor: c.card,
-          title: Text('Choose source',
-              style: GoogleFonts.poppins(
-                  color: c.textPrimary, fontWeight: FontWeight.w600)),
-          actions: [
-            TextButton.icon(
-              icon:  Icon(Icons.photo_library_rounded, color: c.accent),
-              label: Text('Gallery', style: GoogleFonts.poppins(color: c.accent)),
-              onPressed: () => Navigator.of(ctx).pop(ImageSource.gallery),
-            ),
-            TextButton.icon(
-              icon:  Icon(Icons.camera_alt_rounded, color: c.green),
-              label: Text('Camera', style: GoogleFonts.poppins(color: c.green)),
-              onPressed: () => Navigator.of(ctx).pop(ImageSource.camera),
-            ),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.card,
+        title: Text('Add attachment',
+            style: GoogleFonts.poppins(
+                color: c.textPrimary, fontWeight: FontWeight.w600)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _sourceTile(ctx, Icons.photo_library_rounded, c.accent, 'Gallery (Images)', _UploadSource.gallery),
+            _sourceTile(ctx, Icons.camera_alt_rounded,    c.green,  'Camera',           _UploadSource.camera),
+            _sourceTile(ctx, Icons.attach_file_rounded,   c.amber,  'Document (PDF, Word)', _UploadSource.document),
           ],
-        );
-      },
+        ),
+      ),
     );
     if (source == null) return;
 
-    if (source == ImageSource.gallery) {
-      final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
-      if (picked.isEmpty) return;
-      setState(() => _uploadingImage = true);
-      try {
-        for (final file in picked) {
-          final url = await _svc.uploadImage(file);
-          if (url != null && mounted) setState(() => _imageUrls.add(url));
+    switch (source) {
+      case _UploadSource.gallery:
+        final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
+        if (picked.isEmpty) return;
+        setState(() => _uploadingImage = true);
+        try {
+          for (final file in picked) {
+            final url = await _svc.uploadImage(file);
+            if (url != null && mounted) setState(() => _imageUrls.add(url));
+          }
+        } catch (e) {
+          if (mounted) _snack('Upload failed: $e', isError: true);
+        } finally {
+          if (mounted) setState(() => _uploadingImage = false);
         }
-      } catch (e) {
-        if (mounted) _snack('Image upload failed: $e', isError: true);
-      } finally {
-        if (mounted) setState(() => _uploadingImage = false);
-      }
-    } else {
-      final picked = await _imagePicker.pickImage(source: source, imageQuality: 80, maxWidth: 1024);
-      if (picked == null) return;
-      setState(() => _uploadingImage = true);
-      try {
-        final url = await _svc.uploadImage(picked);
-        if (url != null && mounted) setState(() => _imageUrls.add(url));
-      } catch (e) {
-        if (mounted) _snack('Image upload failed: $e', isError: true);
-      } finally {
-        if (mounted) setState(() => _uploadingImage = false);
-      }
+
+      case _UploadSource.camera:
+        final picked = await _imagePicker.pickImage(source: ImageSource.camera, imageQuality: 80, maxWidth: 1024);
+        if (picked == null) return;
+        setState(() => _uploadingImage = true);
+        try {
+          final url = await _svc.uploadImage(picked);
+          if (url != null && mounted) setState(() => _imageUrls.add(url));
+        } catch (e) {
+          if (mounted) _snack('Upload failed: $e', isError: true);
+        } finally {
+          if (mounted) setState(() => _uploadingImage = false);
+        }
+
+      case _UploadSource.document:
+        final result = await FilePicker.platform.pickFiles(
+          type:              FileType.custom,
+          allowedExtensions: ['pdf', 'doc', 'docx'],
+          allowMultiple:     true,
+        );
+        if (result == null || result.files.isEmpty) return;
+        setState(() => _uploadingImage = true);
+        try {
+          for (final file in result.files) {
+            final url = await _svc.uploadDocument(file);
+            if (url != null && mounted) setState(() => _imageUrls.add(url));
+          }
+        } catch (e) {
+          if (mounted) _snack('Upload failed: $e', isError: true);
+        } finally {
+          if (mounted) setState(() => _uploadingImage = false);
+        }
     }
+  }
+
+  Widget _sourceTile(BuildContext ctx, IconData icon, Color color, String label, _UploadSource val) {
+    final c = ctx.colors;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        width: 38, height: 38,
+        decoration: BoxDecoration(color: color.withAlpha(20), borderRadius: BorderRadius.circular(10)),
+        child: Icon(icon, color: color, size: 20),
+      ),
+      title: Text(label, style: GoogleFonts.poppins(fontSize: 13, color: c.textPrimary)),
+      onTap: () => Navigator.of(ctx).pop(val),
+    );
   }
 
   Future<void> _save() async {
@@ -329,6 +362,24 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
     );
   }
 
+  Widget _docFileTile(String ext, ThemeColors c) => Container(
+    width: 80, height: 80,
+    decoration: BoxDecoration(
+      color:        c.amber.withAlpha(20),
+      borderRadius: BorderRadius.circular(10),
+      border:       Border.all(color: c.amber.withAlpha(80)),
+    ),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.picture_as_pdf_rounded, color: c.amber, size: 28),
+        const SizedBox(height: 4),
+        Text(ext.toUpperCase(),
+            style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: c.amber)),
+      ],
+    ),
+  );
+
   Widget _buildImageSection(ThemeColors c) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -348,7 +399,7 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
                   style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary)),
               const Spacer(),
               GestureDetector(
-                onTap: _uploadingImage ? null : _pickImage,
+                onTap: _uploadingImage ? null : _pickAttachment,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
@@ -375,34 +426,35 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _imageUrls.map((url) => Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.network(url, width: 80, height: 80, fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, st) => Container(
-                          width: 80, height: 80,
-                          decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(10)),
-                          child: Icon(Icons.broken_image_rounded, color: c.textMuted),
-                        )),
-                  ),
-                  Positioned(
-                    top: 3, right: 3,
-                    child: GestureDetector(
-                      onTap: () => setState(() => _imageUrls.remove(url)),
-                      child: Container(
-                        width: 20, height: 20,
-                        decoration: BoxDecoration(color: c.red, shape: BoxShape.circle),
-                        child: const Icon(Icons.close_rounded, color: Colors.white, size: 13),
+              children: _imageUrls.map((url) {
+                final isImg = isImageUrl(url);
+                return Stack(
+                  children: [
+                    isImg
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(url, width: 80, height: 80, fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => _docFileTile(extFromUrl(url), c)),
+                          )
+                        : _docFileTile(extFromUrl(url), c),
+                    Positioned(
+                      top: 3, right: 3,
+                      child: GestureDetector(
+                        onTap: () => setState(() => _imageUrls.remove(url)),
+                        child: Container(
+                          width: 20, height: 20,
+                          decoration: BoxDecoration(color: c.red, shape: BoxShape.circle),
+                          child: const Icon(Icons.close_rounded, color: Colors.white, size: 13),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              )).toList(),
+                  ],
+                );
+              }).toList(),
             ),
           ] else ...[
             const SizedBox(height: 8),
-            Text('No images added', style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted)),
+            Text('No files added', style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted)),
           ],
         ],
       ),

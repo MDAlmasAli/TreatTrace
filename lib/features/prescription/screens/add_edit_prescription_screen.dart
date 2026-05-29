@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -11,10 +12,13 @@ import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/profile_service.dart';
 import '../../../core/services/reminder_service.dart';
+import '../../../core/utils/file_utils.dart';
 import '../../../core/widgets/linked_doctor_picker_card.dart';
 import '../models/prescription.dart';
 import '../models/prescription_medicine.dart';
 import '../services/prescription_service.dart';
+
+enum _UploadSource { gallery, camera, document }
 
 class AddEditPrescriptionScreen extends StatefulWidget {
   final Prescription? existing;
@@ -119,80 +123,102 @@ class _AddEditPrescriptionScreenState
 
   // ── Image upload ──────────────────────────────────────────────────────────
 
-  Future<void> _pickImage() async {
+  Future<void> _pickAttachment() async {
     final source = await _showSourceDialog();
     if (source == null) return;
 
-    if (source == ImageSource.gallery) {
-      final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
-      if (picked.isEmpty) return;
-      setState(() => _uploadingImage = true);
-      try {
-        for (final file in picked) {
-          final url = await _prescService.uploadImage(file);
+    switch (source) {
+      case _UploadSource.gallery:
+        final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
+        if (picked.isEmpty) return;
+        setState(() => _uploadingImage = true);
+        try {
+          for (final file in picked) {
+            final url = await _prescService.uploadImage(file);
+            if (url != null && mounted) setState(() => _imageUrls.add(url));
+          }
+        } catch (e) {
+          if (mounted) { ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Upload failed: $e'))); }
+        } finally {
+          if (mounted) setState(() => _uploadingImage = false);
+        }
+
+      case _UploadSource.camera:
+        XFile? picked;
+        try {
+          picked = await _imagePicker.pickImage(source: ImageSource.camera, imageQuality: 80, maxWidth: 1024);
+        } catch (e) {
+          if (mounted) { ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not open camera: $e'))); }
+          return;
+        }
+        if (picked == null) return;
+        setState(() => _uploadingImage = true);
+        try {
+          final url = await _prescService.uploadImage(picked);
           if (url != null && mounted) setState(() => _imageUrls.add(url));
+        } catch (e) {
+          if (mounted) { ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Upload failed: $e'))); }
+        } finally {
+          if (mounted) setState(() => _uploadingImage = false);
         }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Image upload failed: $e')));
+
+      case _UploadSource.document:
+        final result = await FilePicker.platform.pickFiles(
+          type:              FileType.custom,
+          allowedExtensions: ['pdf', 'doc', 'docx'],
+          allowMultiple:     true,
+        );
+        if (result == null || result.files.isEmpty) return;
+        setState(() => _uploadingImage = true);
+        try {
+          for (final file in result.files) {
+            final url = await _prescService.uploadDocument(file);
+            if (url != null && mounted) setState(() => _imageUrls.add(url));
+          }
+        } catch (e) {
+          if (mounted) { ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Upload failed: $e'))); }
+        } finally {
+          if (mounted) setState(() => _uploadingImage = false);
         }
-      } finally {
-        if (mounted) setState(() => _uploadingImage = false);
-      }
-    } else {
-      XFile? picked;
-      try {
-        picked = await _imagePicker.pickImage(source: source, imageQuality: 80, maxWidth: 1024);
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Could not open camera: $e')));
-        }
-        return;
-      }
-      if (picked == null) return;
-      setState(() => _uploadingImage = true);
-      try {
-        final url = await _prescService.uploadImage(picked);
-        if (url != null && mounted) setState(() => _imageUrls.add(url));
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Image upload failed: $e')));
-        }
-      } finally {
-        if (mounted) setState(() => _uploadingImage = false);
-      }
     }
   }
 
-  Future<ImageSource?> _showSourceDialog() {
+  Future<_UploadSource?> _showSourceDialog() {
     final c = context.colors;
-    return showDialog<ImageSource>(
+    return showDialog<_UploadSource>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: c.card,
-        title: Text('Choose source',
+        title: Text('Add attachment',
             style: GoogleFonts.poppins(
                 color: c.textPrimary, fontWeight: FontWeight.w600)),
-        actions: [
-          TextButton.icon(
-            icon:     Icon(Icons.photo_library_rounded,
-                          color: c.purpleBright),
-            label:    Text('Gallery',
-                          style: GoogleFonts.poppins(
-                              color: c.purpleBright)),
-            onPressed: () => Navigator.of(ctx).pop(ImageSource.gallery),
-          ),
-          TextButton.icon(
-            icon:     Icon(Icons.camera_alt_rounded,
-                          color: c.cyan),
-            label:    Text('Camera',
-                          style: GoogleFonts.poppins(color: c.cyan)),
-            onPressed: () => Navigator.of(ctx).pop(ImageSource.camera),
-          ),
-        ],
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _SourceTile(
+              icon:  Icons.photo_library_rounded,
+              color: c.purpleBright,
+              label: 'Gallery (Images)',
+              onTap: () => Navigator.of(ctx).pop(_UploadSource.gallery),
+            ),
+            _SourceTile(
+              icon:  Icons.camera_alt_rounded,
+              color: c.cyan,
+              label: 'Camera',
+              onTap: () => Navigator.of(ctx).pop(_UploadSource.camera),
+            ),
+            _SourceTile(
+              icon:  Icons.attach_file_rounded,
+              color: c.amber,
+              label: 'Document (PDF, Word)',
+              onTap: () => Navigator.of(ctx).pop(_UploadSource.document),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -345,7 +371,7 @@ class _AddEditPrescriptionScreenState
                     _MultiImageUploadCard(
                       imageUrls: _imageUrls,
                       uploading: _uploadingImage,
-                      onAdd:     _pickImage,
+                      onAdd:     _pickAttachment,
                       onRemove:  (url) => setState(() => _imageUrls.remove(url)),
                     ),
 
@@ -642,7 +668,7 @@ class _DateRow extends StatelessWidget {
   }
 }
 
-// Multi-image grid: shows existing pages + an "Add Page" tile
+// Multi-image/document grid: shows existing attachments + an "Add" tile
 class _MultiImageUploadCard extends StatelessWidget {
   final List<String>           imageUrls;
   final bool                   uploading;
@@ -660,33 +686,20 @@ class _MultiImageUploadCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final items = <Widget>[
-      // Existing image thumbnails
       ...imageUrls.asMap().entries.map((e) {
-        final idx = e.key;
-        final url = e.value;
+        final idx  = e.key;
+        final url  = e.value;
+        final isImg = isImageUrl(url);
         return Stack(
           clipBehavior: Clip.none,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                url,
-                width:  90,
-                height: 110,
-                fit:    BoxFit.cover,
-                errorBuilder: (ctx, err, st) => Container(
-                  width: 90, height: 110,
-                  decoration: BoxDecoration(
-                    color:        c.surface,
+            isImg
+                ? ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    border:       Border.all(color: c.border),
-                  ),
-                  child: Icon(Icons.broken_image_rounded,
-                      color: c.purpleBright),
-                ),
-              ),
-            ),
-            // Page label
+                    child: Image.network(url, width: 90, height: 110, fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _docTile(extFromUrl(url), c)),
+                  )
+                : _docTile(extFromUrl(url), c),
             Positioned(
               bottom: 4, left: 4,
               child: Container(
@@ -695,14 +708,10 @@ class _MultiImageUploadCard extends StatelessWidget {
                   color:        Colors.black54,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
-                  'Page ${idx + 1}',
-                  style: GoogleFonts.poppins(
-                      fontSize: 9, color: Colors.white),
-                ),
+                child: Text('${idx + 1}',
+                    style: GoogleFonts.poppins(fontSize: 9, color: Colors.white)),
               ),
             ),
-            // Remove button
             Positioned(
               top: -6, right: -6,
               child: GestureDetector(
@@ -714,8 +723,7 @@ class _MultiImageUploadCard extends StatelessWidget {
                     shape:  BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 1.5),
                   ),
-                  child: const Icon(Icons.close_rounded,
-                      color: Colors.white, size: 12),
+                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 12),
                 ),
               ),
             ),
@@ -723,7 +731,6 @@ class _MultiImageUploadCard extends StatelessWidget {
         );
       }),
 
-      // "Add page" tile
       GestureDetector(
         onTap: uploading ? null : onAdd,
         child: Container(
@@ -731,29 +738,20 @@ class _MultiImageUploadCard extends StatelessWidget {
           decoration: BoxDecoration(
             color:        c.card,
             borderRadius: BorderRadius.circular(12),
-            border:       Border.all(
-                color: c.purpleBright.withAlpha(100),
-                width: 1.5),
+            border:       Border.all(color: c.purpleBright.withAlpha(100), width: 1.5),
           ),
           child: uploading
-              ? Center(
-                  child: SizedBox(
-                    width: 20, height: 20,
-                    child: CircularProgressIndicator(
-                        color: c.purpleBright, strokeWidth: 2),
-                  ),
-                )
+              ? Center(child: SizedBox(width: 20, height: 20,
+                  child: CircularProgressIndicator(color: c.purpleBright, strokeWidth: 2)))
               : Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.add_photo_alternate_rounded,
-                        color: c.purpleBright, size: 26),
+                    Icon(Icons.add_rounded, color: c.purpleBright, size: 26),
                     const SizedBox(height: 4),
                     Text(
-                      imageUrls.isEmpty ? 'Add\nImage' : 'Add\nPage',
+                      imageUrls.isEmpty ? 'Add\nFile' : 'Add\nMore',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                          fontSize: 10, color: c.purpleBright),
+                      style: GoogleFonts.poppins(fontSize: 10, color: c.purpleBright),
                     ),
                   ],
                 ),
@@ -761,10 +759,60 @@ class _MultiImageUploadCard extends StatelessWidget {
       ),
     ];
 
-    return Wrap(
-      spacing:    10,
-      runSpacing: 10,
-      children:   items,
+    return Wrap(spacing: 10, runSpacing: 10, children: items);
+  }
+
+  Widget _docTile(String ext, ThemeColors c) {
+    return Container(
+      width: 90, height: 110,
+      decoration: BoxDecoration(
+        color:        c.amber.withAlpha(20),
+        borderRadius: BorderRadius.circular(12),
+        border:       Border.all(color: c.amber.withAlpha(80)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.picture_as_pdf_rounded, color: c.amber, size: 32),
+          const SizedBox(height: 6),
+          Text(ext.toUpperCase(),
+              style: GoogleFonts.poppins(
+                  fontSize: 11, fontWeight: FontWeight.w700, color: c.amber)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SourceTile extends StatelessWidget {
+  final IconData     icon;
+  final Color        color;
+  final String       label;
+  final VoidCallback onTap;
+
+  const _SourceTile({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        width: 38, height: 38,
+        decoration: BoxDecoration(
+          color:        color.withAlpha(20),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: color, size: 20),
+      ),
+      title: Text(label,
+          style: GoogleFonts.poppins(fontSize: 13, color: c.textPrimary)),
+      onTap: onTap,
     );
   }
 }

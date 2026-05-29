@@ -19,15 +19,25 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.36 — Active Development |
+| **Stage** | v0.37 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-29 (v0.36) |
+| **Last Updated** | 2026-05-29 (v0.37) |
 
 ---
 
 ## Latest Updates (2026-05-29)
+
+**v0.37 — File upload support for prescriptions and test reports**
+
+- **PDF / DOC / DOCX upload** — both patients and doctors can now attach documents (not just images) to prescriptions and test reports
+- **Upload dialog** extended with a third "Document" option alongside Gallery and Camera; uses `file_picker` to pick PDF, DOC, DOCX from device storage
+- **PDF tile in upload card** — non-image attachments render as an amber icon tile (with file extension label) instead of a broken image thumbnail
+- **Gallery detail screens updated** — `_ReportGallery`, `_PrescriptionGallery`, and the doctor prescription view now detect file type via `isImageUrl()`:
+  - Image URLs → shown in the existing swipeable photo viewer / full-screen viewer
+  - Document URLs → shown as a tappable document tile; tap opens the file in the device's default external browser via `url_launcher`
+- Shared helper `lib/core/utils/file_utils.dart` (`isImageUrl`, `extFromUrl`) used across all screens for consistent file-type detection
 
 **v0.36 — Linked Prescription is now tappable in Test Report detail**
 

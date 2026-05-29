@@ -40,6 +40,12 @@ dependencies:
   # PDF printing/sharing — share prescription PDF
   printing: ^5.13.2
 
+  # File picker — pick PDFs and other documents for upload
+  file_picker: ^8.1.2
+
+  # URL launcher — open documents in browser / external app
+  url_launcher: ^6.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

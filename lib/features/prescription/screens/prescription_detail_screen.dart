@@ -10,11 +10,13 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/profile_service.dart';
 import '../../../core/services/reminder_service.dart';
+import '../../../core/utils/file_utils.dart';
 import '../models/prescription.dart';
 import '../models/prescription_medicine.dart';
 import '../services/prescription_service.dart';
@@ -907,20 +909,42 @@ class _PrescriptionGalleryState extends State<_PrescriptionGallery> {
               controller: _controller,
               itemCount: widget.urls.length,
               onPageChanged: (i) => setState(() => _current = i),
-              itemBuilder: (_, i) => GestureDetector(
-                onTap: () => _showFullScreen(context, i),
-                child: Image.network(
-                  widget.urls[i],
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    color: c.card,
-                    child: Center(
-                      child: Icon(Icons.broken_image_rounded,
-                          color: c.purpleBright, size: 36),
+              itemBuilder: (_, i) {
+                final url = widget.urls[i];
+                if (!isImageUrl(url)) {
+                  return GestureDetector(
+                    onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+                    child: Container(
+                      color: c.card,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.insert_drive_file_rounded, color: Colors.orange, size: 64),
+                          const SizedBox(height: 12),
+                          Text(extFromUrl(url).toUpperCase(),
+                              style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.orange)),
+                          const SizedBox(height: 8),
+                          Text('Tap to open', style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted)),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                return GestureDetector(
+                  onTap: () => _showFullScreen(context, i),
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      color: c.card,
+                      child: Center(
+                        child: Icon(Icons.broken_image_rounded,
+                            color: c.purpleBright, size: 36),
+                      ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ),
@@ -1001,11 +1025,33 @@ class _FullScreenGalleryState extends State<_FullScreenGallery> {
         controller: PageController(initialPage: widget.initialIndex),
         itemCount: widget.urls.length,
         onPageChanged: (i) => setState(() => _current = i),
-        itemBuilder: (_, i) => Center(
-          child: InteractiveViewer(
-            child: Image.network(widget.urls[i]),
-          ),
-        ),
+        itemBuilder: (_, i) {
+          final url = widget.urls[i];
+          if (!isImageUrl(url)) {
+            return GestureDetector(
+              onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.insert_drive_file_rounded, color: Colors.orange, size: 80),
+                    const SizedBox(height: 16),
+                    Text(extFromUrl(url).toUpperCase(),
+                        style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.orange)),
+                    const SizedBox(height: 8),
+                    Text('Tap to open in browser',
+                        style: GoogleFonts.poppins(fontSize: 13, color: Colors.white70)),
+                  ],
+                ),
+              ),
+            );
+          }
+          return Center(
+            child: InteractiveViewer(
+              child: Image.network(url),
+            ),
+          );
+        },
       ),
     );
   }

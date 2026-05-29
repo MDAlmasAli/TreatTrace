@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/utils/file_utils.dart';
 import '../models/lab_report.dart';
 import '../services/lab_report_service.dart';
 import 'add_edit_lab_report_screen.dart';
@@ -504,20 +506,29 @@ class _ReportGalleryState extends State<_ReportGallery> {
               controller: _ctrl,
               itemCount:  widget.urls.length,
               onPageChanged: (i) => setState(() => _current = i),
-              itemBuilder: (_, i) => GestureDetector(
-                onTap: () => _showFullScreen(context, i),
-                child: Image.network(
-                  widget.urls[i],
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    color: c.card,
-                    child: Center(
-                      child: Icon(Icons.broken_image_rounded,
-                          color: c.cyan, size: 36),
+              itemBuilder: (_, i) {
+                final url = widget.urls[i];
+                if (!isImageUrl(url)) {
+                  return GestureDetector(
+                    onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+                    child: _docPageTile(extFromUrl(url), c),
+                  );
+                }
+                return GestureDetector(
+                  onTap: () => _showFullScreen(context, i),
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      color: c.card,
+                      child: Center(
+                        child: Icon(Icons.broken_image_rounded,
+                            color: c.cyan, size: 36),
+                      ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ),
@@ -547,6 +558,23 @@ class _ReportGalleryState extends State<_ReportGallery> {
           ),
         ],
       ],
+    );
+  }
+
+  Widget _docPageTile(String ext, ThemeColors c) {
+    return Container(
+      color: c.card,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.insert_drive_file_rounded, color: Colors.orange, size: 64),
+          const SizedBox(height: 12),
+          Text(ext.toUpperCase(),
+              style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.orange)),
+          const SizedBox(height: 8),
+          Text('Tap to open', style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted)),
+        ],
+      ),
     );
   }
 
@@ -598,11 +626,33 @@ class _FullScreenGalleryState extends State<_FullScreenGallery> {
         controller: PageController(initialPage: widget.initialIndex),
         itemCount:  widget.urls.length,
         onPageChanged: (i) => setState(() => _current = i),
-        itemBuilder: (_, i) => Center(
-          child: InteractiveViewer(
-            child: Image.network(widget.urls[i]),
-          ),
-        ),
+        itemBuilder: (_, i) {
+          final url = widget.urls[i];
+          if (!isImageUrl(url)) {
+            return GestureDetector(
+              onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.insert_drive_file_rounded, color: Colors.orange, size: 80),
+                    const SizedBox(height: 16),
+                    Text(extFromUrl(url).toUpperCase(),
+                        style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.orange)),
+                    const SizedBox(height: 8),
+                    Text('Tap to open in browser',
+                        style: GoogleFonts.poppins(fontSize: 13, color: Colors.white70)),
+                  ],
+                ),
+              ),
+            );
+          }
+          return Center(
+            child: InteractiveViewer(
+              child: Image.network(url),
+            ),
+          );
+        },
       ),
     );
   }

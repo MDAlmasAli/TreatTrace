@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -5,14 +6,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/doctor_verification_service.dart';
+import '../../../core/theme/theme_colors.dart';
+import '../../../core/utils/file_utils.dart';
 import '../../appointment/models/appointment.dart';
 import '../../appointment/services/appointment_service.dart';
 import '../../prescription/models/prescription.dart';
-import '../services/doctor_patient_link_service.dart';
 import '../../prescription/models/prescription_medicine.dart';
 import '../../prescription/services/prescription_service.dart';
+import '../services/doctor_patient_link_service.dart';
+
+enum _UploadSource { gallery, camera, document }
 
 class DoctorWritePrescriptionScreen extends StatefulWidget {
   final String       patientId;
@@ -115,63 +119,107 @@ class _DoctorWritePrescriptionScreenState
     setState(() => _meds.removeAt(i));
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickAttachment() async {
     final c = context.colors;
-    final source = await showDialog<ImageSource>(
+    final source = await showDialog<_UploadSource>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: c.card,
-        title: Text('Choose source',
+        title: Text('Add file',
             style: GoogleFonts.poppins(color: c.textPrimary, fontWeight: FontWeight.w600)),
-        actions: [
-          TextButton.icon(
-            icon:  Icon(Icons.photo_library_rounded, color: c.accent),
-            label: Text('Gallery', style: GoogleFonts.poppins(color: c.accent)),
-            onPressed: () => Navigator.of(ctx).pop(ImageSource.gallery),
-          ),
-          TextButton.icon(
-            icon:  Icon(Icons.camera_alt_rounded, color: c.green),
-            label: Text('Camera', style: GoogleFonts.poppins(color: c.green)),
-            onPressed: () => Navigator.of(ctx).pop(ImageSource.camera),
-          ),
-        ],
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _sourceTile(ctx, Icons.photo_library_rounded, 'Gallery', c.accent,  _UploadSource.gallery),
+            _sourceTile(ctx, Icons.camera_alt_rounded,    'Camera',  c.green,   _UploadSource.camera),
+            _sourceTile(ctx, Icons.insert_drive_file_rounded, 'Document (PDF/DOC)', Colors.orange, _UploadSource.document),
+          ],
+        ),
       ),
     );
     if (source == null) return;
 
-    if (source == ImageSource.gallery) {
-      final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
-      if (picked.isEmpty) return;
-      setState(() => _uploadingImage = true);
-      try {
-        for (final file in picked) {
-          final url = await _svc.uploadImage(file);
-          if (url != null && mounted) setState(() => _imageUrls.add(url));
+    switch (source) {
+      case _UploadSource.gallery:
+        final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
+        if (picked.isEmpty) return;
+        setState(() => _uploadingImage = true);
+        try {
+          for (final file in picked) {
+            final url = await _svc.uploadImage(file);
+            if (url != null && mounted) setState(() => _imageUrls.add(url));
+          }
+        } catch (e) {
+          if (mounted) _snack('Upload failed: $e', isError: true);
+        } finally {
+          if (mounted) setState(() => _uploadingImage = false);
         }
-      } catch (e) {
-        if (mounted) _snack('Image upload failed: $e', isError: true);
-      } finally {
-        if (mounted) setState(() => _uploadingImage = false);
-      }
-    } else {
-      XFile? picked;
-      try {
-        picked = await _imagePicker.pickImage(source: source, imageQuality: 80, maxWidth: 1024);
-      } catch (e) {
-        if (mounted) _snack('Could not open camera: $e', isError: true);
-        return;
-      }
-      if (picked == null) return;
-      setState(() => _uploadingImage = true);
-      try {
-        final url = await _svc.uploadImage(picked);
-        if (url != null && mounted) setState(() => _imageUrls.add(url));
-      } catch (e) {
-        if (mounted) _snack('Image upload failed: $e', isError: true);
-      } finally {
-        if (mounted) setState(() => _uploadingImage = false);
-      }
+      case _UploadSource.camera:
+        XFile? picked;
+        try {
+          picked = await _imagePicker.pickImage(source: ImageSource.camera, imageQuality: 80, maxWidth: 1024);
+        } catch (e) {
+          if (mounted) _snack('Could not open camera: $e', isError: true);
+          return;
+        }
+        if (picked == null) return;
+        setState(() => _uploadingImage = true);
+        try {
+          final url = await _svc.uploadImage(picked);
+          if (url != null && mounted) setState(() => _imageUrls.add(url));
+        } catch (e) {
+          if (mounted) _snack('Upload failed: $e', isError: true);
+        } finally {
+          if (mounted) setState(() => _uploadingImage = false);
+        }
+      case _UploadSource.document:
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['pdf', 'doc', 'docx'],
+        );
+        final file = result?.files.firstOrNull;
+        if (file == null) return;
+        setState(() => _uploadingImage = true);
+        try {
+          final url = await _svc.uploadDocument(file);
+          if (url != null && mounted) setState(() => _imageUrls.add(url));
+        } catch (e) {
+          if (mounted) _snack('Upload failed: $e', isError: true);
+        } finally {
+          if (mounted) setState(() => _uploadingImage = false);
+        }
     }
+  }
+
+  Widget _sourceTile(BuildContext ctx, IconData icon, String label, Color color, _UploadSource src) {
+    final c = context.colors;
+    return ListTile(
+      leading:       Icon(icon, color: color),
+      title:         Text(label, style: GoogleFonts.poppins(fontSize: 14, color: c.textPrimary)),
+      onTap:         () => Navigator.of(ctx).pop(src),
+      shape:         RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+    );
+  }
+
+  Widget _docFileTile(String ext, ThemeColors c) {
+    return Container(
+      width: 80, height: 80,
+      decoration: BoxDecoration(
+        color:        Colors.orange.withAlpha(20),
+        borderRadius: BorderRadius.circular(10),
+        border:       Border.all(color: Colors.orange.withAlpha(80)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.picture_as_pdf_rounded, color: Colors.orange, size: 32),
+          const SizedBox(height: 4),
+          Text(ext.toUpperCase(),
+              style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.orange)),
+        ],
+      ),
+    );
   }
 
   Future<void> _pickDate() async {
@@ -396,13 +444,13 @@ class _DoctorWritePrescriptionScreenState
 
                 const SizedBox(height: 24),
 
-                // ── Prescription images ───────────────────────────────────────
+                // ── Prescription files ────────────────────────────────────────
                 Row(
                   children: [
-                    _SectionLabel(label: 'Prescription Images', icon: Icons.image_rounded, color: c.textSec),
+                    _SectionLabel(label: 'Prescription Files', icon: Icons.attach_file_rounded, color: c.textSec),
                     const Spacer(),
                     GestureDetector(
-                      onTap: _uploadingImage ? null : _pickImage,
+                      onTap: _uploadingImage ? null : _pickAttachment,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
@@ -415,7 +463,7 @@ class _DoctorWritePrescriptionScreenState
                             : Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.add_photo_alternate_rounded, size: 14, color: c.accent),
+                                  Icon(Icons.add_rounded, size: 14, color: c.accent),
                                   const SizedBox(width: 4),
                                   Text('Add', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: c.accent)),
                                 ],
@@ -435,9 +483,9 @@ class _DoctorWritePrescriptionScreenState
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.image_outlined, color: c.textMuted, size: 20),
+                        Icon(Icons.attach_file_rounded, color: c.textMuted, size: 20),
                         const SizedBox(width: 10),
-                        Text('No images added', style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted)),
+                        Text('No files added', style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted)),
                       ],
                     ),
                   )
@@ -445,30 +493,35 @@ class _DoctorWritePrescriptionScreenState
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _imageUrls.map((url) => Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.network(url, width: 80, height: 80, fit: BoxFit.cover,
-                              errorBuilder: (ctx, err, st) => Container(
-                                width: 80, height: 80,
-                                decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(10)),
-                                child: Icon(Icons.broken_image_rounded, color: c.textMuted),
-                              )),
-                        ),
-                        Positioned(
-                          top: 3, right: 3,
-                          child: GestureDetector(
-                            onTap: () => setState(() => _imageUrls.remove(url)),
-                            child: Container(
-                              width: 20, height: 20,
-                              decoration: BoxDecoration(color: c.red, shape: BoxShape.circle),
-                              child: const Icon(Icons.close_rounded, color: Colors.white, size: 13),
+                    children: _imageUrls.map((url) {
+                      final isImg = isImageUrl(url);
+                      return Stack(
+                        children: [
+                          isImg
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.network(url, width: 80, height: 80, fit: BoxFit.cover,
+                                      errorBuilder: (ctx, err, st) => Container(
+                                        width: 80, height: 80,
+                                        decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(10)),
+                                        child: Icon(Icons.broken_image_rounded, color: c.textMuted),
+                                      )),
+                                )
+                              : _docFileTile(extFromUrl(url), c),
+                          Positioned(
+                            top: 3, right: 3,
+                            child: GestureDetector(
+                              onTap: () => setState(() => _imageUrls.remove(url)),
+                              child: Container(
+                                width: 20, height: 20,
+                                decoration: BoxDecoration(color: c.red, shape: BoxShape.circle),
+                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 13),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    )).toList(),
+                        ],
+                      );
+                    }).toList(),
                   ),
 
                 const SizedBox(height: 28),

@@ -3,6 +3,7 @@
 // Also handles image upload to the 'prescriptions' storage bucket.
 
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -157,6 +158,34 @@ class PrescriptionService {
     }
 
     return await _client.storage.from('prescriptions').createSignedUrl(path, 315360000);
+  }
+
+  // ── Upload document (PDF, DOC, etc.) to prescriptions bucket ─────────────────
+
+  Future<String?> uploadDocument(PlatformFile file) async {
+    final uid = _uid;
+    if (uid == null) return null;
+
+    final ext  = (file.extension ?? 'pdf').toLowerCase();
+    final path = '$uid/${DateTime.now().millisecondsSinceEpoch}.$ext';
+    final opts = FileOptions(upsert: true, contentType: _mimeFromDocExt(ext));
+
+    if (kIsWeb || file.path == null) {
+      await _client.storage.from('prescriptions').uploadBinary(path, file.bytes!, fileOptions: opts);
+    } else {
+      await _client.storage.from('prescriptions').upload(path, File(file.path!), fileOptions: opts);
+    }
+
+    return await _client.storage.from('prescriptions').createSignedUrl(path, 315360000);
+  }
+
+  static String _mimeFromDocExt(String ext) {
+    switch (ext) {
+      case 'pdf':  return 'application/pdf';
+      case 'doc':  return 'application/msword';
+      case 'docx': return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      default:     return 'application/octet-stream';
+    }
   }
 
   static String _mimeFromExt(String ext) {
