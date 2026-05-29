@@ -19,15 +19,22 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.34 — Active Development |
+| **Stage** | v0.35 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-29 (v0.34) |
+| **Last Updated** | 2026-05-29 (v0.35) |
 
 ---
 
 ## Latest Updates (2026-05-29)
+
+**v0.35 — Fix: test report edit fails with uuid error**
+
+- **Root cause**: `AddEditLabReportScreen` hardcoded `userId: ''` (empty string) in the edit draft; on UPDATE `toMap()` sent `user_id = ""` to PostgreSQL which rejected it as an invalid UUID (code 22P02)
+- **Fix 1**: In the edit path, `userId` now carries the existing report's `userId` instead of `""`
+- **Fix 2**: `LabReportService.update()` strips `user_id` from the update payload — the owner of a report never changes after creation, so sending it was both unnecessary and risky
+- The CREATE path was unaffected because `create()` always overrides `user_id` with `_uid`
 
 **v0.34 — Remove global patient search for doctors**
 

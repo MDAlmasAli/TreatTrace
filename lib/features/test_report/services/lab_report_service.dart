@@ -53,9 +53,11 @@ class LabReportService {
   // ── Update ────────────────────────────────────────────────────────────────
 
   Future<void> update(LabReport report) async {
+    final payload = Map<String, dynamic>.from(report.toMap())
+      ..remove('user_id');
     await _client
         .from('lab_reports')
-        .update(report.toMap())
+        .update(payload)
         .eq('id', report.id);
   }
 

@@ -263,7 +263,7 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
     try {
       final draft = LabReport(
         id:                _isEdit ? widget.existing!.id : '',
-        userId:            '',
+        userId:            _isEdit ? widget.existing!.userId : '',
         testName:          _category!,
         category:          _category,
         testDate:          _testDate,
