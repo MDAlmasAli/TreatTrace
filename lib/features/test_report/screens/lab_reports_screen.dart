@@ -9,6 +9,8 @@ import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../models/lab_report.dart';
 import '../services/lab_report_service.dart';
+import '../../prescription/services/prescription_service.dart';
+import '../../prescription/screens/prescription_detail_screen.dart';
 import 'add_edit_lab_report_screen.dart';
 import 'lab_report_detail_screen.dart';
 
@@ -20,7 +22,8 @@ class LabReportsScreen extends StatefulWidget {
 }
 
 class _LabReportsScreenState extends State<LabReportsScreen> {
-  final _service    = LabReportService();
+  final _service = LabReportService();
+  final _rxSvc   = PrescriptionService();
   final _searchCtrl = TextEditingController();
 
   bool             _loading        = true;
@@ -90,9 +93,22 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
 
   Future<void> _openDetail(LabReport r) async {
     final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => LabReportDetailScreen(report: r)),
+      MaterialPageRoute(
+        builder: (_) => LabReportDetailScreen(
+          report:            r,
+          onPrescriptionTap: (id) => _openLinkedRx(id),
+        ),
+      ),
     );
     if (changed == true) _load();
+  }
+
+  Future<void> _openLinkedRx(String prescriptionId) async {
+    final p = await _rxSvc.fetchOne(prescriptionId);
+    if (p == null || !mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PrescriptionDetailScreen(prescription: p)),
+    );
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────

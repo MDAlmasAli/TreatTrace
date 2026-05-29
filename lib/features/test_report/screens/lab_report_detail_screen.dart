@@ -17,13 +17,15 @@ class LabReportDetailScreen extends StatefulWidget {
   final bool       canEdit;
   final bool       canDelete;
   final Future<void> Function(LabReport)? onEditOverride;
+  final Future<void> Function(String prescriptionId)? onPrescriptionTap;
 
   const LabReportDetailScreen({
     super.key,
     required this.report,
-    this.canEdit        = true,
-    this.canDelete      = true,
+    this.canEdit           = true,
+    this.canDelete         = true,
     this.onEditOverride,
+    this.onPrescriptionTap,
   });
 
   @override
@@ -212,15 +214,27 @@ class _LabReportDetailScreenState extends State<LabReportDetailScreen> {
                           const SizedBox(height: 20),
                           _SectionLabel(text: s.linkedPrescription),
                           const SizedBox(height: 10),
-                          _InfoCard(
-                            accentColor: c.purpleBright,
-                            child: _InfoRow(
-                              icon:      Icons.link_rounded,
-                              iconColor: c.purpleBright,
-                              label:     s.linkedPrescription,
-                              value:     _r.prescriptionDisplay ??
-                                  _r.prescriptionId!.substring(0, 8),
-                              isLast: true,
+                          GestureDetector(
+                            onTap: widget.onPrescriptionTap != null
+                                ? () => widget.onPrescriptionTap!(_r.prescriptionId!)
+                                : null,
+                            child: _InfoCard(
+                              accentColor: c.purpleBright,
+                              child: _InfoRow(
+                                icon:      Icons.link_rounded,
+                                iconColor: c.purpleBright,
+                                label:     s.linkedPrescription,
+                                value:     _r.prescriptionDisplay ??
+                                    _r.prescriptionId!.substring(0, 8),
+                                isLast:    true,
+                                trailing: widget.onPrescriptionTap != null
+                                    ? Padding(
+                                        padding: const EdgeInsets.only(right: 4),
+                                        child: Icon(Icons.arrow_forward_ios_rounded,
+                                            size: 14, color: c.purpleBright),
+                                      )
+                                    : null,
+                              ),
                             ),
                           ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.06),
                         ],
@@ -399,13 +413,15 @@ class _InfoRow extends StatelessWidget {
   final String   label;
   final String   value;
   final bool     isLast;
+  final Widget?  trailing;
 
   const _InfoRow({
     required this.icon,
     required this.iconColor,
     required this.label,
     required this.value,
-    this.isLast = false,
+    this.isLast  = false,
+    this.trailing,
   });
 
   @override
@@ -443,6 +459,7 @@ class _InfoRow extends StatelessWidget {
                   ],
                 ),
               ),
+              ?trailing,
             ],
           ),
         ),

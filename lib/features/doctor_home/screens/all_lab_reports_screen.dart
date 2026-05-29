@@ -8,7 +8,9 @@ import '../../../core/theme/theme_colors.dart';
 import '../../test_report/models/lab_report.dart';
 import '../../test_report/services/lab_report_service.dart';
 import '../../test_report/screens/lab_report_detail_screen.dart';
+import '../../prescription/services/prescription_service.dart';
 import 'doctor_lab_report_screen.dart';
+import 'doctor_prescription_view_screen.dart';
 
 class AllLabReportsScreen extends StatefulWidget {
   final String patientId;
@@ -25,7 +27,8 @@ class AllLabReportsScreen extends StatefulWidget {
 }
 
 class _AllLabReportsScreenState extends State<AllLabReportsScreen> {
-  final _svc        = LabReportService();
+  final _svc   = LabReportService();
+  final _rxSvc = PrescriptionService();
   final _searchCtrl = TextEditingController();
 
   final String _currentDoctorId =
@@ -132,9 +135,23 @@ class _AllLabReportsScreenState extends State<AllLabReportsScreen> {
                   ),
                 ))
             : null,
+        onPrescriptionTap: (id) => _openLinkedRx(id),
       ),
     ));
     _load();
+  }
+
+  Future<void> _openLinkedRx(String prescriptionId) async {
+    final p = await _rxSvc.fetchOne(prescriptionId);
+    if (p == null || !mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DoctorPrescriptionViewScreen(
+        rx:          p,
+        canEdit:     p.writtenByDoctorId == _currentDoctorId,
+        patientId:   widget.patientId,
+        patientName: widget.patientName,
+      ),
+    ));
   }
 
   Future<void> _goEdit(LabReport lab) async {

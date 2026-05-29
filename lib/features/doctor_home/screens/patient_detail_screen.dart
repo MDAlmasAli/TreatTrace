@@ -174,9 +174,23 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                   ),
                 ))
             : null,
+        onPrescriptionTap: (id) => _openLinkedRx(id),
       ),
     ));
     _load();
+  }
+
+  Future<void> _openLinkedRx(String prescriptionId) async {
+    final p = await _rxSvc.fetchOne(prescriptionId);
+    if (p == null || !mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DoctorPrescriptionViewScreen(
+        rx:          p,
+        canEdit:     p.writtenByDoctorId == _currentDoctorId,
+        patientId:   widget.patientId,
+        patientName: widget.patientName,
+      ),
+    ));
   }
 
   @override

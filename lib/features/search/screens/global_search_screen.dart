@@ -142,9 +142,20 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   }
 
   void _openLabReport(LabReport r) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => LabReportDetailScreen(report: r)));
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => LabReportDetailScreen(
+        report:            r,
+        onPrescriptionTap: (id) => _openLinkedRx(id),
+      ),
+    ));
+  }
+
+  Future<void> _openLinkedRx(String prescriptionId) async {
+    final p = await _prescriptionSvc.fetchOne(prescriptionId);
+    if (p == null || !mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PrescriptionDetailScreen(prescription: p)),
+    );
   }
 
   // â”€â”€ Build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

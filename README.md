@@ -19,15 +19,23 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.35 — Active Development |
+| **Stage** | v0.36 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-29 (v0.35) |
+| **Last Updated** | 2026-05-29 (v0.36) |
 
 ---
 
 ## Latest Updates (2026-05-29)
+
+**v0.36 — Linked Prescription is now tappable in Test Report detail**
+
+- **Linked Prescription card is now tappable** — a right-arrow indicator appears on the card; tapping it fetches and opens the full prescription detail
+- **Privacy-aware navigation**:
+  - Patients open their own prescription in `PrescriptionDetailScreen` (editable as always)
+  - Doctors open the prescription in `DoctorPrescriptionViewScreen`; edit is permitted only if `writtenByDoctorId == currentDoctorId`, so a doctor cannot edit another doctor's prescription but can view it
+- Applied consistently across all four entry points: patient lab report list, patient global search, doctor patient detail, and doctor all-lab-reports screen
 
 **v0.35 — Fix: test report edit fails with uuid error**
 
