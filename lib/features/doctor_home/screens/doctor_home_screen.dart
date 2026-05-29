@@ -14,7 +14,6 @@ import '../../profile/screens/profile_screen.dart';
 import '../services/doctor_patient_link_service.dart';
 import 'doctor_today_schedule_screen.dart';
 import 'my_patients_screen.dart';
-import 'search_patient_screen.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
   final void Function(String) onThemeChanged;
@@ -137,7 +136,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   void _navigateFromNotification(String? payload) {
     if (!mounted) return;
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SearchPatientScreen()),
+      MaterialPageRoute(builder: (_) => const DoctorTodayScheduleScreen()),
     );
   }
 

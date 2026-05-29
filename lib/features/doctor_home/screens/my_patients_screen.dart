@@ -7,7 +7,6 @@ import '../../../core/theme/theme_colors.dart';
 import '../models/doctor_patient_link.dart';
 import '../services/doctor_patient_link_service.dart';
 import 'patient_detail_screen.dart';
-import 'search_patient_screen.dart';
 
 class MyPatientsScreen extends StatefulWidget {
   const MyPatientsScreen({super.key});
@@ -68,13 +67,6 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
 
     return Scaffold(
       backgroundColor: c.bg,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _goSearch,
-        backgroundColor: c.accent,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.person_search_rounded),
-        label: Text('Add Patient', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-      ),
       body: Column(
         children: [
           _buildHeader(c, filtered.length),
@@ -132,13 +124,6 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
         ],
       ),
     );
-  }
-
-  Future<void> _goSearch() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SearchPatientScreen()),
-    );
-    _load(); // refresh list in case a new link was accepted
   }
 
   Future<void> _openPatient(DoctorPatientLink link) async {

@@ -19,15 +19,22 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.33 — Active Development |
+| **Stage** | v0.34 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-29 (v0.33) |
+| **Last Updated** | 2026-05-29 (v0.34) |
 
 ---
 
 ## Latest Updates (2026-05-29)
+
+**v0.34 — Remove global patient search for doctors**
+
+- **`SearchPatientScreen` deleted** — global patient search is completely removed; doctors can no longer search for arbitrary patients in the system
+- **"Add Patient" FAB removed** from My Patients screen — doctors can only view patients who are already linked to them
+- **Notification tap** now opens Today's Schedule (appointment-relevant) instead of the removed patient search screen
+- Doctors can only access patients they already have a link with
 
 **v0.33 — All Test Reports screen with search & filters**
 
