@@ -19,15 +19,32 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.31 — Active Development |
+| **Stage** | v0.33 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-26 (v0.31) |
+| **Last Updated** | 2026-05-29 (v0.33) |
 
 ---
 
-## Latest Updates (2026-05-26)
+## Latest Updates (2026-05-29)
+
+**v0.33 — All Test Reports screen with search & filters**
+
+- **Show More on Test Reports** — Patient Details now shows the 5 most recent test reports; if there are more, a green "Show X more →" button opens the new `AllLabReportsScreen`
+- **All Test Reports screen** — loads every test report for the patient with full search and filter support:
+  - **Search** by test name or category (live, client-side)
+  - **Date filter** chip — filters to a single test date with an inline × to clear
+  - **Newest / Oldest sort** toggle
+  - **Clear all** link resets both filters at once
+  - **Result count** shows `filtered / total` when any filter is active
+  - **View** (eye) button always visible; **Edit** (pencil) visible only for reports ordered by this doctor
+- View and Edit navigate to existing `LabReportDetailScreen` / `DoctorLabReportScreen` and reload on return
+
+**v0.32 — Remove time field from appointments + show notes in schedule tile**
+
+- **Time field removed** from both patient-facing (`AddEditAppointmentScreen`) and doctor-facing (`DoctorAddAppointmentScreen`) appointment forms; `appointmentTime` is always saved as `null` for new appointments
+- **Notes now visible on schedule tile** — appointment `notes` text appears below the visit reason in every `_ScheduleTile` in Today's Schedule, with a notes icon and muted style to distinguish it from the primary reason
 
 **v0.31 — Search bar in My Patients screen**
 

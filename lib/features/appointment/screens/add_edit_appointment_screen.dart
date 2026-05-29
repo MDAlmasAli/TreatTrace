@@ -44,7 +44,6 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
   final _prescSvc = PrescriptionService();
 
   final _reasonCtrl = TextEditingController();
-  final _timeCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
 
   // Doctor selection
@@ -84,7 +83,6 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
   @override
   void dispose() {
     _reasonCtrl.dispose();
-    _timeCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
@@ -126,7 +124,6 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
   void _populate() {
     final a = widget.existing!;
     _reasonCtrl.text = a.visitReason ?? '';
-    _timeCtrl.text = a.appointmentTime ?? '';
     _notesCtrl.text = a.notes ?? '';
     _date = a.appointmentDate;
     _status = a.status;
@@ -187,7 +184,7 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
         doctorId: useFixedDoctor ? null : _selectedDoctor?.id,
         doctorNameSnapshot: doctorName,
         appointmentDate: _date!,
-        appointmentTime: _timeCtrl.text.trim().nullIfEmpty,
+        appointmentTime: null,
         visitReason: _reasonCtrl.text.trim().nullIfEmpty,
         status: _status,
         notes: _notesCtrl.text.trim().nullIfEmpty,
@@ -268,9 +265,9 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
                         onChanged: (d) => setState(() => _selectedDoctor = d),
                       ),
 
-                    // ── Date & Time ───────────────────────────────────────
+                    // ── Date ─────────────────────────────────────────────
                     const SizedBox(height: 24),
-                    _SectionLabel(text: 'Date & Time'),
+                    _SectionLabel(text: 'Date'),
                     const SizedBox(height: 12),
                     _FormCard(
                       children: [
@@ -279,13 +276,7 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
                           label: s.appointmentDate,
                           onTap: _pickDate,
                           onClear: () => setState(() => _date = null),
-                        ),
-                        _Field(
-                          ctrl: _timeCtrl,
-                          label: s.appointmentTime,
-                          icon: Icons.access_time_rounded,
                           isLast: true,
-                          hint: 'e.g. 10:30 AM',
                         ),
                       ],
                     ),
@@ -715,7 +706,6 @@ class _Field extends StatelessWidget {
   final IconData icon;
   final int maxLines;
   final bool isLast;
-  final String? hint;
 
   const _Field({
     required this.ctrl,
@@ -723,7 +713,6 @@ class _Field extends StatelessWidget {
     required this.icon,
     this.maxLines = 1,
     this.isLast = false,
-    this.hint,
   });
 
   @override
@@ -740,10 +729,6 @@ class _Field extends StatelessWidget {
             decoration: InputDecoration(
               labelText: label,
               labelStyle: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
-              hintText: hint,
-              hintStyle: hint != null
-                  ? GoogleFonts.poppins(fontSize: 12, color: c.textMuted)
-                  : null,
               prefixIcon: Icon(icon, size: 18, color: c.amber),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -768,12 +753,14 @@ class _DateRow extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final VoidCallback onClear;
+  final bool isLast;
 
   const _DateRow({
     required this.date,
     required this.label,
     required this.onTap,
     required this.onClear,
+    this.isLast = false,
   });
 
   @override
@@ -834,13 +821,14 @@ class _DateRow extends StatelessWidget {
             ),
           ),
         ),
-        Divider(
-          height: 1,
-          indent: 16,
-          endIndent: 16,
-          color: c.border,
-          thickness: 1,
-        ),
+        if (!isLast)
+          Divider(
+            height: 1,
+            indent: 16,
+            endIndent: 16,
+            color: c.border,
+            thickness: 1,
+          ),
       ],
     );
   }

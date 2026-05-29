@@ -14,6 +14,7 @@ import '../../test_report/services/lab_report_service.dart';
 import '../../appointment/models/appointment.dart';
 import '../../appointment/services/appointment_service.dart';
 import '../../test_report/screens/lab_report_detail_screen.dart';
+import 'all_lab_reports_screen.dart';
 import 'all_prescriptions_screen.dart';
 import 'doctor_prescription_view_screen.dart';
 import 'doctor_write_prescription_screen.dart';
@@ -126,6 +127,16 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     if (result == true) _load();
   }
 
+  Future<void> _goShowMoreLab() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => AllLabReportsScreen(
+        patientId:   widget.patientId,
+        patientName: widget.patientName,
+      ),
+    ));
+    _load();
+  }
+
   Future<void> _goOrderLab() async {
     final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
       builder: (_) => DoctorLabReportScreen(
@@ -214,6 +225,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           onView:          _goViewLab,
                           onEdit:          _goEditLab,
                           onOrder:         _goOrderLab,
+                          onShowMore:      _goShowMoreLab,
                         ).animate().fadeIn(delay: 200.ms),
                         const SizedBox(height: 20),
                         _AppointmentsSection(list: _appts)
@@ -667,6 +679,9 @@ class _LabReportsSection extends StatelessWidget {
   final Future<void> Function(LabReport) onView;
   final Future<void> Function(LabReport) onEdit;
   final VoidCallback                     onOrder;
+  final VoidCallback                     onShowMore;
+
+  static const _previewCount = 5;
 
   const _LabReportsSection({
     required this.list,
@@ -674,11 +689,15 @@ class _LabReportsSection extends StatelessWidget {
     required this.onView,
     required this.onEdit,
     required this.onOrder,
+    required this.onShowMore,
   });
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
+    final c       = context.colors;
+    final visible = list.take(_previewCount).toList();
+    final hasMore = list.length > _previewCount;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -717,13 +736,37 @@ class _LabReportsSection extends StatelessWidget {
         const SizedBox(height: 12),
         if (list.isEmpty)
           _EmptySection(message: 'No test reports found.')
-        else
-          ...list.take(5).map((lab) => _LabTile(
+        else ...[
+          ...visible.map((lab) => _LabTile(
                 lab:     lab,
                 canEdit: lab.orderedByDoctorId == currentDoctorId,
                 onTap:   () => onView(lab),
                 onEdit:  () => onEdit(lab),
               )),
+          if (hasMore)
+            GestureDetector(
+              onTap: onShowMore,
+              child: Container(
+                margin: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color:        c.green.withAlpha(10),
+                  borderRadius: BorderRadius.circular(14),
+                  border:       Border.all(color: c.green.withAlpha(40)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Show ${list.length - _previewCount} more',
+                        style: GoogleFonts.poppins(
+                            fontSize: 13, fontWeight: FontWeight.w600, color: c.green)),
+                    const SizedBox(width: 6),
+                    Icon(Icons.arrow_forward_rounded, size: 15, color: c.green),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ],
     );
   }

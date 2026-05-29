@@ -27,7 +27,6 @@ class _DoctorAddAppointmentScreenState
     extends State<DoctorAddAppointmentScreen> {
   final _svc         = AppointmentService();
   final _reasonCtrl  = TextEditingController();
-  final _timeCtrl    = TextEditingController();
   final _notesCtrl   = TextEditingController();
 
   DateTime _date    = DateTime.now().add(const Duration(days: 1));
@@ -46,7 +45,6 @@ class _DoctorAddAppointmentScreenState
   @override
   void dispose() {
     _reasonCtrl.dispose();
-    _timeCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
@@ -65,25 +63,6 @@ class _DoctorAddAppointmentScreenState
       ),
     );
     if (picked != null) setState(() => _date = picked);
-  }
-
-  Future<void> _pickTime() async {
-    final picked = await showTimePicker(
-      context:     context,
-      initialTime: TimeOfDay.now(),
-      builder:     (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.light(primary: context.colors.accent),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked != null) {
-      final h = picked.hourOfPeriod == 0 ? 12 : picked.hourOfPeriod;
-      final m = picked.minute.toString().padLeft(2, '0');
-      final period = picked.period == DayPeriod.am ? 'AM' : 'PM';
-      setState(() => _timeCtrl.text = '$h:$m $period');
-    }
   }
 
   Future<void> _save() async {
@@ -105,7 +84,7 @@ class _DoctorAddAppointmentScreenState
         doctorId:           null,
         doctorNameSnapshot: _doctorName ?? 'Doctor',
         appointmentDate:    _date,
-        appointmentTime:    _timeCtrl.text.trim().isEmpty ? null : _timeCtrl.text.trim(),
+        appointmentTime:    null,
         visitReason:        _reasonCtrl.text.trim(),
         status:             AppointmentStatus.scheduled,
         notes:              _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
@@ -191,39 +170,6 @@ class _DoctorAddAppointmentScreenState
                     ),
                   ),
                 ).animate().fadeIn(delay: 120.ms),
-
-                const SizedBox(height: 20),
-
-                // ── Time ─────────────────────────────────────────────────────
-                _label('Time (optional)', c),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: _pickTime,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color:        c.card,
-                      borderRadius: BorderRadius.circular(14),
-                      border:       Border.all(color: c.border),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.access_time_rounded, color: c.accent, size: 18),
-                        const SizedBox(width: 10),
-                        Text(
-                          _timeCtrl.text.isEmpty ? 'Select time' : _timeCtrl.text,
-                          style: GoogleFonts.poppins(
-                            fontSize:   14,
-                            color:      _timeCtrl.text.isEmpty ? c.textMuted : c.textPrimary,
-                            fontWeight: _timeCtrl.text.isEmpty ? FontWeight.w400 : FontWeight.w600,
-                          ),
-                        ),
-                        const Spacer(),
-                        Icon(Icons.edit_rounded, size: 14, color: c.textMuted),
-                      ],
-                    ),
-                  ),
-                ).animate().fadeIn(delay: 160.ms),
 
                 const SizedBox(height: 20),
 

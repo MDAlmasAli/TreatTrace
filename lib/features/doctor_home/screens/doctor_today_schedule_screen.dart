@@ -529,6 +529,24 @@ class _ScheduleTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ],
+          if ((appointment.notes ?? '').isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.notes_rounded, size: 13, color: c.textMuted),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    appointment.notes!,
+                    style: GoogleFonts.poppins(fontSize: 12, color: c.textSec),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
