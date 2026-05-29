@@ -11,8 +11,6 @@ import '../../../core/utils/file_utils.dart';
 import '../../test_report/models/lab_report.dart';
 import '../../test_report/services/lab_report_service.dart';
 
-enum _UploadSource { gallery, camera, document }
-
 class DoctorLabReportScreen extends StatefulWidget {
   final String     patientId;
   final String     patientName;
@@ -80,9 +78,9 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
     if (picked != null) setState(() => _testDate = picked);
   }
 
-  Future<void> _pickAttachment() async {
+  void _pickAttachment() {
     final c = context.colors;
-    final source = await showDialog<_UploadSource>(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: c.card,
@@ -92,67 +90,67 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _sourceTile(ctx, Icons.photo_library_rounded, c.accent, 'Gallery (Images)', _UploadSource.gallery),
-            _sourceTile(ctx, Icons.camera_alt_rounded,    c.green,  'Camera',           _UploadSource.camera),
-            _sourceTile(ctx, Icons.attach_file_rounded,   c.amber,  'Document (PDF, Word)', _UploadSource.document),
+            _sourceTile(ctx, Icons.photo_library_rounded, c.accent, 'Gallery (Images)', () { Navigator.of(ctx).pop(); _pickGallery(); }),
+            _sourceTile(ctx, Icons.camera_alt_rounded,    c.green,  'Camera',           () { Navigator.of(ctx).pop(); _pickCamera(); }),
+            _sourceTile(ctx, Icons.attach_file_rounded,   c.amber,  'Document (PDF, Word)', () { Navigator.of(ctx).pop(); _pickDocument(); }),
           ],
         ),
       ),
     );
-    if (source == null) return;
+  }
 
-    switch (source) {
-      case _UploadSource.gallery:
-        final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
-        if (picked.isEmpty) return;
-        setState(() => _uploadingImage = true);
-        try {
-          for (final file in picked) {
-            final url = await _svc.uploadImage(file);
-            if (url != null && mounted) setState(() => _imageUrls.add(url));
-          }
-        } catch (e) {
-          if (mounted) _snack('Upload failed: $e', isError: true);
-        } finally {
-          if (mounted) setState(() => _uploadingImage = false);
-        }
-
-      case _UploadSource.camera:
-        final picked = await _imagePicker.pickImage(source: ImageSource.camera, imageQuality: 80, maxWidth: 1024);
-        if (picked == null) return;
-        setState(() => _uploadingImage = true);
-        try {
-          final url = await _svc.uploadImage(picked);
-          if (url != null && mounted) setState(() => _imageUrls.add(url));
-        } catch (e) {
-          if (mounted) _snack('Upload failed: $e', isError: true);
-        } finally {
-          if (mounted) setState(() => _uploadingImage = false);
-        }
-
-      case _UploadSource.document:
-        final result = await FilePicker.platform.pickFiles(
-          type:              FileType.custom,
-          allowedExtensions: ['pdf', 'doc', 'docx'],
-          allowMultiple:     true,
-          withData:          true,
-        );
-        if (result == null || result.files.isEmpty) return;
-        setState(() => _uploadingImage = true);
-        try {
-          for (final file in result.files) {
-            final url = await _svc.uploadDocument(file);
-            if (url != null && mounted) setState(() => _imageUrls.add(url));
-          }
-        } catch (e) {
-          if (mounted) _snack('Upload failed: $e', isError: true);
-        } finally {
-          if (mounted) setState(() => _uploadingImage = false);
-        }
+  Future<void> _pickGallery() async {
+    final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
+    if (picked.isEmpty) return;
+    setState(() => _uploadingImage = true);
+    try {
+      for (final file in picked) {
+        final url = await _svc.uploadImage(file);
+        if (url != null && mounted) setState(() => _imageUrls.add(url));
+      }
+    } catch (e) {
+      if (mounted) _snack('Upload failed: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
     }
   }
 
-  Widget _sourceTile(BuildContext ctx, IconData icon, Color color, String label, _UploadSource val) {
+  Future<void> _pickCamera() async {
+    final picked = await _imagePicker.pickImage(source: ImageSource.camera, imageQuality: 80, maxWidth: 1024);
+    if (picked == null) return;
+    setState(() => _uploadingImage = true);
+    try {
+      final url = await _svc.uploadImage(picked);
+      if (url != null && mounted) setState(() => _imageUrls.add(url));
+    } catch (e) {
+      if (mounted) _snack('Upload failed: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
+    }
+  }
+
+  Future<void> _pickDocument() async {
+    final result = await FilePicker.platform.pickFiles(
+      type:              FileType.custom,
+      allowedExtensions: ['pdf', 'doc', 'docx'],
+      allowMultiple:     true,
+      withData:          true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    setState(() => _uploadingImage = true);
+    try {
+      for (final file in result.files) {
+        final url = await _svc.uploadDocument(file);
+        if (url != null && mounted) setState(() => _imageUrls.add(url));
+      }
+    } catch (e) {
+      if (mounted) _snack('Upload failed: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
+    }
+  }
+
+  Widget _sourceTile(BuildContext ctx, IconData icon, Color color, String label, VoidCallback onTap) {
     final c = ctx.colors;
     return ListTile(
       contentPadding: EdgeInsets.zero,
@@ -162,7 +160,7 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
         child: Icon(icon, color: color, size: 20),
       ),
       title: Text(label, style: GoogleFonts.poppins(fontSize: 13, color: c.textPrimary)),
-      onTap: () => Navigator.of(ctx).pop(val),
+      onTap: onTap,
     );
   }
 

@@ -15,8 +15,6 @@ import '../../prescription/services/prescription_service.dart';
 import '../models/lab_report.dart';
 import '../services/lab_report_service.dart';
 
-enum _UploadSource { gallery, camera, document }
-
 const _kPresetCategories = [
   'Blood Test',
   'Urine Test',
@@ -176,73 +174,9 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
 
   // ── File / Image upload ───────────────────────────────────────────────────
 
-  Future<void> _pickAttachment() async {
-    final source = await _showSourceDialog();
-    if (source == null) return;
-
-    switch (source) {
-      case _UploadSource.gallery:
-        final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
-        if (picked.isEmpty) return;
-        setState(() => _uploadingImage = true);
-        try {
-          for (final file in picked) {
-            final url = await _reportService.uploadImage(file);
-            if (url != null && mounted) setState(() => _imageUrls.add(url));
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Upload failed: $e')));
-          }
-        } finally {
-          if (mounted) setState(() => _uploadingImage = false);
-        }
-
-      case _UploadSource.camera:
-        final picked = await _imagePicker.pickImage(source: ImageSource.camera, imageQuality: 80, maxWidth: 1024);
-        if (picked == null) return;
-        setState(() => _uploadingImage = true);
-        try {
-          final url = await _reportService.uploadImage(picked);
-          if (url != null && mounted) setState(() => _imageUrls.add(url));
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Upload failed: $e')));
-          }
-        } finally {
-          if (mounted) setState(() => _uploadingImage = false);
-        }
-
-      case _UploadSource.document:
-        final result = await FilePicker.platform.pickFiles(
-          type:              FileType.custom,
-          allowedExtensions: ['pdf', 'doc', 'docx'],
-          allowMultiple:     true,
-          withData:          true,
-        );
-        if (result == null || result.files.isEmpty) return;
-        setState(() => _uploadingImage = true);
-        try {
-          for (final file in result.files) {
-            final url = await _reportService.uploadDocument(file);
-            if (url != null && mounted) setState(() => _imageUrls.add(url));
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Upload failed: $e')));
-          }
-        } finally {
-          if (mounted) setState(() => _uploadingImage = false);
-        }
-    }
-  }
-
-  Future<_UploadSource?> _showSourceDialog() {
+  void _pickAttachment() {
     final c = context.colors;
-    return showDialog<_UploadSource>(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: c.card,
@@ -256,24 +190,84 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
               icon:  Icons.photo_library_rounded,
               color: c.cyan,
               label: 'Gallery (Images)',
-              onTap: () => Navigator.of(ctx).pop(_UploadSource.gallery),
+              onTap: () { Navigator.of(ctx).pop(); _pickGallery(); },
             ),
             _SourceTile(
               icon:  Icons.camera_alt_rounded,
               color: c.purpleBright,
               label: 'Camera',
-              onTap: () => Navigator.of(ctx).pop(_UploadSource.camera),
+              onTap: () { Navigator.of(ctx).pop(); _pickCamera(); },
             ),
             _SourceTile(
               icon:  Icons.attach_file_rounded,
               color: c.amber,
               label: 'Document (PDF, Word)',
-              onTap: () => Navigator.of(ctx).pop(_UploadSource.document),
+              onTap: () { Navigator.of(ctx).pop(); _pickDocument(); },
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _pickGallery() async {
+    final picked = await _imagePicker.pickMultiImage(imageQuality: 80, maxWidth: 1024);
+    if (picked.isEmpty) return;
+    setState(() => _uploadingImage = true);
+    try {
+      for (final file in picked) {
+        final url = await _reportService.uploadImage(file);
+        if (url != null && mounted) setState(() => _imageUrls.add(url));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Upload failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
+    }
+  }
+
+  Future<void> _pickCamera() async {
+    final picked = await _imagePicker.pickImage(source: ImageSource.camera, imageQuality: 80, maxWidth: 1024);
+    if (picked == null) return;
+    setState(() => _uploadingImage = true);
+    try {
+      final url = await _reportService.uploadImage(picked);
+      if (url != null && mounted) setState(() => _imageUrls.add(url));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Upload failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
+    }
+  }
+
+  Future<void> _pickDocument() async {
+    final result = await FilePicker.platform.pickFiles(
+      type:              FileType.custom,
+      allowedExtensions: ['pdf', 'doc', 'docx'],
+      allowMultiple:     true,
+      withData:          true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    setState(() => _uploadingImage = true);
+    try {
+      for (final file in result.files) {
+        final url = await _reportService.uploadDocument(file);
+        if (url != null && mounted) setState(() => _imageUrls.add(url));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Upload failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
+    }
   }
 
   // ── Save ──────────────────────────────────────────────────────────────────

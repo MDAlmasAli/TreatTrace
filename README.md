@@ -19,15 +19,22 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.38 — Active Development |
+| **Stage** | v0.39 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-29 (v0.38) |
+| **Last Updated** | 2026-05-29 (v0.39) |
 
 ---
 
 ## Latest Updates (2026-05-29)
+
+**v0.39 — Fix: document upload dialog stuck/hanging on Flutter Web**
+
+- **Root cause**: Browser user-gesture context was lost between `await showDialog()` and `await FilePicker.platform.pickFiles()` — Chrome silently blocks file input clicks not originating from a live user gesture, causing `pickFiles()` to hang forever with no file dialog appearing
+- **Fix**: Refactored all four upload screens so each dialog tile's `onTap` directly calls its own async handler (`_pickGallery`, `_pickCamera`, `_pickDocument`) in the same synchronous call stack as the tap, before any `await`; this preserves the browser's user gesture context
+- **Affected screens**: `add_edit_prescription_screen`, `add_edit_lab_report_screen`, `doctor_write_prescription_screen`, `doctor_lab_report_screen`
+- Removed intermediate `_UploadSource` enum dispatch pattern; replaced with direct callback-per-option approach
 
 **v0.38 — Fix: document upload silently failing on Android**
 
