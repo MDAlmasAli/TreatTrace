@@ -174,15 +174,18 @@ class _DoctorWritePrescriptionScreenState
         }
       case _UploadSource.document:
         final result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
+          type:              FileType.custom,
           allowedExtensions: ['pdf', 'doc', 'docx'],
+          allowMultiple:     true,
+          withData:          true,
         );
-        final file = result?.files.firstOrNull;
-        if (file == null) return;
+        if (result == null || result.files.isEmpty) return;
         setState(() => _uploadingImage = true);
         try {
-          final url = await _svc.uploadDocument(file);
-          if (url != null && mounted) setState(() => _imageUrls.add(url));
+          for (final file in result.files) {
+            final url = await _svc.uploadDocument(file);
+            if (url != null && mounted) setState(() => _imageUrls.add(url));
+          }
         } catch (e) {
           if (mounted) _snack('Upload failed: $e', isError: true);
         } finally {

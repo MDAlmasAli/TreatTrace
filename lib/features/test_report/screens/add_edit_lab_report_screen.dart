@@ -220,6 +220,7 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
           type:              FileType.custom,
           allowedExtensions: ['pdf', 'doc', 'docx'],
           allowMultiple:     true,
+          withData:          true,
         );
         if (result == null || result.files.isEmpty) return;
         setState(() => _uploadingImage = true);

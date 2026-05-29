@@ -170,10 +170,12 @@ class PrescriptionService {
     final path = '$uid/${DateTime.now().millisecondsSinceEpoch}.$ext';
     final opts = FileOptions(upsert: true, contentType: _mimeFromDocExt(ext));
 
-    if (kIsWeb || file.path == null) {
+    if (file.bytes != null) {
       await _client.storage.from('prescriptions').uploadBinary(path, file.bytes!, fileOptions: opts);
-    } else {
+    } else if (file.path != null) {
       await _client.storage.from('prescriptions').upload(path, File(file.path!), fileOptions: opts);
+    } else {
+      return null;
     }
 
     return await _client.storage.from('prescriptions').createSignedUrl(path, 315360000);

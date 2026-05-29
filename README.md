@@ -19,15 +19,22 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.37 — Active Development |
+| **Stage** | v0.38 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-29 (v0.37) |
+| **Last Updated** | 2026-05-29 (v0.38) |
 
 ---
 
 ## Latest Updates (2026-05-29)
+
+**v0.38 — Fix: document upload silently failing on Android**
+
+- **Root cause**: `FilePicker.platform.pickFiles()` was called without `withData: true`; on Android (especially when picking from cloud storage like Google Drive), `file.path` can be a content URI that Supabase's `upload()` cannot access, and `file.bytes` was null because bytes were never loaded
+- **Fix 1**: All four upload screens (`add_edit_lab_report`, `add_edit_prescription`, `doctor_lab_report`, `doctor_write_prescription`) now pass `withData: true` to `pickFiles()`, ensuring bytes are always loaded regardless of file source
+- **Fix 2**: Both service `uploadDocument()` methods now check `file.bytes` first, fall back to `file.path`, and return null gracefully if neither is available — no more null assertion crashes
+- **Fix 3**: `doctor_write_prescription_screen` document case now supports multiple file selection (was only picking the first file)
 
 **v0.37 — File upload support for prescriptions and test reports**
 
