@@ -19,15 +19,22 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.44 — Active Development |
+| **Stage** | v0.45 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-30 (v0.44) |
+| **Last Updated** | 2026-05-30 (v0.45) |
 
 ---
 
 ## Latest Updates (2026-05-30)
+
+**v0.45 — Remove "Order Test" button from doctor patient portal**
+
+- Doctors can no longer order new test reports from a patient's profile
+- Removed `_goOrderTest` method, `onOrder` parameter, and "Order Test" button from `patient_detail_screen`
+- Removed unused `doctor_test_report_screen.dart` import
+- Rationale: test reports are uploaded by patients; if a doctor needs a test they note it in the prescription
 
 **v0.44 — Fix: images opening in new browser tab instead of in-app viewer**
 

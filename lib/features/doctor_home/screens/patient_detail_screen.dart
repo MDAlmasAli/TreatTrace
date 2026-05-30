@@ -18,7 +18,6 @@ import 'all_test_reports_screen.dart';
 import 'all_prescriptions_screen.dart';
 import 'doctor_prescription_view_screen.dart';
 import 'doctor_write_prescription_screen.dart';
-import 'doctor_test_report_screen.dart';
 
 class PatientDetailScreen extends StatefulWidget {
   final String  patientId;
@@ -137,16 +136,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     _load();
   }
 
-  Future<void> _goOrderTest() async {
-    final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
-      builder: (_) => DoctorTestReportScreen(
-        patientId:   widget.patientId,
-        patientName: widget.patientName,
-      ),
-    ));
-    if (result == true) _load();
-  }
-
   Future<void> _goViewTest(TestReport lab) async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => TestReportDetailScreen(
@@ -215,7 +204,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         _TestReportsSection(
                           list:       _testReports,
                           onView:     _goViewTest,
-                          onOrder:    _goOrderTest,
                           onShowMore: _goShowMoreTest,
                         ).animate().fadeIn(delay: 200.ms),
                         const SizedBox(height: 20),
@@ -667,7 +655,6 @@ class _RxTile extends StatelessWidget {
 class _TestReportsSection extends StatelessWidget {
   final List<TestReport>                  list;
   final Future<void> Function(TestReport) onView;
-  final VoidCallback                     onOrder;
   final VoidCallback                     onShowMore;
 
   static const _previewCount = 5;
@@ -675,7 +662,6 @@ class _TestReportsSection extends StatelessWidget {
   const _TestReportsSection({
     required this.list,
     required this.onView,
-    required this.onOrder,
     required this.onShowMore,
   });
 
@@ -688,37 +674,11 @@ class _TestReportsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _SectionHeader(
-                icon:  Icons.science_rounded,
-                title: 'Test Reports',
-                count: list.length,
-                color: c.green,
-              ),
-            ),
-            GestureDetector(
-              onTap: onOrder,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color:        c.green.withAlpha(15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add_rounded, size: 14, color: c.green),
-                    const SizedBox(width: 4),
-                    Text('Order Test',
-                        style: GoogleFonts.poppins(
-                            fontSize: 12, fontWeight: FontWeight.w600, color: c.green)),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        _SectionHeader(
+          icon:  Icons.science_rounded,
+          title: 'Test Reports',
+          count: list.length,
+          color: c.green,
         ),
         const SizedBox(height: 12),
         if (list.isEmpty)
