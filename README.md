@@ -19,15 +19,20 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.43 — Active Development |
+| **Stage** | v0.44 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-30 (v0.43) |
+| **Last Updated** | 2026-05-30 (v0.44) |
 
 ---
 
 ## Latest Updates (2026-05-30)
+
+**v0.44 — Fix: images opening in new browser tab instead of in-app viewer**
+
+- Gallery thumbnails and fullscreen viewer now always attempt `Image.network` first; only fall back to a doc tile (with external open) if the image fails to load — this also fixes existing reports where the stored URL has no recognisable image extension
+- Removed `isImageUrl` pre-check from gallery `itemBuilder`s in `test_report_detail_screen` and `prescription_detail_screen`; inner `GestureDetector` with `HitTestBehavior.opaque` ensures doc-tile taps don't bubble up to the fullscreen handler
 
 **v0.43 — Fix: gallery image on web shown as document tile**
 

@@ -508,23 +508,16 @@ class _ReportGalleryState extends State<_ReportGallery> {
               onPageChanged: (i) => setState(() => _current = i),
               itemBuilder: (_, i) {
                 final url = widget.urls[i];
-                if (!isImageUrl(url)) {
-                  return GestureDetector(
-                    onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
-                    child: _docPageTile(extFromUrl(url), c),
-                  );
-                }
+                // Always try loading as image first; only fall back to doc tile if load fails.
                 return GestureDetector(
                   onTap: () => _showFullScreen(context, i),
                   child: Image.network(
                     url,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                      color: c.card,
-                      child: Center(
-                        child: Icon(Icons.broken_image_rounded,
-                            color: c.cyan, size: 36),
-                      ),
+                    errorBuilder: (_, _, _) => GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+                      child: _docPageTile(extFromUrl(url), c),
                     ),
                   ),
                 );
@@ -628,28 +621,29 @@ class _FullScreenGalleryState extends State<_FullScreenGallery> {
         onPageChanged: (i) => setState(() => _current = i),
         itemBuilder: (_, i) {
           final url = widget.urls[i];
-          if (!isImageUrl(url)) {
-            return GestureDetector(
-              onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.insert_drive_file_rounded, color: Colors.orange, size: 80),
-                    const SizedBox(height: 16),
-                    Text(extFromUrl(url).toUpperCase(),
-                        style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.orange)),
-                    const SizedBox(height: 8),
-                    Text('Tap to open in browser',
-                        style: GoogleFonts.poppins(fontSize: 13, color: Colors.white70)),
-                  ],
-                ),
-              ),
-            );
-          }
           return Center(
             child: InteractiveViewer(
-              child: Image.network(url),
+              child: Image.network(
+                url,
+                errorBuilder: (_, _, _) => GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.insert_drive_file_rounded, color: Colors.orange, size: 80),
+                      const SizedBox(height: 16),
+                      Text(
+                        extFromUrl(url).isEmpty ? 'FILE' : extFromUrl(url).toUpperCase(),
+                        style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.orange),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Tap to open in browser',
+                          style: GoogleFonts.poppins(fontSize: 13, color: Colors.white70)),
+                    ],
+                  ),
+                ),
+              ),
             ),
           );
         },
