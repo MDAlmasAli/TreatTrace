@@ -10,13 +10,17 @@ class TestReport {
   final String?      hospital;
   final List<String> imageUrls;
   final String?      notes;
-  final String?      prescriptionId;
+  final List<String> prescriptionIds;
   final String?      orderedByDoctorId;
   final DateTime     createdAt;
   final DateTime     updatedAt;
 
-  // Display label fetched alongside the report (not stored in DB).
+  // Transient display label (never stored).
   final String? prescriptionDisplay;
+
+  // Backward-compat getter — first linked prescription id or null.
+  String? get prescriptionId =>
+      prescriptionIds.isNotEmpty ? prescriptionIds.first : null;
 
   const TestReport({
     required this.id,
@@ -26,9 +30,9 @@ class TestReport {
     this.testDate,
     this.doctorName,
     this.hospital,
-    this.imageUrls        = const [],
+    this.imageUrls         = const [],
     this.notes,
-    this.prescriptionId,
+    this.prescriptionIds   = const [],
     this.orderedByDoctorId,
     required this.createdAt,
     required this.updatedAt,
@@ -38,25 +42,34 @@ class TestReport {
   bool get hasImages => imageUrls.isNotEmpty;
 
   factory TestReport.fromMap(Map<String, dynamic> m,
-      {String? prescriptionDisplay}) =>
-      TestReport(
-        id:                m['id']                     as String,
-        userId:            m['user_id']                as String,
-        testName:          m['test_name']              as String,
-        category:          m['category']               as String?,
-        testDate:          m['test_date'] != null
-            ? DateTime.parse(m['test_date'] as String)
-            : null,
-        doctorName:        m['doctor_name']            as String?,
-        hospital:          m['hospital']               as String?,
-        imageUrls: (m['image_urls'] as List<dynamic>?)?.cast<String>() ?? [],
-        notes:             m['notes']                  as String?,
-        prescriptionId:    m['prescription_id']        as String?,
-        orderedByDoctorId: m['ordered_by_doctor_id']   as String?,
-        createdAt: DateTime.parse(m['created_at'] as String),
-        updatedAt: DateTime.parse(m['updated_at'] as String),
-        prescriptionDisplay: prescriptionDisplay,
-      );
+      {String? prescriptionDisplay}) {
+    // Read new array column; fall back to old single-id column.
+    final rawPresc = (m['prescription_ids'] as List<dynamic>?)?.cast<String>() ?? [];
+    final prescIds = rawPresc.isNotEmpty
+        ? rawPresc
+        : (m['prescription_id'] != null
+            ? [m['prescription_id'] as String]
+            : <String>[]);
+
+    return TestReport(
+      id:                m['id']                   as String,
+      userId:            m['user_id']              as String,
+      testName:          m['test_name']            as String,
+      category:          m['category']             as String?,
+      testDate:          m['test_date'] != null
+          ? DateTime.parse(m['test_date'] as String)
+          : null,
+      doctorName:        m['doctor_name']          as String?,
+      hospital:          m['hospital']             as String?,
+      imageUrls: (m['image_urls'] as List<dynamic>?)?.cast<String>() ?? [],
+      notes:             m['notes']                as String?,
+      prescriptionIds:   prescIds,
+      orderedByDoctorId: m['ordered_by_doctor_id'] as String?,
+      createdAt: DateTime.parse(m['created_at'] as String),
+      updatedAt: DateTime.parse(m['updated_at'] as String),
+      prescriptionDisplay: prescriptionDisplay,
+    );
+  }
 
   Map<String, dynamic> toMap() => {
         'user_id':               userId,
@@ -67,7 +80,7 @@ class TestReport {
         'hospital':              hospital,
         'image_urls':            imageUrls,
         'notes':                 notes,
-        'prescription_id':       prescriptionId,
+        'prescription_ids':      prescriptionIds,
         'ordered_by_doctor_id':  orderedByDoctorId,
       };
 
@@ -77,13 +90,13 @@ class TestReport {
     String?       testName,
     String?       category,
     DateTime?     testDate,
-    bool          clearTestDate = false,
+    bool          clearTestDate        = false,
     String?       doctorName,
     String?       hospital,
     List<String>? imageUrls,
     String?       notes,
-    String?       prescriptionId,
-    bool          clearPrescriptionId = false,
+    List<String>? prescriptionIds,
+    bool          clearPrescriptionIds = false,
     String?       orderedByDoctorId,
     DateTime?     createdAt,
     DateTime?     updatedAt,
@@ -99,7 +112,9 @@ class TestReport {
         hospital:            hospital            ?? this.hospital,
         imageUrls:           imageUrls           ?? this.imageUrls,
         notes:               notes               ?? this.notes,
-        prescriptionId:      clearPrescriptionId ? null : (prescriptionId ?? this.prescriptionId),
+        prescriptionIds:     clearPrescriptionIds
+            ? []
+            : (prescriptionIds ?? this.prescriptionIds),
         orderedByDoctorId:   orderedByDoctorId   ?? this.orderedByDoctorId,
         createdAt:           createdAt           ?? this.createdAt,
         updatedAt:           updatedAt           ?? this.updatedAt,

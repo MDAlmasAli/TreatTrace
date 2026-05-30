@@ -881,27 +881,40 @@ class _ApptTile extends StatefulWidget {
 
 class _ApptTileState extends State<_ApptTile> {
   final _prescSvc = PrescriptionService();
-  Prescription? _linkedPresc;
+  final Map<String, Prescription> _linkedPrescMap = {};
 
   @override
   void initState() {
     super.initState();
-    if (widget.appt.prescriptionId?.isNotEmpty == true) _fetchLinkedRx();
+    if (widget.appt.prescriptionIds.isNotEmpty) _fetchLinkedRx();
   }
 
   Future<void> _fetchLinkedRx() async {
-    try {
-      final p = await _prescSvc.fetchOne(widget.appt.prescriptionId!);
-      if (mounted) setState(() => _linkedPresc = p);
-    } catch (_) {}
+    for (final id in widget.appt.prescriptionIds) {
+      try {
+        final p = await _prescSvc.fetchOne(id);
+        if (p != null && mounted) setState(() => _linkedPrescMap[id] = p);
+      } catch (_) {}
+    }
   }
 
   String _rxLabel(Prescription p) {
     final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     final doc = p.doctorName?.isNotEmpty == true ? 'Dr. ${p.doctorName}' : 'Prescription';
     final d = p.prescriptionDate;
-    final dateStr = '${d.day} ${months[d.month - 1]} ${d.year}';
-    return '$doc — $dateStr';
+    return '$doc — ${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+
+  String _prescBadgeLabel() {
+    final ids = widget.appt.prescriptionIds;
+    if (ids.isEmpty) return '';
+    if (ids.length == 1) {
+      final p = _linkedPrescMap[ids.first];
+      return p != null ? _rxLabel(p) : 'Linked Prescription';
+    }
+    final first = _linkedPrescMap[ids.first];
+    final firstLabel = first != null ? _rxLabel(first) : 'Linked Prescription';
+    return '$firstLabel  +${ids.length - 1} more';
   }
 
   @override
@@ -919,12 +932,13 @@ class _ApptTileState extends State<_ApptTile> {
         : appt.isCancelled ? 'Cancelled'
         : 'Completed';
 
-    final hasRx = appt.prescriptionId != null;
-    final rxLabel = _linkedPresc != null ? _rxLabel(_linkedPresc!) : 'Linked Prescription';
+    final hasRx        = appt.prescriptionIds.isNotEmpty;
+    final hasTestRep   = appt.testReportIds.isNotEmpty;
+    final hasAnyLink   = hasRx || hasTestRep;
 
     return GestureDetector(
       onTap: hasRx && widget.onPrescriptionTap != null
-          ? () => widget.onPrescriptionTap!(appt.prescriptionId!)
+          ? () => widget.onPrescriptionTap!(appt.prescriptionIds.first)
           : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -932,7 +946,7 @@ class _ApptTileState extends State<_ApptTile> {
         decoration: BoxDecoration(
           color:        c.card,
           borderRadius: BorderRadius.circular(16),
-          border:       Border.all(color: hasRx ? c.purpleBright.withAlpha(60) : c.border),
+          border:       Border.all(color: hasAnyLink ? c.purpleBright.withAlpha(60) : c.border),
         ),
         child: Row(
           children: [
@@ -961,10 +975,25 @@ class _ApptTileState extends State<_ApptTile> {
                         Icon(Icons.link_rounded, size: 10, color: c.purpleBright),
                         const SizedBox(width: 3),
                         Flexible(
-                          child: Text(rxLabel,
+                          child: Text(_prescBadgeLabel(),
                               style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: c.purpleBright),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (hasTestRep) ...[
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Icon(Icons.science_rounded, size: 10, color: c.cyan),
+                        const SizedBox(width: 3),
+                        Text(
+                          appt.testReportIds.length == 1
+                              ? '1 Test Report Linked'
+                              : '${appt.testReportIds.length} Test Reports Linked',
+                          style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: c.cyan),
                         ),
                       ],
                     ),

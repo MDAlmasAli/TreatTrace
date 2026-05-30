@@ -47,14 +47,14 @@ class _TestReportDetailScreenState extends State<TestReportDetailScreen> {
   bool                      _loading       = false;
   Map<String, dynamic>?     _doctorProfile;
   bool                      _loadingDoctor = false;
-  Prescription?             _linkedPresc;
+  final Map<String, Prescription> _linkedPrescMap = {};
 
   @override
   void initState() {
     super.initState();
     _r = widget.report;
     if (_r.orderedByDoctorId?.isNotEmpty == true) _fetchDoctorProfile();
-    if (_r.prescriptionId?.isNotEmpty == true) _fetchLinkedPrescription();
+    if (_r.prescriptionIds.isNotEmpty) _fetchLinkedPrescriptions();
   }
 
   Future<void> _fetchDoctorProfile() async {
@@ -67,11 +67,13 @@ class _TestReportDetailScreenState extends State<TestReportDetailScreen> {
     }
   }
 
-  Future<void> _fetchLinkedPrescription() async {
-    try {
-      final p = await _prescSvc.fetchOne(_r.prescriptionId!);
-      if (mounted) setState(() => _linkedPresc = p);
-    } catch (_) {}
+  Future<void> _fetchLinkedPrescriptions() async {
+    for (final id in _r.prescriptionIds) {
+      try {
+        final p = await _prescSvc.fetchOne(id);
+        if (p != null && mounted) setState(() => _linkedPrescMap[id] = p);
+      } catch (_) {}
+    }
   }
 
   String _prescLabel(Prescription p) {
@@ -260,34 +262,44 @@ class _TestReportDetailScreenState extends State<TestReportDetailScreen> {
                           ).animate().fadeIn(delay: 80.ms).slideY(begin: 0.06),
                         ],
 
-                        // Prescription link
-                        if (_r.prescriptionId != null) ...[
+                        // Prescription links
+                        if (_r.prescriptionIds.isNotEmpty) ...[
                           const SizedBox(height: 20),
                           _SectionLabel(text: s.linkedPrescription),
                           const SizedBox(height: 10),
-                          GestureDetector(
-                            onTap: widget.onPrescriptionTap != null
-                                ? () => widget.onPrescriptionTap!(_r.prescriptionId!)
-                                : null,
-                            child: _InfoCard(
-                              accentColor: c.purpleBright,
-                              child: _InfoRow(
-                                icon:      Icons.link_rounded,
-                                iconColor: c.purpleBright,
-                                label:     s.linkedPrescription,
-                                value:     _linkedPresc != null
-                                    ? _prescLabel(_linkedPresc!)
-                                    : _r.prescriptionDisplay ??
-                                        _r.prescriptionId!.substring(0, 8),
-                                isLast:    true,
-                                trailing: widget.onPrescriptionTap != null
-                                    ? Padding(
-                                        padding: const EdgeInsets.only(right: 4),
-                                        child: Icon(Icons.arrow_forward_ios_rounded,
-                                            size: 14, color: c.purpleBright),
-                                      )
-                                    : null,
-                              ),
+                          _InfoCard(
+                            accentColor: c.purpleBright,
+                            child: Column(
+                              children: _r.prescriptionIds.asMap().entries.map((e) {
+                                final idx    = e.key;
+                                final id     = e.value;
+                                final linked = _linkedPrescMap[id];
+                                final label  = linked != null
+                                    ? _prescLabel(linked)
+                                    : id.substring(0, 8);
+                                final isLast = idx == _r.prescriptionIds.length - 1;
+                                return GestureDetector(
+                                  onTap: widget.onPrescriptionTap != null
+                                      ? () => widget.onPrescriptionTap!(id)
+                                      : null,
+                                  child: _InfoRow(
+                                    icon:      Icons.link_rounded,
+                                    iconColor: c.purpleBright,
+                                    label:     _r.prescriptionIds.length > 1
+                                        ? '${s.linkedPrescription} ${idx + 1}'
+                                        : s.linkedPrescription,
+                                    value:  label,
+                                    isLast: isLast,
+                                    trailing: widget.onPrescriptionTap != null
+                                        ? Padding(
+                                            padding: const EdgeInsets.only(right: 4),
+                                            child: Icon(Icons.arrow_forward_ios_rounded,
+                                                size: 14, color: c.purpleBright),
+                                          )
+                                        : null,
+                                  ),
+                                );
+                              }).toList(),
                             ),
                           ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.06),
                         ],

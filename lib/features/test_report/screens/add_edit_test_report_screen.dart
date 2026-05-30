@@ -52,9 +52,9 @@ class _AddEditTestReportScreenState extends State<AddEditTestReportScreen> {
   // Doctor link
   String? _linkedDoctorId;
 
-  // Prescription link
+  // Prescription links
   List<Prescription> _prescriptions       = [];
-  String?            _linkedPrescId;
+  List<String>       _linkedPrescIds      = [];
   bool               _loadingPrescriptions = false;
 
   bool get _isEdit => widget.existing != null;
@@ -87,7 +87,7 @@ class _AddEditTestReportScreenState extends State<AddEditTestReportScreen> {
     _category       = r.category;
     _testDate       = r.testDate;
     _imageUrls      = List.from(r.imageUrls);
-    _linkedPrescId  = r.prescriptionId;
+    _linkedPrescIds = List.from(r.prescriptionIds);
     _linkedDoctorId = r.orderedByDoctorId;
   }
 
@@ -301,7 +301,7 @@ class _AddEditTestReportScreenState extends State<AddEditTestReportScreen> {
         testDate:          _testDate,
         imageUrls:         _imageUrls,
         notes:             _notesCtrl.text.trim().nullIfEmpty,
-        prescriptionId:    _linkedPrescId,
+        prescriptionIds:   _linkedPrescIds,
         orderedByDoctorId: _linkedDoctorId,
         createdAt:         DateTime.now(),
         updatedAt:         DateTime.now(),
@@ -472,11 +472,11 @@ class _AddEditTestReportScreenState extends State<AddEditTestReportScreen> {
                   const SizedBox(height: 24),
                   _SectionLabel(text: s.linkedPrescription),
                   const SizedBox(height: 12),
-                  _PrescriptionLinkPicker(
+                  _MultiPrescriptionPicker(
                     prescriptions: _prescriptions,
-                    selectedId:    _linkedPrescId,
+                    selectedIds:   _linkedPrescIds,
                     loading:       _loadingPrescriptions,
-                    onChanged: (id) => setState(() => _linkedPrescId = id),
+                    onChanged: (ids) => setState(() => _linkedPrescIds = ids),
                   ),
 
                   const SizedBox(height: 32),
@@ -631,90 +631,290 @@ class _Chip extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _PrescriptionLinkPicker
+// Multi-prescription picker
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _PrescriptionLinkPicker extends StatelessWidget {
-  final List<Prescription> prescriptions;
-  final String?            selectedId;
-  final bool               loading;
-  final void Function(String?) onChanged;
+class _LinkItem {
+  final String id;
+  final String label;
+  const _LinkItem({required this.id, required this.label});
+}
 
-  const _PrescriptionLinkPicker({
+class _MultiPrescriptionPicker extends StatelessWidget {
+  final List<Prescription>       prescriptions;
+  final List<String>             selectedIds;
+  final bool                     loading;
+  final void Function(List<String>) onChanged;
+
+  const _MultiPrescriptionPicker({
     required this.prescriptions,
-    required this.selectedId,
+    required this.selectedIds,
     required this.loading,
     required this.onChanged,
   });
 
-  String _prescLabel(Prescription p) {
-    final doc  = p.doctorName?.isNotEmpty == true
+  String _label(Prescription p) {
+    final doc = p.doctorName?.isNotEmpty == true
         ? 'Dr. ${p.doctorName}'
-        : 'Unknown Doctor';
-    final date =
-        '${p.prescriptionDate.day.toString().padLeft(2, '0')}/'
-        '${p.prescriptionDate.month.toString().padLeft(2, '0')}/'
-        '${p.prescriptionDate.year}';
-    return '$doc — $date';
+        : 'Prescription';
+    final d = p.prescriptionDate;
+    return '$doc — ${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  }
+
+  void _openSheet(BuildContext context, List<_LinkItem> items) {
+    showModalBottomSheet<void>(
+      context:            context,
+      backgroundColor:    context.colors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      isScrollControlled: true,
+      builder: (_) => _PrescPickerSheet(
+        items:       items,
+        selectedIds: selectedIds,
+        onChanged:   onChanged,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
-    final s = S.of(context);
+    final c      = context.colors;
+    final items  = prescriptions.map((p) => _LinkItem(id: p.id, label: _label(p))).toList();
+    final chosen = items.where((i) => selectedIds.contains(i.id)).toList();
 
     return Container(
+      width:   double.infinity,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color:        c.card,
         borderRadius: BorderRadius.circular(16),
-        border:       Border.all(color: c.border, width: 1),
+        border: Border.all(
+          color: chosen.isNotEmpty ? c.purpleBright.withAlpha(80) : c.border,
+        ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: loading
           ? Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: Center(
                 child: SizedBox(
                   width: 18, height: 18,
-                  child: CircularProgressIndicator(
-                      color: c.cyan, strokeWidth: 2),
+                  child: CircularProgressIndicator(color: c.purpleBright, strokeWidth: 2),
                 ),
               ),
             )
-          : DropdownButtonHideUnderline(
-              child: DropdownButton<String?>(
-                value:      selectedId,
-                isExpanded: true,
-                dropdownColor: c.card,
-                icon: Icon(Icons.expand_more_rounded,
-                    color: c.textMuted, size: 20),
-                style: GoogleFonts.poppins(
-                    fontSize: 13, color: c.textPrimary),
-                hint: Text(
-                  s.noLinkedPrescription,
-                  style: GoogleFonts.poppins(
-                      fontSize: 13, color: c.textMuted),
-                ),
-                onChanged: onChanged,
-                items: [
-                  DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text(s.noLinkedPrescription,
-                        style: GoogleFonts.poppins(
-                            fontSize: 13, color: c.textMuted)),
-                  ),
-                  ...prescriptions.map((p) => DropdownMenuItem<String?>(
-                        value: p.id,
-                        child: Text(
-                          _prescLabel(p),
-                          overflow: TextOverflow.ellipsis,
+          : Wrap(
+              spacing:    8,
+              runSpacing: 8,
+              children: [
+                ...chosen.map((item) => _PrescChip(
+                  label: item.label,
+                  onRemove: () {
+                    onChanged(List<String>.from(selectedIds)..remove(item.id));
+                  },
+                )),
+                GestureDetector(
+                  onTap: items.isEmpty ? null : () => _openSheet(context, items),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: items.isEmpty
+                            ? c.border
+                            : c.purpleBright.withAlpha(140),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_rounded, size: 14,
+                            color: items.isEmpty ? c.textMuted : c.purpleBright),
+                        const SizedBox(width: 4),
+                        Text(
+                          items.isEmpty ? 'No prescriptions yet' : 'Add Prescription',
                           style: GoogleFonts.poppins(
-                              fontSize: 13, color: c.textPrimary),
+                            fontSize:   11,
+                            fontWeight: FontWeight.w600,
+                            color:      items.isEmpty ? c.textMuted : c.purpleBright,
+                          ),
                         ),
-                      )),
-                ],
-              ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
+    );
+  }
+}
+
+class _PrescChip extends StatelessWidget {
+  final String       label;
+  final VoidCallback onRemove;
+  const _PrescChip({required this.label, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.colors.purpleBright;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color:        color.withAlpha(18),
+        borderRadius: BorderRadius.circular(20),
+        border:       Border.all(color: color.withAlpha(100)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                  fontSize: 11, fontWeight: FontWeight.w600, color: color),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              width: 16, height: 16,
+              decoration: BoxDecoration(
+                  color: color.withAlpha(40), shape: BoxShape.circle),
+              child: Icon(Icons.close_rounded, size: 10, color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrescPickerSheet extends StatefulWidget {
+  final List<_LinkItem>          items;
+  final List<String>             selectedIds;
+  final void Function(List<String>) onChanged;
+  const _PrescPickerSheet({
+    required this.items,
+    required this.selectedIds,
+    required this.onChanged,
+  });
+
+  @override
+  State<_PrescPickerSheet> createState() => _PrescPickerSheetState();
+}
+
+class _PrescPickerSheetState extends State<_PrescPickerSheet> {
+  late List<String> _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = List.from(widget.selectedIds);
+  }
+
+  void _toggle(String id) {
+    setState(() {
+      if (_selected.contains(id)) {
+        _selected.remove(id);
+      } else {
+        _selected.add(id);
+      }
+    });
+    widget.onChanged(List.from(_selected));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c      = context.colors;
+    final botPad = MediaQuery.of(context).padding.bottom;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 12, bottom: 4),
+          child: Container(
+            width: 36, height: 4,
+            decoration: BoxDecoration(
+                color: c.border, borderRadius: BorderRadius.circular(2)),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 12, 8),
+          child: Row(
+            children: [
+              Text('Select Prescriptions',
+                  style: GoogleFonts.poppins(
+                      fontSize: 16, fontWeight: FontWeight.w700, color: c.textPrimary)),
+              const Spacer(),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('Done',
+                    style: GoogleFonts.poppins(
+                        fontSize: 14, fontWeight: FontWeight.w700,
+                        color: c.purpleBright)),
+              ),
+            ],
+          ),
+        ),
+        Divider(height: 1, color: c.border),
+        ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.55),
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount:  widget.items.length,
+            separatorBuilder: (_, _) =>
+                Divider(height: 1, indent: 16, endIndent: 16, color: c.border),
+            itemBuilder: (_, i) {
+              final item     = widget.items[i];
+              final isChosen = _selected.contains(item.id);
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 4),
+                leading: Container(
+                  width: 34, height: 34,
+                  decoration: BoxDecoration(
+                    color: c.purpleBright.withAlpha(15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.receipt_long_rounded,
+                      size: 16, color: c.purpleBright),
+                ),
+                title: Text(item.label,
+                    style: GoogleFonts.poppins(
+                      fontSize:   12,
+                      fontWeight: isChosen ? FontWeight.w600 : FontWeight.w400,
+                      color:      isChosen ? c.purpleBright : c.textPrimary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+                trailing: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  width: 22, height: 22,
+                  decoration: BoxDecoration(
+                    color:        isChosen ? c.purpleBright : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isChosen ? c.purpleBright : c.border,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: isChosen
+                      ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                      : null,
+                ),
+                onTap: () => _toggle(item.id),
+              );
+            },
+          ),
+        ),
+        SizedBox(height: botPad + 16),
+      ],
     );
   }
 }

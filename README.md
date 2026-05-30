@@ -19,15 +19,23 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.52 — Active Development |
+| **Stage** | v0.53 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-30 (v0.52) |
+| **Last Updated** | 2026-05-30 (v0.53) |
 
 ---
 
 ## Latest Updates (2026-05-30)
+
+**v0.53 — Feat: Multiple prescriptions and test reports linkable to appointments and test reports**
+
+- DB: Added `prescription_ids text[]` and `test_report_ids text[]` to `appointments`; `prescription_ids text[]` to `test_reports`; existing single-link data migrated to arrays
+- Appointment add/edit: multi-select chip picker for prescriptions + test reports (bottom sheet with checkboxes)
+- Test report add/edit: multi-select chip picker for prescriptions
+- Test report detail: shows all linked prescriptions (fetches each by ID at runtime)
+- Doctor patient detail appointment tile: shows first prescription label + "+N more" for multiple; cyan badge for linked test reports
 
 **v0.52 — Fix: Linked prescription badge shows doctor name and date**
 
