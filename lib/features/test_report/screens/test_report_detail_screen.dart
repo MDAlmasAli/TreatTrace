@@ -13,6 +13,7 @@ import '../../../core/utils/file_utils.dart';
 import '../models/test_report.dart';
 import '../services/test_report_service.dart';
 import 'add_edit_test_report_screen.dart';
+import '../../doctor_home/services/doctor_patient_link_service.dart';
 
 class TestReportDetailScreen extends StatefulWidget {
   final TestReport  report;
@@ -37,14 +38,28 @@ class TestReportDetailScreen extends StatefulWidget {
 
 class _TestReportDetailScreenState extends State<TestReportDetailScreen> {
   final _service = TestReportService();
+  final _linkSvc = DoctorPatientLinkService();
 
-  late TestReport _r;
-  bool _loading = false;
+  late TestReport           _r;
+  bool                      _loading       = false;
+  Map<String, dynamic>?     _doctorProfile;
+  bool                      _loadingDoctor = false;
 
   @override
   void initState() {
     super.initState();
     _r = widget.report;
+    if (_r.orderedByDoctorId?.isNotEmpty == true) _fetchDoctorProfile();
+  }
+
+  Future<void> _fetchDoctorProfile() async {
+    setState(() => _loadingDoctor = true);
+    try {
+      final p = await _linkSvc.fetchDoctorPublicProfile(_r.orderedByDoctorId!);
+      if (mounted) setState(() => _doctorProfile = p);
+    } finally {
+      if (mounted) setState(() => _loadingDoctor = false);
+    }
   }
 
   Future<void> _refresh() async {
@@ -155,7 +170,7 @@ class _TestReportDetailScreenState extends State<TestReportDetailScreen> {
                           const SizedBox(height: 20),
                         ],
 
-                        // Test & doctor info
+                        // Test info
                         _SectionLabel(text: 'Test Information'),
                         const SizedBox(height: 10),
                         _InfoCard(
@@ -166,6 +181,7 @@ class _TestReportDetailScreenState extends State<TestReportDetailScreen> {
                               iconColor: c.cyan,
                               label:     s.testName,
                               value:     _r.testName,
+                              isLast:    _r.testDate == null,
                             ),
                             if (_r.testDate != null)
                               _InfoRow(
@@ -173,26 +189,40 @@ class _TestReportDetailScreenState extends State<TestReportDetailScreen> {
                                 iconColor: c.purpleBright,
                                 label:     s.testDate,
                                 value:     _fmtDate(_r.testDate!),
-                              ),
-                            if (_r.doctorName?.isNotEmpty == true)
-                              _InfoRow(
-                                icon:      Icons.person_rounded,
-                                iconColor: c.green,
-                                label:     s.doctorName,
-                                value:     'Dr. ${_r.doctorName!}',
-                              ),
-                            if (_r.hospital?.isNotEmpty == true)
-                              _InfoRow(
-                                icon:      Icons.local_hospital_rounded,
-                                iconColor: c.amber,
-                                label:     s.labHospital,
-                                value:     _r.hospital!,
                                 isLast:    true,
-                              )
-                            else
-                              const SizedBox.shrink(),
+                              ),
                           ]),
                         ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06),
+
+                        // Ordered by doctor
+                        if (_r.orderedByDoctorId?.isNotEmpty == true ||
+                            _r.doctorName?.isNotEmpty == true) ...[
+                          const SizedBox(height: 20),
+                          _SectionLabel(text: 'Ordered By'),
+                          const SizedBox(height: 10),
+                          _loadingDoctor
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color:        c.card,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border:       Border.all(color: c.border),
+                                  ),
+                                  child: Row(children: [
+                                    SizedBox(
+                                      width: 16, height: 16,
+                                      child: CircularProgressIndicator(
+                                          color: c.green, strokeWidth: 2),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text('Loading…',
+                                        style: GoogleFonts.poppins(
+                                            fontSize: 12, color: c.textMuted)),
+                                  ]),
+                                ).animate().fadeIn(delay: 60.ms)
+                              : _buildDoctorCard(c, s),
+                        ],
 
                         // Notes
                         if (_r.notes?.isNotEmpty == true) ...[
@@ -312,6 +342,45 @@ class _TestReportDetailScreenState extends State<TestReportDetailScreen> {
         ],
       ),
     ).animate().fadeIn(duration: 300.ms).slideY(begin: -0.05);
+  }
+
+  Widget _buildDoctorCard(ThemeColors c, S s) {
+    final name        = _doctorProfile?['full_name'] as String?;
+    final specialty   = _doctorProfile?['specialty'] as String?;
+    final hospital    = (_doctorProfile?['hospital'] as String?)
+                        ?? _r.hospital;
+    final displayName = name ?? _r.doctorName ?? 'Unknown';
+    final hasSpecialty = specialty?.isNotEmpty == true;
+    final hasHospital  = hospital?.isNotEmpty == true;
+
+    return _InfoCard(
+      accentColor: c.green,
+      child: Column(children: [
+        _InfoRow(
+          icon:      Icons.person_rounded,
+          iconColor: c.green,
+          label:     s.doctorName,
+          value:     'Dr. $displayName',
+          isLast:    !hasSpecialty && !hasHospital,
+        ),
+        if (hasSpecialty)
+          _InfoRow(
+            icon:      Icons.medical_services_rounded,
+            iconColor: c.cyan,
+            label:     'Specialty',
+            value:     specialty!,
+            isLast:    !hasHospital,
+          ),
+        if (hasHospital)
+          _InfoRow(
+            icon:      Icons.local_hospital_rounded,
+            iconColor: c.amber,
+            label:     'Hospital',
+            value:     hospital!,
+            isLast:    true,
+          ),
+      ]),
+    ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06);
   }
 
   String _fmtDate(DateTime d) =>
