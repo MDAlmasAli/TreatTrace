@@ -1,6 +1,6 @@
 // linked_doctor_picker_card.dart
 // Reusable widget: shows a tap-to-open card that lets the patient pick one of
-// their linked (accepted) doctors. Used in prescription and lab-report forms.
+// their linked (accepted) doctors. Used in prescription and test-report forms.
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';

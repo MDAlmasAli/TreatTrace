@@ -12,9 +12,9 @@ import 'doctor_public_profile_screen.dart';
 import '../../prescription/models/prescription.dart';
 import '../../prescription/services/prescription_service.dart';
 import '../../prescription/screens/prescription_detail_screen.dart';
-import '../../test_report/models/lab_report.dart';
-import '../../test_report/services/lab_report_service.dart';
-import '../../test_report/screens/lab_report_detail_screen.dart';
+import '../../test_report/models/test_report.dart';
+import '../../test_report/services/test_report_service.dart';
+import '../../test_report/screens/test_report_detail_screen.dart';
 
 class GlobalSearchScreen extends StatefulWidget {
   const GlobalSearchScreen({super.key});
@@ -29,7 +29,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
   final _linkSvc = DoctorPatientLinkService();
   final _prescriptionSvc = PrescriptionService();
-  final _labReportSvc = LabReportService();
+  final _testReportSvc = TestReportService();
 
   bool _loading = true;
   String _query = '';
@@ -37,7 +37,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   List<Map<String, dynamic>> _allDoctors = [];
   Set<String> _linkedIds = {};
   List<Prescription> _prescriptions = [];
-  List<LabReport> _labReports = [];
+  List<TestReport> _testReports = [];
 
   @override
   void initState() {
@@ -60,7 +60,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         _linkSvc.fetchApprovedDoctors(),
         _linkSvc.fetchIncomingRequests(),
         _prescriptionSvc.fetchAll(),
-        _labReportSvc.fetchAll(),
+        _testReportSvc.fetchAll(),
       ]);
       _allDoctors = results[0] as List<Map<String, dynamic>>;
       _linkedIds = (results[1] as List<DoctorPatientLink>)
@@ -68,7 +68,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           .map((l) => l.doctorId)
           .toSet();
       _prescriptions = results[2] as List<Prescription>;
-      _labReports = results[3] as List<LabReport>;
+      _testReports = results[3] as List<TestReport>;
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -101,10 +101,10 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     }).toList();
   }
 
-  List<LabReport> get _filteredLabReports {
+  List<TestReport> get _filteredTestReports {
     if (_query.isEmpty) return [];
     final q = _query.toLowerCase();
-    return _labReports
+    return _testReports
         .where(
           (r) =>
               r.testName.toLowerCase().contains(q) ||
@@ -117,7 +117,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   bool get _hasAnyResults =>
       _filteredDoctors.isNotEmpty ||
       _filteredPrescriptions.isNotEmpty ||
-      _filteredLabReports.isNotEmpty;
+      _filteredTestReports.isNotEmpty;
 
   // â”€â”€ Navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -141,9 +141,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     );
   }
 
-  void _openLabReport(LabReport r) {
+  void _openTestReport(TestReport r) {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => LabReportDetailScreen(
+      builder: (_) => TestReportDetailScreen(
         report:            r,
         onPrescriptionTap: (id) => _openLinkedRx(id),
       ),
@@ -330,14 +330,14 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               ),
           const SizedBox(height: 20),
         ],
-        if (_filteredLabReports.isNotEmpty) ...[
+        if (_filteredTestReports.isNotEmpty) ...[
           _SectionHeader(
-            title: 'Lab Reports',
+            title: 'Test Reports',
             icon: Icons.science_rounded,
             c: c,
           ),
           const SizedBox(height: 8),
-          ..._filteredLabReports
+          ..._filteredTestReports
               .take(4)
               .map(
                 (r) => _ResultTile(
@@ -348,7 +348,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                     if (r.category != null) r.category!,
                     if (r.testDate != null) _fmt(r.testDate!),
                   ].join('  Â·  '),
-                  onTap: () => _openLabReport(r),
+                  onTap: () => _openTestReport(r),
                   c: c,
                 ),
               ),
@@ -371,7 +371,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       ),
       _Shortcut(
         icon: Icons.science_rounded,
-        label: 'Lab Reports',
+        label: 'Test Reports',
         onTap: () => Navigator.of(context).pop(),
       ),
     ];

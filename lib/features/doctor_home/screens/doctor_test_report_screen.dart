@@ -8,15 +8,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/utils/file_utils.dart';
-import '../../test_report/models/lab_report.dart';
-import '../../test_report/services/lab_report_service.dart';
+import '../../test_report/models/test_report.dart';
+import '../../test_report/services/test_report_service.dart';
 
-class DoctorLabReportScreen extends StatefulWidget {
+class DoctorTestReportScreen extends StatefulWidget {
   final String     patientId;
   final String     patientName;
-  final LabReport? existing; // null = new order, non-null = edit
+  final TestReport? existing; // null = new order, non-null = edit
 
-  const DoctorLabReportScreen({
+  const DoctorTestReportScreen({
     super.key,
     required this.patientId,
     required this.patientName,
@@ -24,11 +24,11 @@ class DoctorLabReportScreen extends StatefulWidget {
   });
 
   @override
-  State<DoctorLabReportScreen> createState() => _DoctorLabReportScreenState();
+  State<DoctorTestReportScreen> createState() => _DoctorTestReportScreenState();
 }
 
-class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
-  final _svc         = LabReportService();
+class _DoctorTestReportScreenState extends State<DoctorTestReportScreen> {
+  final _svc         = TestReportService();
   final _imagePicker = ImagePicker();
 
   final _notesCtrl    = TextEditingController();
@@ -172,7 +172,7 @@ class _DoctorLabReportScreenState extends State<DoctorLabReportScreen> {
     }
     setState(() => _saving = true);
     try {
-      final report = LabReport(
+      final report = TestReport(
         id:                widget.existing?.id ?? '',
         userId:            widget.patientId,
         testName:          category,

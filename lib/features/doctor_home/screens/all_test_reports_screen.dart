@@ -5,36 +5,36 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
-import '../../test_report/models/lab_report.dart';
-import '../../test_report/services/lab_report_service.dart';
-import '../../test_report/screens/lab_report_detail_screen.dart';
+import '../../test_report/models/test_report.dart';
+import '../../test_report/services/test_report_service.dart';
+import '../../test_report/screens/test_report_detail_screen.dart';
 import '../../prescription/services/prescription_service.dart';
-import 'doctor_lab_report_screen.dart';
+import 'doctor_test_report_screen.dart';
 import 'doctor_prescription_view_screen.dart';
 
-class AllLabReportsScreen extends StatefulWidget {
+class AllTestReportsScreen extends StatefulWidget {
   final String patientId;
   final String patientName;
 
-  const AllLabReportsScreen({
+  const AllTestReportsScreen({
     super.key,
     required this.patientId,
     required this.patientName,
   });
 
   @override
-  State<AllLabReportsScreen> createState() => _AllLabReportsScreenState();
+  State<AllTestReportsScreen> createState() => _AllTestReportsScreenState();
 }
 
-class _AllLabReportsScreenState extends State<AllLabReportsScreen> {
-  final _svc   = LabReportService();
+class _AllTestReportsScreenState extends State<AllTestReportsScreen> {
+  final _svc   = TestReportService();
   final _rxSvc = PrescriptionService();
   final _searchCtrl = TextEditingController();
 
   final String _currentDoctorId =
       Supabase.instance.client.auth.currentUser?.id ?? '';
 
-  List<LabReport> _list       = [];
+  List<TestReport> _list       = [];
   bool            _loading    = true;
   DateTime?       _selectedDate;
   bool            _sortNewest = true;
@@ -62,8 +62,8 @@ class _AllLabReportsScreenState extends State<AllLabReportsScreen> {
     }
   }
 
-  List<LabReport> get _filteredList {
-    var result = List<LabReport>.from(_list);
+  List<TestReport> get _filteredList {
+    var result = List<TestReport>.from(_list);
 
     final q = _searchCtrl.text.trim().toLowerCase();
     if (q.isNotEmpty) {
@@ -119,16 +119,16 @@ class _AllLabReportsScreenState extends State<AllLabReportsScreen> {
     if (picked != null) setState(() => _selectedDate = picked);
   }
 
-  Future<void> _goView(LabReport lab) async {
+  Future<void> _goView(TestReport lab) async {
     final canEdit = lab.orderedByDoctorId == _currentDoctorId;
     await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => LabReportDetailScreen(
+      builder: (_) => TestReportDetailScreen(
         report:    lab,
         canEdit:   canEdit,
         canDelete: false,
         onEditOverride: canEdit
             ? (r) => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => DoctorLabReportScreen(
+                  builder: (_) => DoctorTestReportScreen(
                     patientId:   widget.patientId,
                     patientName: widget.patientName,
                     existing:    r,
@@ -154,9 +154,9 @@ class _AllLabReportsScreenState extends State<AllLabReportsScreen> {
     ));
   }
 
-  Future<void> _goEdit(LabReport lab) async {
+  Future<void> _goEdit(TestReport lab) async {
     final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
-      builder: (_) => DoctorLabReportScreen(
+      builder: (_) => DoctorTestReportScreen(
         patientId:   widget.patientId,
         patientName: widget.patientName,
         existing:    lab,
@@ -329,7 +329,7 @@ class _AllLabReportsScreenState extends State<AllLabReportsScreen> {
                         child: ListView.builder(
                           padding:     const EdgeInsets.fromLTRB(20, 0, 20, 32),
                           itemCount:   filtered.length,
-                          itemBuilder: (ctx, i) => _LabTile(
+                          itemBuilder: (ctx, i) => _TestReportTile(
                             lab:     filtered[i],
                             canEdit: filtered[i].orderedByDoctorId == _currentDoctorId,
                             onView:  () => _goView(filtered[i]),
@@ -440,15 +440,15 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ── Lab report tile ───────────────────────────────────────────────────────────
+// ── Test report tile ───────────────────────────────────────────────────────────
 
-class _LabTile extends StatelessWidget {
-  final LabReport    lab;
+class _TestReportTile extends StatelessWidget {
+  final TestReport    lab;
   final bool         canEdit;
   final VoidCallback onView;
   final VoidCallback onEdit;
 
-  const _LabTile({
+  const _TestReportTile({
     required this.lab,
     required this.canEdit,
     required this.onView,

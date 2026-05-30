@@ -1,6 +1,6 @@
-// lab_report.dart — Pure Dart model. No Flutter imports.
+// test_report.dart — Pure Dart model. No Flutter imports.
 
-class LabReport {
+class TestReport {
   final String       id;
   final String       userId;
   final String       testName;
@@ -18,7 +18,7 @@ class LabReport {
   // Display label fetched alongside the report (not stored in DB).
   final String? prescriptionDisplay;
 
-  const LabReport({
+  const TestReport({
     required this.id,
     required this.userId,
     required this.testName,
@@ -37,9 +37,9 @@ class LabReport {
 
   bool get hasImages => imageUrls.isNotEmpty;
 
-  factory LabReport.fromMap(Map<String, dynamic> m,
+  factory TestReport.fromMap(Map<String, dynamic> m,
       {String? prescriptionDisplay}) =>
-      LabReport(
+      TestReport(
         id:                m['id']                     as String,
         userId:            m['user_id']                as String,
         testName:          m['test_name']              as String,
@@ -71,7 +71,7 @@ class LabReport {
         'ordered_by_doctor_id':  orderedByDoctorId,
       };
 
-  LabReport copyWith({
+  TestReport copyWith({
     String?       id,
     String?       userId,
     String?       testName,
@@ -89,7 +89,7 @@ class LabReport {
     DateTime?     updatedAt,
     String?       prescriptionDisplay,
   }) =>
-      LabReport(
+      TestReport(
         id:                  id                  ?? this.id,
         userId:              userId              ?? this.userId,
         testName:            testName            ?? this.testName,

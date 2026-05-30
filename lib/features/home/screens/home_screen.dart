@@ -13,7 +13,7 @@ import '../../../core/services/auth_service.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../prescription/screens/prescriptions_screen.dart';
 import '../../profile/screens/profile_screen.dart';
-import '../../test_report/screens/lab_reports_screen.dart';
+import '../../test_report/screens/test_reports_screen.dart';
 import '../../appointment/screens/appointments_screen.dart';
 import '../../search/screens/global_search_screen.dart';
 import '../../doctor/screens/doctors_screen.dart';
@@ -83,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _goToTestReports() async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const LabReportsScreen()),
+      MaterialPageRoute(builder: (_) => const TestReportsScreen()),
     );
   }
 

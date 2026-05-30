@@ -1,4 +1,4 @@
-// lab_reports_screen.dart — Test report list with search + category filter.
+// test_reports_screen.dart — Test report list with search + category filter.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,29 +7,30 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
-import '../models/lab_report.dart';
-import '../services/lab_report_service.dart';
+import '../models/test_report.dart';
+import '../services/test_report_service.dart';
 import '../../prescription/services/prescription_service.dart';
 import '../../prescription/screens/prescription_detail_screen.dart';
-import 'add_edit_lab_report_screen.dart';
-import 'lab_report_detail_screen.dart';
+import 'add_edit_test_report_screen.dart';
+import 'test_report_detail_screen.dart';
 
-class LabReportsScreen extends StatefulWidget {
-  const LabReportsScreen({super.key});
+class TestReportsScreen extends StatefulWidget {
+  const TestReportsScreen({super.key});
 
   @override
-  State<LabReportsScreen> createState() => _LabReportsScreenState();
+  State<TestReportsScreen> createState() => _TestReportsScreenState();
 }
 
-class _LabReportsScreenState extends State<LabReportsScreen> {
-  final _service = LabReportService();
+class _TestReportsScreenState extends State<TestReportsScreen> {
+  final _service = TestReportService();
   final _rxSvc   = PrescriptionService();
   final _searchCtrl = TextEditingController();
 
   bool             _loading        = true;
-  List<LabReport>  _all            = [];
+  List<TestReport>  _all            = [];
   String           _query          = '';
   String?          _selectedCategory; // null = show all
+  DateTime?        _date;             // null = no date filter
 
   @override
   void initState() {
@@ -65,10 +66,15 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
     return cats;
   }
 
-  List<LabReport> get _filtered {
+  List<TestReport> get _filtered {
     var list = _all;
     if (_selectedCategory != null) {
       list = list.where((r) => r.category == _selectedCategory).toList();
+    }
+    if (_date != null) {
+      list = list
+          .where((r) => r.testDate != null && _sameDay(r.testDate!, _date!))
+          .toList();
     }
     if (_query.isNotEmpty) {
       final q = _query.toLowerCase();
@@ -82,19 +88,33 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
     return list;
   }
 
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context:     context,
+      initialDate: _date ?? now,
+      firstDate:   DateTime(2000),
+      lastDate:    DateTime(now.year + 1, 12, 31),
+    );
+    if (picked != null) setState(() => _date = picked);
+  }
+
   // ── Navigation ────────────────────────────────────────────────────────────
 
   Future<void> _openAdd() async {
     final added = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const AddEditLabReportScreen()),
+      MaterialPageRoute(builder: (_) => const AddEditTestReportScreen()),
     );
     if (added == true) _load();
   }
 
-  Future<void> _openDetail(LabReport r) async {
+  Future<void> _openDetail(TestReport r) async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => LabReportDetailScreen(
+        builder: (_) => TestReportDetailScreen(
           report:            r,
           onPrescriptionTap: (id) => _openLinkedRx(id),
         ),
@@ -131,6 +151,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
         children: [
           _buildHeader(c, s),
           _buildSearch(c, s),
+          if (_date != null) _buildDateChip(c),
           _buildCategoryChips(c, s),
           Expanded(
             child: _loading
@@ -139,7 +160,9 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                         color: c.cyan))
                 : items.isEmpty
                     ? _EmptyState(
-                        message: _query.isNotEmpty || _selectedCategory != null
+                        message: _query.isNotEmpty ||
+                                _selectedCategory != null ||
+                                _date != null
                             ? 'No results found'
                             : s.noTestReports,
                       )
@@ -151,7 +174,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                           itemCount:        items.length,
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: 12),
-                          itemBuilder: (ctx, i) => _LabReportCard(
+                          itemBuilder: (ctx, i) => _TestReportCard(
                             report: items[i],
                             onTap:  () => _openDetail(items[i]),
                             delay:  i * 40,
@@ -234,34 +257,86 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
   Widget _buildSearch(ThemeColors c, S s) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Container(
-        height: 44,
-        decoration: BoxDecoration(
-          color:        c.card,
-          borderRadius: BorderRadius.circular(14),
-          border:       Border.all(color: c.border, width: 1),
-        ),
-        child: TextField(
-          controller: _searchCtrl,
-          onChanged:  (v) => setState(() => _query = v.trim()),
-          style:      GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
-          decoration: InputDecoration(
-            hintText:  s.searchTestReports,
-            hintStyle: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
-            prefixIcon: Icon(Icons.search_rounded,
-                color: c.cyan, size: 20),
-            suffixIcon: _query.isNotEmpty
-                ? GestureDetector(
-                    onTap: () {
-                      _searchCtrl.clear();
-                      setState(() => _query = '');
-                    },
-                    child: Icon(Icons.close_rounded,
-                        color: c.textMuted, size: 18),
-                  )
-                : null,
-            border:         InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color:        c.card,
+                borderRadius: BorderRadius.circular(14),
+                border:       Border.all(color: c.border, width: 1),
+              ),
+              child: TextField(
+                controller: _searchCtrl,
+                onChanged:  (v) => setState(() => _query = v.trim()),
+                style:      GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
+                decoration: InputDecoration(
+                  hintText:  s.searchTestReports,
+                  hintStyle: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
+                  prefixIcon: Icon(Icons.search_rounded,
+                      color: c.cyan, size: 20),
+                  suffixIcon: _query.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () {
+                            _searchCtrl.clear();
+                            setState(() => _query = '');
+                          },
+                          child: Icon(Icons.close_rounded,
+                              color: c.textMuted, size: 18),
+                        )
+                      : null,
+                  border:         InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          _DateFilterBtn(
+            active: _date != null,
+            accent: c.cyan,
+            onTap:  _pickDate,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateChip(ThemeColors c) {
+    final d = _date!;
+    final label =
+        '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: GestureDetector(
+          onTap: () => setState(() => _date = null),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color:        c.cyan.withAlpha(20),
+              borderRadius: BorderRadius.circular(20),
+              border:       Border.all(color: c.cyan.withAlpha(60)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.event_rounded, size: 14, color: c.cyan),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize:   12,
+                    fontWeight: FontWeight.w600,
+                    color:      c.cyan,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(Icons.close_rounded, size: 15, color: c.cyan),
+              ],
+            ),
           ),
         ),
       ),
@@ -301,14 +376,14 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
   }
 }
 
-// ── Lab report card ───────────────────────────────────────────────────────────
+// ── Test report card ───────────────────────────────────────────────────────────
 
-class _LabReportCard extends StatelessWidget {
-  final LabReport    report;
+class _TestReportCard extends StatelessWidget {
+  final TestReport    report;
   final VoidCallback onTap;
   final int          delay;
 
-  const _LabReportCard({
+  const _TestReportCard({
     required this.report,
     required this.onTap,
     required this.delay,
@@ -442,6 +517,38 @@ class _LabReportCard extends StatelessWidget {
 }
 
 // ── Shared small widgets ──────────────────────────────────────────────────────
+
+class _DateFilterBtn extends StatelessWidget {
+  final bool         active;
+  final Color        accent;
+  final VoidCallback onTap;
+  const _DateFilterBtn({
+    required this.active,
+    required this.accent,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44, height: 44,
+        decoration: BoxDecoration(
+          color:        active ? accent.withAlpha(20) : c.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: active ? accent : c.border,
+            width: active ? 1.5 : 1,
+          ),
+        ),
+        child: Icon(Icons.calendar_today_rounded,
+            color: active ? accent : c.textMuted, size: 20),
+      ),
+    );
+  }
+}
 
 class _CategoryBadge extends StatelessWidget {
   final String label;

@@ -1,5 +1,5 @@
-// lab_report_detail_screen.dart
-// Full view of a lab/test report — info cards, image gallery, edit/delete.
+// test_report_detail_screen.dart
+// Full view of a test report — info cards, image gallery, edit/delete.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,18 +10,18 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/utils/file_utils.dart';
-import '../models/lab_report.dart';
-import '../services/lab_report_service.dart';
-import 'add_edit_lab_report_screen.dart';
+import '../models/test_report.dart';
+import '../services/test_report_service.dart';
+import 'add_edit_test_report_screen.dart';
 
-class LabReportDetailScreen extends StatefulWidget {
-  final LabReport  report;
+class TestReportDetailScreen extends StatefulWidget {
+  final TestReport  report;
   final bool       canEdit;
   final bool       canDelete;
-  final Future<void> Function(LabReport)? onEditOverride;
+  final Future<void> Function(TestReport)? onEditOverride;
   final Future<void> Function(String prescriptionId)? onPrescriptionTap;
 
-  const LabReportDetailScreen({
+  const TestReportDetailScreen({
     super.key,
     required this.report,
     this.canEdit           = true,
@@ -31,14 +31,14 @@ class LabReportDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<LabReportDetailScreen> createState() =>
-      _LabReportDetailScreenState();
+  State<TestReportDetailScreen> createState() =>
+      _TestReportDetailScreenState();
 }
 
-class _LabReportDetailScreenState extends State<LabReportDetailScreen> {
-  final _service = LabReportService();
+class _TestReportDetailScreenState extends State<TestReportDetailScreen> {
+  final _service = TestReportService();
 
-  late LabReport _r;
+  late TestReport _r;
   bool _loading = false;
 
   @override
@@ -67,7 +67,7 @@ class _LabReportDetailScreenState extends State<LabReportDetailScreen> {
     }
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-          builder: (_) => AddEditLabReportScreen(existing: _r)),
+          builder: (_) => AddEditTestReportScreen(existing: _r)),
     );
     if (changed == true) {
       await _refresh();

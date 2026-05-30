@@ -19,15 +19,30 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.39 — Active Development |
+| **Stage** | v0.41 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-29 (v0.39) |
+| **Last Updated** | 2026-05-30 (v0.41) |
 
 ---
 
-## Latest Updates (2026-05-29)
+## Latest Updates (2026-05-30)
+
+**v0.41 — Rename: lab report → test report (full codebase + backend)**
+
+- All Dart files, class names, file names, and identifiers renamed from `lab_report` / `LabReport` to `test_report` / `TestReport`
+- Supabase DB table renamed `lab_reports` → `test_reports` (indexes, trigger, RLS policies all updated)
+- New `test_reports` storage bucket created; new uploads go there; existing files remain accessible via the legacy `lab_reports` bucket
+- `_deleteImageByUrl` now handles both buckets transparently
+- Migration: `2026_05_30_v17_rename_lab_reports_to_test_reports.sql`
+
+**v0.40 — Search by date (Prescriptions + Test Reports)**
+
+- Calendar button beside the search bar on both screens
+- Tapping opens a date picker; selected date shows as a removable chip
+- Date filter combines with existing text search and category chips
+- Active filter button highlights in the screen's accent colour
 
 **v0.39 — Fix: document upload dialog stuck/hanging on Flutter Web**
 

@@ -1,4 +1,4 @@
-// add_edit_lab_report_screen.dart
+// add_edit_test_report_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,8 +12,8 @@ import '../../../core/utils/file_utils.dart';
 import '../../../core/widgets/linked_doctor_picker_card.dart';
 import '../../prescription/models/prescription.dart';
 import '../../prescription/services/prescription_service.dart';
-import '../models/lab_report.dart';
-import '../services/lab_report_service.dart';
+import '../models/test_report.dart';
+import '../services/test_report_service.dart';
 
 const _kPresetCategories = [
   'Blood Test',
@@ -26,18 +26,18 @@ const _kPresetCategories = [
   'Other',
 ];
 
-class AddEditLabReportScreen extends StatefulWidget {
-  final LabReport? existing;
+class AddEditTestReportScreen extends StatefulWidget {
+  final TestReport? existing;
 
-  const AddEditLabReportScreen({super.key, this.existing});
+  const AddEditTestReportScreen({super.key, this.existing});
 
   @override
-  State<AddEditLabReportScreen> createState() =>
-      _AddEditLabReportScreenState();
+  State<AddEditTestReportScreen> createState() =>
+      _AddEditTestReportScreenState();
 }
 
-class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
-  final _reportService = LabReportService();
+class _AddEditTestReportScreenState extends State<AddEditTestReportScreen> {
+  final _reportService = TestReportService();
   final _prescService  = PrescriptionService();
   final _imagePicker   = ImagePicker();
 
@@ -293,7 +293,7 @@ class _AddEditLabReportScreenState extends State<AddEditLabReportScreen> {
 
     setState(() => _saving = true);
     try {
-      final draft = LabReport(
+      final draft = TestReport(
         id:                _isEdit ? widget.existing!.id : '',
         userId:            _isEdit ? widget.existing!.userId : '',
         testName:          _category!,

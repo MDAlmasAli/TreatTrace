@@ -29,6 +29,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen>
   bool                  _loading = true;
   List<Prescription>    _all     = [];
   String                _query   = '';
+  DateTime?             _date;   // null = no date filter
 
   @override
   void initState() {
@@ -54,13 +55,29 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen>
   }
 
   List<Prescription> _filtered(List<Prescription> source) {
-    if (_query.isEmpty) return source;
     final q = _query.toLowerCase();
     return source.where((p) {
-      return (p.doctorName?.toLowerCase().contains(q)    ?? false) ||
-             (p.diagnosis?.toLowerCase().contains(q)     ?? false) ||
-             p.medicines.any((m) => m.medicineName.toLowerCase().contains(q));
+      final matchesText = q.isEmpty ||
+          (p.doctorName?.toLowerCase().contains(q) ?? false) ||
+          (p.diagnosis?.toLowerCase().contains(q) ?? false) ||
+          p.medicines.any((m) => m.medicineName.toLowerCase().contains(q));
+      final matchesDate = _date == null || _sameDay(p.prescriptionDate, _date!);
+      return matchesText && matchesDate;
     }).toList();
+  }
+
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context:    context,
+      initialDate: _date ?? now,
+      firstDate:  DateTime(2000),
+      lastDate:   DateTime(now.year + 1, 12, 31),
+    );
+    if (picked != null) setState(() => _date = picked);
   }
 
   Future<void> _openAdd() async {
@@ -99,6 +116,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen>
         children: [
           _buildHeader(c, s),
           _buildSearch(c, s),
+          if (_date != null) _buildDateChip(c),
           _buildTabBar(c, s),
           Expanded(
             child: _loading
@@ -186,34 +204,86 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen>
   Widget _buildSearch(ThemeColors c, S s) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Container(
-        height: 44,
-        decoration: BoxDecoration(
-          color:        c.card,
-          borderRadius: BorderRadius.circular(14),
-          border:       Border.all(color: c.border, width: 1),
-        ),
-        child: TextField(
-          controller: _searchCtrl,
-          onChanged:  (v) => setState(() => _query = v.trim()),
-          style:      GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
-          decoration: InputDecoration(
-            hintText:       s.searchPrescriptions,
-            hintStyle:      GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
-            prefixIcon:     Icon(Icons.search_rounded,
-                                color: c.purpleBright, size: 20),
-            suffixIcon: _query.isNotEmpty
-                ? GestureDetector(
-                    onTap: () {
-                      _searchCtrl.clear();
-                      setState(() => _query = '');
-                    },
-                    child: Icon(Icons.close_rounded,
-                        color: c.textMuted, size: 18),
-                  )
-                : null,
-            border:          InputBorder.none,
-            contentPadding:  const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color:        c.card,
+                borderRadius: BorderRadius.circular(14),
+                border:       Border.all(color: c.border, width: 1),
+              ),
+              child: TextField(
+                controller: _searchCtrl,
+                onChanged:  (v) => setState(() => _query = v.trim()),
+                style:      GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
+                decoration: InputDecoration(
+                  hintText:       s.searchPrescriptions,
+                  hintStyle:      GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
+                  prefixIcon:     Icon(Icons.search_rounded,
+                                      color: c.purpleBright, size: 20),
+                  suffixIcon: _query.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () {
+                            _searchCtrl.clear();
+                            setState(() => _query = '');
+                          },
+                          child: Icon(Icons.close_rounded,
+                              color: c.textMuted, size: 18),
+                        )
+                      : null,
+                  border:          InputBorder.none,
+                  contentPadding:  const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          _DateFilterBtn(
+            active: _date != null,
+            accent: c.purpleBright,
+            onTap:  _pickDate,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateChip(ThemeColors c) {
+    final d = _date!;
+    final label =
+        '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: GestureDetector(
+          onTap: () => setState(() => _date = null),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color:        c.purpleBright.withAlpha(20),
+              borderRadius: BorderRadius.circular(20),
+              border:       Border.all(color: c.purpleBright.withAlpha(60)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.event_rounded, size: 14, color: c.purpleBright),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize:   12,
+                    fontWeight: FontWeight.w600,
+                    color:      c.purpleBright,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(Icons.close_rounded, size: 15, color: c.purpleBright),
+              ],
+            ),
           ),
         ),
       ),
@@ -492,6 +562,38 @@ class _IconBtn extends StatelessWidget {
         border:       Border.all(color: c.border, width: 1),
       ),
       child: Icon(icon, color: c.textSec, size: 20),
+    );
+  }
+}
+
+class _DateFilterBtn extends StatelessWidget {
+  final bool         active;
+  final Color        accent;
+  final VoidCallback onTap;
+  const _DateFilterBtn({
+    required this.active,
+    required this.accent,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44, height: 44,
+        decoration: BoxDecoration(
+          color:        active ? accent.withAlpha(20) : c.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: active ? accent : c.border,
+            width: active ? 1.5 : 1,
+          ),
+        ),
+        child: Icon(Icons.calendar_today_rounded,
+            color: active ? accent : c.textMuted, size: 20),
+      ),
     );
   }
 }

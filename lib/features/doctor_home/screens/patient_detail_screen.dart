@@ -9,16 +9,16 @@ import '../../../core/services/profile_service.dart';
 import '../../profile/models/health_profile.dart';
 import '../../prescription/models/prescription.dart';
 import '../../prescription/services/prescription_service.dart';
-import '../../test_report/models/lab_report.dart';
-import '../../test_report/services/lab_report_service.dart';
+import '../../test_report/models/test_report.dart';
+import '../../test_report/services/test_report_service.dart';
 import '../../appointment/models/appointment.dart';
 import '../../appointment/services/appointment_service.dart';
-import '../../test_report/screens/lab_report_detail_screen.dart';
-import 'all_lab_reports_screen.dart';
+import '../../test_report/screens/test_report_detail_screen.dart';
+import 'all_test_reports_screen.dart';
 import 'all_prescriptions_screen.dart';
 import 'doctor_prescription_view_screen.dart';
 import 'doctor_write_prescription_screen.dart';
-import 'doctor_lab_report_screen.dart';
+import 'doctor_test_report_screen.dart';
 
 class PatientDetailScreen extends StatefulWidget {
   final String  patientId;
@@ -43,12 +43,12 @@ class PatientDetailScreen extends StatefulWidget {
 class _PatientDetailScreenState extends State<PatientDetailScreen> {
   final _profileSvc = ProfileService();
   final _rxSvc      = PrescriptionService();
-  final _labSvc     = LabReportService();
+  final _testReportSvc     = TestReportService();
   final _apptSvc    = AppointmentService();
 
   HealthProfile?     _profile;
   List<Prescription> _rxList = [];
-  List<LabReport>    _labs   = [];
+  List<TestReport>    _testReports   = [];
   List<Appointment>  _appts  = [];
   bool               _loading = true;
 
@@ -67,14 +67,14 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
       final results = await Future.wait<dynamic>([
         _profileSvc.fetchForPatient(widget.patientId),
         _rxSvc.fetchForPatient(widget.patientId),
-        _labSvc.fetchForPatient(widget.patientId),
+        _testReportSvc.fetchForPatient(widget.patientId),
         _apptSvc.fetchForPatient(widget.patientId),
       ]);
       if (mounted) {
         setState(() {
           _profile = results[0] as HealthProfile?;
           _rxList  = List<Prescription>.from(results[1] as List);
-          _labs    = List<LabReport>.from(results[2] as List);
+          _testReports    = List<TestReport>.from(results[2] as List);
           _appts   = List<Appointment>.from(results[3] as List);
         });
       }
@@ -127,9 +127,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     if (result == true) _load();
   }
 
-  Future<void> _goShowMoreLab() async {
+  Future<void> _goShowMoreTest() async {
     await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => AllLabReportsScreen(
+      builder: (_) => AllTestReportsScreen(
         patientId:   widget.patientId,
         patientName: widget.patientName,
       ),
@@ -137,9 +137,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     _load();
   }
 
-  Future<void> _goOrderLab() async {
+  Future<void> _goOrderTest() async {
     final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
-      builder: (_) => DoctorLabReportScreen(
+      builder: (_) => DoctorTestReportScreen(
         patientId:   widget.patientId,
         patientName: widget.patientName,
       ),
@@ -147,9 +147,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     if (result == true) _load();
   }
 
-  Future<void> _goEditLab(LabReport lab) async {
+  Future<void> _goEditTest(TestReport lab) async {
     final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
-      builder: (_) => DoctorLabReportScreen(
+      builder: (_) => DoctorTestReportScreen(
         patientId:   widget.patientId,
         patientName: widget.patientName,
         existing:    lab,
@@ -158,16 +158,16 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     if (result == true) _load();
   }
 
-  Future<void> _goViewLab(LabReport lab) async {
+  Future<void> _goViewTest(TestReport lab) async {
     final canEdit = lab.orderedByDoctorId == _currentDoctorId;
     await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => LabReportDetailScreen(
+      builder: (_) => TestReportDetailScreen(
         report:    lab,
         canEdit:   canEdit,
         canDelete: false,
         onEditOverride: canEdit
             ? (r) => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => DoctorLabReportScreen(
+                  builder: (_) => DoctorTestReportScreen(
                     patientId:   widget.patientId,
                     patientName: widget.patientName,
                     existing:    r,
@@ -233,13 +233,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           onShowMore:      _goShowMoreRx,
                         ).animate().fadeIn(delay: 150.ms),
                         const SizedBox(height: 20),
-                        _LabReportsSection(
-                          list:            _labs,
+                        _TestReportsSection(
+                          list:            _testReports,
                           currentDoctorId: _currentDoctorId,
-                          onView:          _goViewLab,
-                          onEdit:          _goEditLab,
-                          onOrder:         _goOrderLab,
-                          onShowMore:      _goShowMoreLab,
+                          onView:          _goViewTest,
+                          onEdit:          _goEditTest,
+                          onOrder:         _goOrderTest,
+                          onShowMore:      _goShowMoreTest,
                         ).animate().fadeIn(delay: 200.ms),
                         const SizedBox(height: 20),
                         _AppointmentsSection(list: _appts)
@@ -685,19 +685,19 @@ class _RxTile extends StatelessWidget {
   }
 }
 
-// ── Lab Reports section ───────────────────────────────────────────────────────
+// ── Test Reports section ───────────────────────────────────────────────────────
 
-class _LabReportsSection extends StatelessWidget {
-  final List<LabReport>                  list;
+class _TestReportsSection extends StatelessWidget {
+  final List<TestReport>                  list;
   final String                           currentDoctorId;
-  final Future<void> Function(LabReport) onView;
-  final Future<void> Function(LabReport) onEdit;
+  final Future<void> Function(TestReport) onView;
+  final Future<void> Function(TestReport) onEdit;
   final VoidCallback                     onOrder;
   final VoidCallback                     onShowMore;
 
   static const _previewCount = 5;
 
-  const _LabReportsSection({
+  const _TestReportsSection({
     required this.list,
     required this.currentDoctorId,
     required this.onView,
@@ -751,7 +751,7 @@ class _LabReportsSection extends StatelessWidget {
         if (list.isEmpty)
           _EmptySection(message: 'No test reports found.')
         else ...[
-          ...visible.map((lab) => _LabTile(
+          ...visible.map((lab) => _TestReportTile(
                 lab:     lab,
                 canEdit: lab.orderedByDoctorId == currentDoctorId,
                 onTap:   () => onView(lab),
@@ -786,13 +786,13 @@ class _LabReportsSection extends StatelessWidget {
   }
 }
 
-class _LabTile extends StatelessWidget {
-  final LabReport    lab;
+class _TestReportTile extends StatelessWidget {
+  final TestReport    lab;
   final bool         canEdit;
   final VoidCallback onTap;
   final VoidCallback onEdit;
 
-  const _LabTile({
+  const _TestReportTile({
     required this.lab,
     required this.canEdit,
     required this.onTap,
