@@ -147,33 +147,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     if (result == true) _load();
   }
 
-  Future<void> _goEditTest(TestReport lab) async {
-    final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
-      builder: (_) => DoctorTestReportScreen(
-        patientId:   widget.patientId,
-        patientName: widget.patientName,
-        existing:    lab,
-      ),
-    ));
-    if (result == true) _load();
-  }
-
   Future<void> _goViewTest(TestReport lab) async {
-    final canEdit = lab.orderedByDoctorId == _currentDoctorId;
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => TestReportDetailScreen(
-        report:    lab,
-        canEdit:   canEdit,
-        canDelete: false,
-        onEditOverride: canEdit
-            ? (r) => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => DoctorTestReportScreen(
-                    patientId:   widget.patientId,
-                    patientName: widget.patientName,
-                    existing:    r,
-                  ),
-                ))
-            : null,
+        report:            lab,
+        canEdit:           false,
+        canDelete:         false,
         onPrescriptionTap: (id) => _openLinkedRx(id),
       ),
     ));
@@ -234,12 +213,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         ).animate().fadeIn(delay: 150.ms),
                         const SizedBox(height: 20),
                         _TestReportsSection(
-                          list:            _testReports,
-                          currentDoctorId: _currentDoctorId,
-                          onView:          _goViewTest,
-                          onEdit:          _goEditTest,
-                          onOrder:         _goOrderTest,
-                          onShowMore:      _goShowMoreTest,
+                          list:       _testReports,
+                          onView:     _goViewTest,
+                          onOrder:    _goOrderTest,
+                          onShowMore: _goShowMoreTest,
                         ).animate().fadeIn(delay: 200.ms),
                         const SizedBox(height: 20),
                         _AppointmentsSection(list: _appts)
@@ -689,9 +666,7 @@ class _RxTile extends StatelessWidget {
 
 class _TestReportsSection extends StatelessWidget {
   final List<TestReport>                  list;
-  final String                           currentDoctorId;
   final Future<void> Function(TestReport) onView;
-  final Future<void> Function(TestReport) onEdit;
   final VoidCallback                     onOrder;
   final VoidCallback                     onShowMore;
 
@@ -699,9 +674,7 @@ class _TestReportsSection extends StatelessWidget {
 
   const _TestReportsSection({
     required this.list,
-    required this.currentDoctorId,
     required this.onView,
-    required this.onEdit,
     required this.onOrder,
     required this.onShowMore,
   });
@@ -752,10 +725,8 @@ class _TestReportsSection extends StatelessWidget {
           _EmptySection(message: 'No test reports found.')
         else ...[
           ...visible.map((lab) => _TestReportTile(
-                lab:     lab,
-                canEdit: lab.orderedByDoctorId == currentDoctorId,
-                onTap:   () => onView(lab),
-                onEdit:  () => onEdit(lab),
+                lab:   lab,
+                onTap: () => onView(lab),
               )),
           if (hasMore)
             GestureDetector(
@@ -788,15 +759,11 @@ class _TestReportsSection extends StatelessWidget {
 
 class _TestReportTile extends StatelessWidget {
   final TestReport    lab;
-  final bool         canEdit;
   final VoidCallback onTap;
-  final VoidCallback onEdit;
 
   const _TestReportTile({
     required this.lab,
-    required this.canEdit,
     required this.onTap,
-    required this.onEdit,
   });
 
   @override
@@ -848,20 +815,6 @@ class _TestReportTile extends StatelessWidget {
                       fontSize: 10, fontWeight: FontWeight.w600, color: c.green),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis),
-            ),
-          ],
-          if (canEdit) ...[
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: onEdit,
-              child: Container(
-                width: 32, height: 32,
-                decoration: BoxDecoration(
-                  color:        c.green.withAlpha(15),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Icon(Icons.edit_rounded, size: 15, color: c.green),
-              ),
             ),
           ],
         ],

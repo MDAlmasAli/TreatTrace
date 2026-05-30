@@ -9,7 +9,6 @@ import '../../test_report/models/test_report.dart';
 import '../../test_report/services/test_report_service.dart';
 import '../../test_report/screens/test_report_detail_screen.dart';
 import '../../prescription/services/prescription_service.dart';
-import 'doctor_test_report_screen.dart';
 import 'doctor_prescription_view_screen.dart';
 
 class AllTestReportsScreen extends StatefulWidget {
@@ -120,21 +119,11 @@ class _AllTestReportsScreenState extends State<AllTestReportsScreen> {
   }
 
   Future<void> _goView(TestReport lab) async {
-    final canEdit = lab.orderedByDoctorId == _currentDoctorId;
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => TestReportDetailScreen(
-        report:    lab,
-        canEdit:   canEdit,
-        canDelete: false,
-        onEditOverride: canEdit
-            ? (r) => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => DoctorTestReportScreen(
-                    patientId:   widget.patientId,
-                    patientName: widget.patientName,
-                    existing:    r,
-                  ),
-                ))
-            : null,
+        report:            lab,
+        canEdit:           false,
+        canDelete:         false,
         onPrescriptionTap: (id) => _openLinkedRx(id),
       ),
     ));
@@ -152,17 +141,6 @@ class _AllTestReportsScreenState extends State<AllTestReportsScreen> {
         patientName: widget.patientName,
       ),
     ));
-  }
-
-  Future<void> _goEdit(TestReport lab) async {
-    final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
-      builder: (_) => DoctorTestReportScreen(
-        patientId:   widget.patientId,
-        patientName: widget.patientName,
-        existing:    lab,
-      ),
-    ));
-    if (result == true) _load();
   }
 
   @override
@@ -330,10 +308,8 @@ class _AllTestReportsScreenState extends State<AllTestReportsScreen> {
                           padding:     const EdgeInsets.fromLTRB(20, 0, 20, 32),
                           itemCount:   filtered.length,
                           itemBuilder: (ctx, i) => _TestReportTile(
-                            lab:     filtered[i],
-                            canEdit: filtered[i].orderedByDoctorId == _currentDoctorId,
-                            onView:  () => _goView(filtered[i]),
-                            onEdit:  () => _goEdit(filtered[i]),
+                            lab:    filtered[i],
+                            onView: () => _goView(filtered[i]),
                           ).animate().fadeIn(delay: Duration(milliseconds: 25 * i)),
                         ),
                       ),
@@ -444,15 +420,11 @@ class _EmptyState extends StatelessWidget {
 
 class _TestReportTile extends StatelessWidget {
   final TestReport    lab;
-  final bool         canEdit;
   final VoidCallback onView;
-  final VoidCallback onEdit;
 
   const _TestReportTile({
     required this.lab,
-    required this.canEdit,
     required this.onView,
-    required this.onEdit,
   });
 
   @override
@@ -523,20 +495,6 @@ class _TestReportTile extends StatelessWidget {
               child: Icon(Icons.visibility_rounded, size: 15, color: c.green),
             ),
           ),
-          if (canEdit) ...[
-            const SizedBox(width: 6),
-            GestureDetector(
-              onTap: onEdit,
-              child: Container(
-                width: 32, height: 32,
-                decoration: BoxDecoration(
-                  color:        c.green.withAlpha(12),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Icon(Icons.edit_rounded, size: 15, color: c.green),
-              ),
-            ),
-          ],
         ],
       ),
     );

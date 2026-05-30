@@ -19,15 +19,22 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.41 — Active Development |
+| **Stage** | v0.42 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-30 (v0.41) |
+| **Last Updated** | 2026-05-30 (v0.42) |
 
 ---
 
 ## Latest Updates (2026-05-30)
+
+**v0.42 — Restrict doctor access to test reports (view-only)**
+
+- Doctors can no longer edit test reports — they can only view them
+- Removed edit buttons from `patient_detail_screen` and `all_test_reports_screen`
+- `TestReportDetailScreen` always opens with `canEdit: false` in doctor context
+- Rationale: test reports are uploaded by patients; doctors should not modify them
 
 **v0.41 — Rename: lab report → test report (full codebase + backend)**
 
