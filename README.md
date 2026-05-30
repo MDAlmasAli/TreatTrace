@@ -87,6 +87,37 @@ flutter run
 
 ---
 
+## Project Structure
+
+```
+lib/
+├── core/
+│   ├── config/          # Supabase config
+│   ├── constants/       # App-wide constants
+│   ├── l10n/            # Localisation (EN + BN)
+│   ├── preferences/     # Local prefs (SharedPreferences)
+│   ├── services/        # Auth, storage, notifications
+│   ├── theme/           # Colours, typography, ThemeData
+│   ├── utils/           # Helpers, extensions
+│   └── widgets/         # Shared UI components
+├── features/
+│   ├── admin/           # Admin panel
+│   ├── appointment/     # Booking, status management
+│   ├── auth/            # Login, register, auth gate
+│   ├── doctor/          # My Doctors (patient side)
+│   ├── doctor_home/     # Doctor portal (patient list, detail)
+│   ├── home/            # Patient home screen
+│   ├── prescription/    # Prescriptions CRUD
+│   ├── profile/         # Health profile, vitals
+│   ├── search/          # Global search
+│   └── test_report/     # Test reports CRUD
+├── shared/
+│   └── widgets/         # Cross-feature widgets
+└── main.dart
+```
+
+---
+
 ## Authors
 
 - **MD Almas Ali**
