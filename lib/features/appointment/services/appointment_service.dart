@@ -135,10 +135,12 @@ class AppointmentService {
 
   Future<int> countTodayForCurrentDoctor() async {
     final rows = await _fetchRowsForCurrentDoctor(
-      columns: 'id',
+      columns: 'id, status',
       day: DateTime.now(),
     );
-    return rows.length;
+    return rows
+        .where((r) => (r as Map<String, dynamic>)['status'] == 'scheduled')
+        .length;
   }
 
   // Count upcoming appointments (scheduled + date >= today)

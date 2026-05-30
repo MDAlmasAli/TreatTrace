@@ -19,15 +19,20 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.47 — Active Development |
+| **Stage** | v0.48 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-30 (v0.47) |
+| **Last Updated** | 2026-05-30 (v0.48) |
 
 ---
 
 ## Latest Updates (2026-05-30)
+
+**v0.48 — Fix: Today's Appointments count matches Today tab**
+
+- `countTodayForCurrentDoctor()` now only counts `scheduled` appointments for today
+- Previously it counted all statuses (completed/cancelled included), causing the home screen count to be higher than what Today's Schedule actually showed
 
 **v0.47 — Completed appointments: date filter + search by name/ID/diagnosis**
 
