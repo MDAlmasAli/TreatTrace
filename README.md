@@ -19,15 +19,20 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.50 — Active Development |
+| **Stage** | v0.51 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-30 (v0.50) |
+| **Last Updated** | 2026-05-30 (v0.51) |
 
 ---
 
 ## Latest Updates (2026-05-30)
+
+**v0.51 — Fix: Appointment sort order in doctor patient detail**
+
+- Upcoming (scheduled) appointments now appear first, sorted ascending by date (soonest first)
+- Past/completed appointments appear below, sorted descending (most recent first)
 
 **v0.50 — Fix: Linked prescription label + doctor appointment tile**
 

@@ -75,7 +75,15 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
           _profile = results[0] as HealthProfile?;
           _rxList  = List<Prescription>.from(results[1] as List);
           _testReports    = List<TestReport>.from(results[2] as List);
-          _appts   = List<Appointment>.from(results[3] as List);
+          _appts   = List<Appointment>.from(results[3] as List)
+            ..sort((a, b) {
+              final aUp = a.isUpcoming ? 0 : 1;
+              final bUp = b.isUpcoming ? 0 : 1;
+              if (aUp != bUp) return aUp.compareTo(bUp);
+              return aUp == 0
+                  ? a.appointmentDate.compareTo(b.appointmentDate)
+                  : b.appointmentDate.compareTo(a.appointmentDate);
+            });
         });
       }
     } finally {
