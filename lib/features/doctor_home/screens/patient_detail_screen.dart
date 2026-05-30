@@ -870,13 +870,43 @@ class _AppointmentsSection extends StatelessWidget {
   }
 }
 
-class _ApptTile extends StatelessWidget {
+class _ApptTile extends StatefulWidget {
   final Appointment            appt;
   final void Function(String)? onPrescriptionTap;
   const _ApptTile({required this.appt, this.onPrescriptionTap});
 
   @override
+  State<_ApptTile> createState() => _ApptTileState();
+}
+
+class _ApptTileState extends State<_ApptTile> {
+  final _prescSvc = PrescriptionService();
+  Prescription? _linkedPresc;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.appt.prescriptionId?.isNotEmpty == true) _fetchLinkedRx();
+  }
+
+  Future<void> _fetchLinkedRx() async {
+    try {
+      final p = await _prescSvc.fetchOne(widget.appt.prescriptionId!);
+      if (mounted) setState(() => _linkedPresc = p);
+    } catch (_) {}
+  }
+
+  String _rxLabel(Prescription p) {
+    final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final doc = p.doctorName?.isNotEmpty == true ? 'Dr. ${p.doctorName}' : 'Prescription';
+    final d = p.prescriptionDate;
+    final dateStr = '${d.day} ${months[d.month - 1]} ${d.year}';
+    return '$doc — $dateStr';
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final appt   = widget.appt;
     final c      = context.colors;
     final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     final d      = appt.appointmentDate;
@@ -890,10 +920,11 @@ class _ApptTile extends StatelessWidget {
         : 'Completed';
 
     final hasRx = appt.prescriptionId != null;
+    final rxLabel = _linkedPresc != null ? _rxLabel(_linkedPresc!) : 'Linked Prescription';
 
     return GestureDetector(
-      onTap: hasRx && onPrescriptionTap != null
-          ? () => onPrescriptionTap!(appt.prescriptionId!)
+      onTap: hasRx && widget.onPrescriptionTap != null
+          ? () => widget.onPrescriptionTap!(appt.prescriptionId!)
           : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -929,8 +960,12 @@ class _ApptTile extends StatelessWidget {
                       children: [
                         Icon(Icons.link_rounded, size: 10, color: c.purpleBright),
                         const SizedBox(width: 3),
-                        Text('Linked Prescription',
-                            style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: c.purpleBright)),
+                        Flexible(
+                          child: Text(rxLabel,
+                              style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: c.purpleBright),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                        ),
                       ],
                     ),
                   ],
