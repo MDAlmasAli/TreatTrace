@@ -19,15 +19,22 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.46 — Active Development |
+| **Stage** | v0.47 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-30 (v0.46) |
+| **Last Updated** | 2026-05-30 (v0.47) |
 
 ---
 
 ## Latest Updates (2026-05-30)
+
+**v0.47 — Completed appointments: date filter + search by name/ID/diagnosis**
+
+- Completed tab now defaults to today's completed appointments (not all-time)
+- "Pick Date" button lets doctor browse completed appointments for any past date
+- Search bar filters by patient name, user ID, or linked prescription diagnosis
+- Diagnosis is batch-fetched in a single DB call — no N+1 queries
 
 **v0.46 — Appointments preview + All Appointments screen in doctor patient portal**
 

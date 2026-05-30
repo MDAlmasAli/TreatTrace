@@ -24,15 +24,27 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
   final _client = Supabase.instance.client;
 
   List<Appointment> _appointments = [];
-  Map<String, Map<String, dynamic>> _patientById = {};
+  Map<String, Map<String, dynamic>> _patientById  = {};
+  Map<String, String?>              _diagnosisByRxId = {};
   _ScheduleFilter _filter = _ScheduleFilter.today;
   DateTime? _selectedUpcomingDate;
+  DateTime  _completedDate = DateTime(
+    DateTime.now().year, DateTime.now().month, DateTime.now().day,
+  );
+  final _completedSearchCtrl = TextEditingController();
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _completedSearchCtrl.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _completedSearchCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -56,10 +68,31 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
         };
       }
 
+      // Batch-fetch diagnoses for completed appointments that have a linked Rx.
+      final rxIds = sorted
+          .where((a) =>
+              a.status == AppointmentStatus.completed &&
+              a.prescriptionId != null)
+          .map((a) => a.prescriptionId!)
+          .toSet()
+          .toList();
+      Map<String, String?> diagnosisMap = {};
+      if (rxIds.isNotEmpty) {
+        final rows = await _client
+            .from('prescriptions')
+            .select('id, diagnosis')
+            .inFilter('id', rxIds) as List;
+        diagnosisMap = {
+          for (final row in rows)
+            (row['id'] as String): row['diagnosis'] as String?,
+        };
+      }
+
       if (!mounted) return;
       setState(() {
-        _appointments = sorted;
-        _patientById = patientMap;
+        _appointments      = sorted;
+        _patientById       = patientMap;
+        _diagnosisByRxId   = diagnosisMap;
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -71,10 +104,25 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
     final today = DateTime(now.year, now.month, now.day);
 
     if (_filter == _ScheduleFilter.completed) {
-      return _appointments
-          .where((a) => a.status == AppointmentStatus.completed)
+      var list = _appointments
+          .where((a) =>
+              a.status == AppointmentStatus.completed &&
+              _isSameDate(a.appointmentDate, _completedDate))
           .toList()
         ..sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
+
+      final q = _completedSearchCtrl.text.trim().toLowerCase();
+      if (q.isNotEmpty) {
+        list = list.where((a) {
+          final name      = (_patientById[a.userId]?['full_name'] as String? ?? '').toLowerCase();
+          final uid       = a.userId.toLowerCase();
+          final diagnosis = (a.prescriptionId != null
+              ? (_diagnosisByRxId[a.prescriptionId!] ?? '')
+              : '').toLowerCase();
+          return name.contains(q) || uid.contains(q) || diagnosis.contains(q);
+        }).toList();
+      }
+      return list;
     }
 
     if (_filter == _ScheduleFilter.today) {
@@ -133,6 +181,29 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
 
   bool _isSameDate(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+
+  Future<void> _pickCompletedDate() async {
+    final picked = await showDatePicker(
+      context:     context,
+      initialDate: _completedDate,
+      firstDate:   DateTime(2020),
+      lastDate:    DateTime.now(),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.dark(
+            primary:   context.colors.green,
+            onPrimary: Colors.white,
+            surface:   context.colors.card,
+            onSurface: context.colors.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked == null) return;
+    setState(() => _completedDate =
+        DateTime(picked.year, picked.month, picked.day));
+  }
 
   Future<void> _pickUpcomingDate() async {
     final now = DateTime.now();
@@ -197,6 +268,34 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
       body: Column(
         children: [
           _buildHeader(c, visible.length),
+          if (_filter == _ScheduleFilter.completed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color:        c.card,
+                  borderRadius: BorderRadius.circular(14),
+                  border:       Border.all(color: c.border),
+                ),
+                child: TextField(
+                  controller: _completedSearchCtrl,
+                  style:      GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
+                  decoration: InputDecoration(
+                    hintText:   'Search by name, user ID or diagnosis…',
+                    hintStyle:  GoogleFonts.poppins(fontSize: 13, color: c.textMuted),
+                    prefixIcon: Icon(Icons.search_rounded, color: c.textSec, size: 20),
+                    suffixIcon: _completedSearchCtrl.text.isNotEmpty
+                        ? GestureDetector(
+                            onTap: () => setState(() => _completedSearchCtrl.clear()),
+                            child: Icon(Icons.close_rounded, color: c.textMuted, size: 18),
+                          )
+                        : null,
+                    border:         InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                  ),
+                ),
+              ),
+            ),
           Expanded(
             child: _loading
                 ? Center(
@@ -255,7 +354,9 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
     ];
     final selectedDate = _filter == _ScheduleFilter.today
         ? now
-        : (_selectedUpcomingDate ?? now);
+        : _filter == _ScheduleFilter.completed
+            ? _completedDate
+            : (_selectedUpcomingDate ?? now);
     final title = _filter == _ScheduleFilter.today
         ? "Today's Schedule"
         : _filter == _ScheduleFilter.upcoming
@@ -374,31 +475,40 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
                 GestureDetector(
                   onTap: _pickUpcomingDate,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: c.accent.withAlpha(16),
+                      color:        c.accent.withAlpha(16),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: c.accent.withAlpha(60)),
+                      border:       Border.all(color: c.accent.withAlpha(60)),
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.calendar_month_rounded,
-                          size: 14,
-                          color: c.accent,
-                        ),
+                        Icon(Icons.calendar_month_rounded, size: 14, color: c.accent),
                         const SizedBox(width: 4),
-                        Text(
-                          'Pick Date',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: c.accent,
-                          ),
-                        ),
+                        Text('Pick Date',
+                            style: GoogleFonts.poppins(
+                                fontSize: 11, fontWeight: FontWeight.w600, color: c.accent)),
+                      ],
+                    ),
+                  ),
+                ),
+              if (_filter == _ScheduleFilter.completed)
+                GestureDetector(
+                  onTap: _pickCompletedDate,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color:        c.green.withAlpha(16),
+                      borderRadius: BorderRadius.circular(10),
+                      border:       Border.all(color: c.green.withAlpha(60)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_month_rounded, size: 14, color: c.green),
+                        const SizedBox(width: 4),
+                        Text('Pick Date',
+                            style: GoogleFonts.poppins(
+                                fontSize: 11, fontWeight: FontWeight.w600, color: c.green)),
                       ],
                     ),
                   ),
