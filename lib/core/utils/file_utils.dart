@@ -8,7 +8,11 @@ bool isImageUrl(String url) {
 }
 
 String extFromUrl(String url) {
-  final path = url.split('?').first;
+  final path   = url.split('?').first;
   final dotIdx = path.lastIndexOf('.');
-  return dotIdx == -1 ? '' : path.substring(dotIdx + 1).toLowerCase();
+  if (dotIdx == -1) return '';
+  final ext = path.substring(dotIdx + 1).toLowerCase();
+  // Sanity check: a real extension has no slashes, colons, or spaces.
+  if (ext.contains('/') || ext.contains(':') || ext.contains(' ') || ext.length > 8) return '';
+  return ext;
 }

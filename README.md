@@ -19,15 +19,21 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.42 — Active Development |
+| **Stage** | v0.43 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-30 (v0.42) |
+| **Last Updated** | 2026-05-30 (v0.43) |
 
 ---
 
 ## Latest Updates (2026-05-30)
+
+**v0.43 — Fix: gallery image on web shown as document tile**
+
+- **Root cause**: `XFile.path` on Flutter Web is a blob URL (e.g. `blob:http://localhost:9533/uuid`) with no file extension. Using `file.path.split('.').last` made the entire blob URL the "extension", stored in the Supabase path, and later extracted by `extFromUrl`, causing `isImageUrl` to return false
+- **Fix 1**: `uploadImage` in both `test_report_service` and `prescription_service` now derives extension from `file.name` (which carries the real filename) instead of `file.path`; defaults to `jpg` if name has no extension
+- **Fix 2**: `extFromUrl` now validates the extracted token — if it contains `/`, `:`, spaces, or is longer than 8 chars it returns `''`, preventing the blob URL from leaking into the UI as extension text
 
 **v0.42 — Restrict doctor access to test reports (view-only)**
 

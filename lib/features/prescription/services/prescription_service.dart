@@ -145,7 +145,11 @@ class PrescriptionService {
     final uid = _uid;
     if (uid == null) return null;
 
-    final ext         = file.path.split('.').last.toLowerCase();
+    // file.path on web is a blob URL with no extension; use file.name instead.
+    final nameDot     = file.name.lastIndexOf('.');
+    final ext         = nameDot != -1
+        ? file.name.substring(nameDot + 1).toLowerCase()
+        : 'jpg';
     final contentType = _mimeFromExt(ext);
     final path        = '$uid/${DateTime.now().millisecondsSinceEpoch}.$ext';
     final opts        = FileOptions(upsert: true, contentType: contentType);
