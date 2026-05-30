@@ -219,8 +219,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         ).animate().fadeIn(delay: 200.ms),
                         const SizedBox(height: 20),
                         _AppointmentsSection(
-                          list:       _appts,
-                          onShowMore: _goShowMoreAppts,
+                          list:              _appts,
+                          onShowMore:        _goShowMoreAppts,
+                          onPrescriptionTap: _openLinkedRx,
                         ).animate().fadeIn(delay: 250.ms),
                       ],
                     ),
@@ -800,14 +801,16 @@ class _TestReportTile extends StatelessWidget {
 // ── Appointments section ──────────────────────────────────────────────────────
 
 class _AppointmentsSection extends StatelessWidget {
-  final List<Appointment> list;
-  final VoidCallback      onShowMore;
+  final List<Appointment>       list;
+  final VoidCallback            onShowMore;
+  final void Function(String)?  onPrescriptionTap;
 
   static const _previewCount = 3;
 
   const _AppointmentsSection({
     required this.list,
     required this.onShowMore,
+    this.onPrescriptionTap,
   });
 
   @override
@@ -829,7 +832,7 @@ class _AppointmentsSection extends StatelessWidget {
         if (list.isEmpty)
           _EmptySection(message: 'No appointments found.')
         else ...[
-          ...visible.map((appt) => _ApptTile(appt: appt)),
+          ...visible.map((appt) => _ApptTile(appt: appt, onPrescriptionTap: onPrescriptionTap)),
           if (hasMore)
             GestureDetector(
               onTap: onShowMore,
@@ -860,8 +863,9 @@ class _AppointmentsSection extends StatelessWidget {
 }
 
 class _ApptTile extends StatelessWidget {
-  final Appointment appt;
-  const _ApptTile({required this.appt});
+  final Appointment            appt;
+  final void Function(String)? onPrescriptionTap;
+  const _ApptTile({required this.appt, this.onPrescriptionTap});
 
   @override
   Widget build(BuildContext context) {
@@ -877,43 +881,65 @@ class _ApptTile extends StatelessWidget {
         : appt.isCancelled ? 'Cancelled'
         : 'Completed';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color:        c.card,
-        borderRadius: BorderRadius.circular(16),
-        border:       Border.all(color: c.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(color: c.amber.withAlpha(15), borderRadius: BorderRadius.circular(12)),
-            child: Icon(Icons.calendar_month_rounded, color: c.amber, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(appt.visitReason ?? appt.doctorNameSnapshot,
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                Text(
-                  dateStr + (appt.appointmentTime != null ? ' · ${appt.appointmentTime}' : ''),
-                  style: GoogleFonts.poppins(fontSize: 11, color: c.textSec),
-                ),
-              ],
+    final hasRx = appt.prescriptionId != null;
+
+    return GestureDetector(
+      onTap: hasRx && onPrescriptionTap != null
+          ? () => onPrescriptionTap!(appt.prescriptionId!)
+          : null,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color:        c.card,
+          borderRadius: BorderRadius.circular(16),
+          border:       Border.all(color: hasRx ? c.purpleBright.withAlpha(60) : c.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(color: c.amber.withAlpha(15), borderRadius: BorderRadius.circular(12)),
+              child: Icon(Icons.calendar_month_rounded, color: c.amber, size: 20),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(color: statusColor.withAlpha(15), borderRadius: BorderRadius.circular(8)),
-            child: Text(statusLabel, style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: statusColor)),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(appt.visitReason ?? appt.doctorNameSnapshot,
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    dateStr + (appt.appointmentTime != null ? ' · ${appt.appointmentTime}' : ''),
+                    style: GoogleFonts.poppins(fontSize: 11, color: c.textSec),
+                  ),
+                  if (hasRx) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.link_rounded, size: 10, color: c.purpleBright),
+                        const SizedBox(width: 3),
+                        Text('Linked Prescription',
+                            style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: c.purpleBright)),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: statusColor.withAlpha(15), borderRadius: BorderRadius.circular(8)),
+              child: Text(statusLabel, style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: statusColor)),
+            ),
+            if (hasRx) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.arrow_forward_ios_rounded, size: 12, color: c.purpleBright),
+            ],
+          ],
+        ),
       ),
     );
   }

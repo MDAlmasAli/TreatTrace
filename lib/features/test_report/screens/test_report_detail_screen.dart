@@ -14,6 +14,8 @@ import '../models/test_report.dart';
 import '../services/test_report_service.dart';
 import 'add_edit_test_report_screen.dart';
 import '../../doctor_home/services/doctor_patient_link_service.dart';
+import '../../prescription/models/prescription.dart';
+import '../../prescription/services/prescription_service.dart';
 
 class TestReportDetailScreen extends StatefulWidget {
   final TestReport  report;
@@ -37,19 +39,22 @@ class TestReportDetailScreen extends StatefulWidget {
 }
 
 class _TestReportDetailScreenState extends State<TestReportDetailScreen> {
-  final _service = TestReportService();
-  final _linkSvc = DoctorPatientLinkService();
+  final _service  = TestReportService();
+  final _linkSvc  = DoctorPatientLinkService();
+  final _prescSvc = PrescriptionService();
 
   late TestReport           _r;
   bool                      _loading       = false;
   Map<String, dynamic>?     _doctorProfile;
   bool                      _loadingDoctor = false;
+  Prescription?             _linkedPresc;
 
   @override
   void initState() {
     super.initState();
     _r = widget.report;
     if (_r.orderedByDoctorId?.isNotEmpty == true) _fetchDoctorProfile();
+    if (_r.prescriptionId?.isNotEmpty == true) _fetchLinkedPrescription();
   }
 
   Future<void> _fetchDoctorProfile() async {
@@ -60,6 +65,20 @@ class _TestReportDetailScreenState extends State<TestReportDetailScreen> {
     } finally {
       if (mounted) setState(() => _loadingDoctor = false);
     }
+  }
+
+  Future<void> _fetchLinkedPrescription() async {
+    try {
+      final p = await _prescSvc.fetchOne(_r.prescriptionId!);
+      if (mounted) setState(() => _linkedPresc = p);
+    } catch (_) {}
+  }
+
+  String _prescLabel(Prescription p) {
+    final doc = p.doctorName?.isNotEmpty == true
+        ? 'Dr. ${p.doctorName}'
+        : 'Prescription';
+    return '$doc — ${_fmtDate(p.prescriptionDate)}';
   }
 
   Future<void> _refresh() async {
@@ -256,8 +275,10 @@ class _TestReportDetailScreenState extends State<TestReportDetailScreen> {
                                 icon:      Icons.link_rounded,
                                 iconColor: c.purpleBright,
                                 label:     s.linkedPrescription,
-                                value:     _r.prescriptionDisplay ??
-                                    _r.prescriptionId!.substring(0, 8),
+                                value:     _linkedPresc != null
+                                    ? _prescLabel(_linkedPresc!)
+                                    : _r.prescriptionDisplay ??
+                                        _r.prescriptionId!.substring(0, 8),
                                 isLast:    true,
                                 trailing: widget.onPrescriptionTap != null
                                     ? Padding(
