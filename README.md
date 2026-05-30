@@ -19,15 +19,21 @@
 
 | Item | Detail |
 |---|---|
-| **Stage** | v0.45 — Active Development |
+| **Stage** | v0.46 — Active Development |
 | **UI Status** | Auth · Animated Splash · Home · Profile · Prescriptions · Test Reports · Doctors · Appointments · Doctor Portal · Username System · Global Doctor Search · Doctor Public Profile Page · Visiting Information Section |
 | **Backend Status** | Auth · Profile (+ username) · Prescriptions + Medicines · Test Reports (doctor-linked) · Doctors · Appointments · Doctor–Patient Links · Approved Doctor Directory · Doctor Schedule RLS · Doctor Degree, About · Visiting Fee / Hours / Chamber (direct update, no admin review) |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-30 (v0.45) |
+| **Last Updated** | 2026-05-30 (v0.46) |
 
 ---
 
 ## Latest Updates (2026-05-30)
+
+**v0.46 — Appointments preview + All Appointments screen in doctor patient portal**
+
+- `_AppointmentsSection` now shows max 3 appointments with a "Show X more" button
+- Tapping "Show more" opens new `AllAppointmentsScreen` with search and sort
+- Added `all_appointments_screen.dart` following the same pattern as `AllTestReportsScreen`
 
 **v0.45 — Remove "Order Test" button from doctor patient portal**
 

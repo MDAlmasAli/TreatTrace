@@ -16,6 +16,7 @@ import '../../appointment/services/appointment_service.dart';
 import '../../test_report/screens/test_report_detail_screen.dart';
 import 'all_test_reports_screen.dart';
 import 'all_prescriptions_screen.dart';
+import 'all_appointments_screen.dart';
 import 'doctor_prescription_view_screen.dart';
 import 'doctor_write_prescription_screen.dart';
 
@@ -136,6 +137,16 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     _load();
   }
 
+  Future<void> _goShowMoreAppts() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => AllAppointmentsScreen(
+        patientId:   widget.patientId,
+        patientName: widget.patientName,
+      ),
+    ));
+    _load();
+  }
+
   Future<void> _goViewTest(TestReport lab) async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => TestReportDetailScreen(
@@ -207,8 +218,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           onShowMore: _goShowMoreTest,
                         ).animate().fadeIn(delay: 200.ms),
                         const SizedBox(height: 20),
-                        _AppointmentsSection(list: _appts)
-                            .animate().fadeIn(delay: 250.ms),
+                        _AppointmentsSection(
+                          list:       _appts,
+                          onShowMore: _goShowMoreAppts,
+                        ).animate().fadeIn(delay: 250.ms),
                       ],
                     ),
                   ),
@@ -788,11 +801,21 @@ class _TestReportTile extends StatelessWidget {
 
 class _AppointmentsSection extends StatelessWidget {
   final List<Appointment> list;
-  const _AppointmentsSection({required this.list});
+  final VoidCallback      onShowMore;
+
+  static const _previewCount = 3;
+
+  const _AppointmentsSection({
+    required this.list,
+    required this.onShowMore,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
+    final c       = context.colors;
+    final visible = list.take(_previewCount).toList();
+    final hasMore = list.length > _previewCount;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -805,8 +828,32 @@ class _AppointmentsSection extends StatelessWidget {
         const SizedBox(height: 12),
         if (list.isEmpty)
           _EmptySection(message: 'No appointments found.')
-        else
-          ...list.take(5).map((appt) => _ApptTile(appt: appt)),
+        else ...[
+          ...visible.map((appt) => _ApptTile(appt: appt)),
+          if (hasMore)
+            GestureDetector(
+              onTap: onShowMore,
+              child: Container(
+                margin: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color:        c.amber.withAlpha(10),
+                  borderRadius: BorderRadius.circular(14),
+                  border:       Border.all(color: c.amber.withAlpha(40)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Show ${list.length - _previewCount} more',
+                        style: GoogleFonts.poppins(
+                            fontSize: 13, fontWeight: FontWeight.w600, color: c.amber)),
+                    const SizedBox(width: 6),
+                    Icon(Icons.arrow_forward_rounded, size: 15, color: c.amber),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ],
     );
   }
