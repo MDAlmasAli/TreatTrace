@@ -19,13 +19,16 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.61 — Active Development |
+| **Version** | v0.62 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.62 — Show doctor name on prescription & test report tiles (doctor patient detail)**
+- Prescription and test report tiles now show "Dr. Name · date" so it's clear which doctor wrote/ordered each
 
 **v0.61 — Show date + linked doctor on test report rows in appointment detail**
 - Each linked test report now shows the test name, then the linked doctor (if any) and the test date

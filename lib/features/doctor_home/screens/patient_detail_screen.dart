@@ -643,6 +643,8 @@ class _RxTile extends StatelessWidget {
     final date    = rx.prescriptionDate;
     final months  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     final dateStr = '${date.day} ${months[date.month-1]} ${date.year}';
+    final doc     = rx.doctorName?.trim();
+    final subStr  = (doc != null && doc.isNotEmpty) ? 'Dr. $doc · $dateStr' : dateStr;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -675,7 +677,7 @@ class _RxTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(dateStr,
+                Text(subStr,
                     style: GoogleFonts.poppins(fontSize: 11, color: c.textSec)),
               ],
             ),
@@ -797,6 +799,8 @@ class _TestReportTile extends StatelessWidget {
     final months  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     final d       = lab.testDate;
     final dateStr = d != null ? '${d.day} ${months[d.month - 1]} ${d.year}' : '—';
+    final doc     = lab.doctorName?.trim();
+    final subStr  = (doc != null && doc.isNotEmpty) ? 'Dr. $doc · $dateStr' : dateStr;
 
     return GestureDetector(
       onTap: onTap,
@@ -826,7 +830,7 @@ class _TestReportTile extends StatelessWidget {
                         fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
-                Text(dateStr, style: GoogleFonts.poppins(fontSize: 11, color: c.textSec)),
+                Text(subStr, style: GoogleFonts.poppins(fontSize: 11, color: c.textSec)),
               ],
             ),
           ),
