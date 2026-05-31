@@ -270,9 +270,13 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     ));
 
     return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (_, _) {
-        if (_changed) Navigator.of(context).pop(true);
+      // canPop:false so the framework doesn't pop; we pop exactly once with the
+      // result. (canPop:true + a manual pop here caused a double-pop that tore
+      // down two routes mid gesture-dispatch → ConcurrentModificationError.)
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        Navigator.of(context).pop(_changed ? true : null);
       },
       child: Scaffold(
         backgroundColor: c.bg,

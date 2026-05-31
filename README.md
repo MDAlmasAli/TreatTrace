@@ -19,13 +19,17 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.64 — Active Development |
+| **Version** | v0.65 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.65 — Fix appointment detail freeze (double-pop in PopScope)**
+- `canPop:true` + a manual `Navigator.pop` in `onPopInvokedWithResult` tore down two routes mid gesture-dispatch → ConcurrentModificationError froze the app
+- Switched to the correct `canPop:false` + single manual pop idiom
 
 **v0.64 — Search + richer labels in appointment link picker**
 - Prescription/test report link picker now has a search box (matches doctor, diagnosis/test name, date)
