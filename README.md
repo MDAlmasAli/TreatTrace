@@ -19,13 +19,16 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.60 — Active Development |
+| **Version** | v0.61 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.61 — Show date + linked doctor on test report rows in appointment detail**
+- Each linked test report now shows the test name, then the linked doctor (if any) and the test date
 
 **v0.60 — Show diagnosis on linked prescription rows in appointment detail**
 - Each linked prescription now leads with its diagnosis, then doctor name + date, so the doctor knows what condition the Rx is for

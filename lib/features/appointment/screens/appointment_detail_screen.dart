@@ -105,6 +105,18 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     return '$doc — $dateStr';
   }
 
+  String _testReportLabel(TestReport t) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final d = t.testDate ?? t.createdAt;
+    final dateStr = '${d.day} ${months[d.month - 1]} ${d.year}';
+    final doc = t.doctorName?.trim();
+    // Show the test name, then the linked doctor (if any) and the test date.
+    if (doc != null && doc.isNotEmpty) {
+      return '${t.testName}\nDr. $doc — $dateStr';
+    }
+    return '${t.testName}\n$dateStr';
+  }
+
   Future<void> _openPrescription(String id) async {
     final p = _prescMap[id];
     if (p == null || !mounted) return;
@@ -344,7 +356,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                 final idx   = e.key;
                                 final id    = e.value;
                                 final t     = _testReportMap[id];
-                                final label = t != null ? t.testName : 'Linked Test Report';
+                                final label = t != null ? _testReportLabel(t) : 'Linked Test Report';
                                 final isLast = idx == _appt.testReportIds.length - 1;
                                 return GestureDetector(
                                   onTap: () => _openTestReport(id),
