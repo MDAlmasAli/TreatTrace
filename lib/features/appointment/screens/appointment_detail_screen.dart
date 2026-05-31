@@ -7,6 +7,12 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../../features/prescription/models/prescription.dart';
+import '../../../features/prescription/services/prescription_service.dart';
+import '../../../features/prescription/screens/prescription_detail_screen.dart';
+import '../../../features/test_report/models/test_report.dart';
+import '../../../features/test_report/services/test_report_service.dart';
+import '../../../features/test_report/screens/test_report_detail_screen.dart';
 import '../models/appointment.dart';
 import '../services/appointment_service.dart';
 import 'add_edit_appointment_screen.dart';
@@ -21,15 +27,60 @@ class AppointmentDetailScreen extends StatefulWidget {
 }
 
 class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
-  final _service = AppointmentService();
+  final _service    = AppointmentService();
+  final _prescSvc   = PrescriptionService();
+  final _testRepSvc = TestReportService();
+
   late Appointment _appt;
   bool _loading = false;
   bool _changed = false;
+
+  final Map<String, Prescription> _prescMap      = {};
+  final Map<String, TestReport>   _testReportMap = {};
 
   @override
   void initState() {
     super.initState();
     _appt = widget.appointment;
+    _fetchLinkedData();
+  }
+
+  Future<void> _fetchLinkedData() async {
+    for (final id in _appt.prescriptionIds) {
+      try {
+        final p = await _prescSvc.fetchOne(id);
+        if (p != null && mounted) setState(() => _prescMap[id] = p);
+      } catch (_) {}
+    }
+    for (final id in _appt.testReportIds) {
+      try {
+        final t = await _testRepSvc.fetchOne(id);
+        if (t != null && mounted) setState(() => _testReportMap[id] = t);
+      } catch (_) {}
+    }
+  }
+
+  String _prescLabel(Prescription p) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final doc = p.doctorName?.isNotEmpty == true ? 'Dr. ${p.doctorName}' : 'Prescription';
+    final d   = p.prescriptionDate;
+    return '$doc — ${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+
+  Future<void> _openPrescription(String id) async {
+    final p = _prescMap[id];
+    if (p == null || !mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => PrescriptionDetailScreen(prescription: p),
+    ));
+  }
+
+  Future<void> _openTestReport(String id) async {
+    final t = _testReportMap[id];
+    if (t == null || !mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => TestReportDetailScreen(report: t),
+    ));
   }
 
   Future<void> _updateStatus(AppointmentStatus status) async {
@@ -142,7 +193,10 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         setState(() {
           _appt    = updated;
           _changed = true;
+          _prescMap.clear();
+          _testReportMap.clear();
         });
+        _fetchLinkedData();
       }
     }
   }
@@ -204,23 +258,62 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                   label: s.visitReason,
                                   value: _appt.visitReason!,
                                   isLast: _appt.notes?.isEmpty != false &&
-                                      _appt.prescriptionId == null,
+                                      _appt.prescriptionIds.isEmpty &&
+                                      _appt.testReportIds.isEmpty,
                                 ),
                               if (_appt.notes?.isNotEmpty == true)
                                 _InfoRow(
                                   icon:  Icons.notes_rounded,
                                   label: s.notes,
                                   value: _appt.notes!,
-                                  isLast: _appt.prescriptionId == null,
+                                  isLast: _appt.prescriptionIds.isEmpty &&
+                                      _appt.testReportIds.isEmpty,
                                 ),
-                              if (_appt.prescriptionId != null)
-                                _InfoRow(
-                                  icon:  Icons.link_rounded,
-                                  label: s.linkedPrescription,
-                                  value: 'Linked',
-                                  valueColor: c.purpleBright,
-                                  isLast: true,
-                                ),
+                              ..._appt.prescriptionIds.asMap().entries.map((e) {
+                                final idx   = e.key;
+                                final id    = e.value;
+                                final p     = _prescMap[id];
+                                final label = p != null ? _prescLabel(p) : 'Linked Prescription';
+                                final isLast = idx == _appt.prescriptionIds.length - 1 &&
+                                    _appt.testReportIds.isEmpty;
+                                return GestureDetector(
+                                  onTap: () => _openPrescription(id),
+                                  child: _InfoRow(
+                                    icon:       Icons.link_rounded,
+                                    iconColor:  c.purpleBright,
+                                    label:      _appt.prescriptionIds.length > 1
+                                        ? '${s.linkedPrescription} ${idx + 1}'
+                                        : s.linkedPrescription,
+                                    value:      label,
+                                    valueColor: c.purpleBright,
+                                    isLast:     isLast,
+                                    trailing:   Icon(Icons.arrow_forward_ios_rounded,
+                                        size: 12, color: c.purpleBright),
+                                  ),
+                                );
+                              }),
+                              ..._appt.testReportIds.asMap().entries.map((e) {
+                                final idx   = e.key;
+                                final id    = e.value;
+                                final t     = _testReportMap[id];
+                                final label = t != null ? t.testName : 'Linked Test Report';
+                                final isLast = idx == _appt.testReportIds.length - 1;
+                                return GestureDetector(
+                                  onTap: () => _openTestReport(id),
+                                  child: _InfoRow(
+                                    icon:       Icons.science_rounded,
+                                    iconColor:  c.cyan,
+                                    label:      _appt.testReportIds.length > 1
+                                        ? 'Test Report ${idx + 1}'
+                                        : 'Test Report',
+                                    value:      label,
+                                    valueColor: c.cyan,
+                                    isLast:     isLast,
+                                    trailing:   Icon(Icons.arrow_forward_ios_rounded,
+                                        size: 12, color: c.cyan),
+                                  ),
+                                );
+                              }),
                             ],
                           ),
 
@@ -423,22 +516,27 @@ class _InfoCard extends StatelessWidget {
 
 class _InfoRow extends StatelessWidget {
   final IconData icon;
+  final Color?   iconColor;
   final String   label;
   final String   value;
   final Color?   valueColor;
   final bool     isLast;
+  final Widget?  trailing;
 
   const _InfoRow({
     required this.icon,
+    this.iconColor,
     required this.label,
     required this.value,
     this.valueColor,
-    this.isLast = false,
+    this.isLast  = false,
+    this.trailing,
   });
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
+    final c    = context.colors;
+    final iCol = iconColor ?? c.amber;
     return Column(
       children: [
         Padding(
@@ -449,10 +547,10 @@ class _InfoRow extends StatelessWidget {
               Container(
                 width: 32, height: 32,
                 decoration: BoxDecoration(
-                  color:        c.amber.withAlpha(15),
+                  color:        iCol.withAlpha(15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, size: 16, color: c.amber),
+                child: Icon(icon, size: 16, color: iCol),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -474,6 +572,7 @@ class _InfoRow extends StatelessWidget {
                   ],
                 ),
               ),
+              ?trailing,
             ],
           ),
         ),

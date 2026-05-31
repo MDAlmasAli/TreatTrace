@@ -389,11 +389,18 @@ class _AppointmentCard extends StatelessWidget {
                                       fontSize: 11, color: c.textMuted),
                                 ),
                               ],
-                              if (a.prescriptionId != null) ...[
+                              if (a.prescriptionIds.isNotEmpty ||
+                                  a.testReportIds.isNotEmpty) ...[
                                 const Spacer(),
-                                Icon(Icons.link_rounded,
-                                    size: 12,
-                                    color: c.purpleBright),
+                                if (a.prescriptionIds.isNotEmpty)
+                                  Icon(Icons.link_rounded,
+                                      size: 12, color: c.purpleBright),
+                                if (a.testReportIds.isNotEmpty) ...[
+                                  if (a.prescriptionIds.isNotEmpty)
+                                    const SizedBox(width: 4),
+                                  Icon(Icons.science_rounded,
+                                      size: 12, color: c.cyan),
+                                ],
                               ],
                             ],
                           ),

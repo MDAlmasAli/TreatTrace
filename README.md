@@ -19,13 +19,18 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.53 — Active Development |
+| **Version** | v0.54 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-30 |
+| **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.54 — Fix appointment detail: show all linked prescriptions and test reports**
+- Appointment detail: all linked prescriptions shown with doctor name + date, each tappable
+- Appointment detail: all linked test reports shown with test name, each tappable
+- Appointment list card: updated to use `prescriptionIds` array; test report icon added
 
 **v0.53 — Multiple link support for prescriptions and test reports**
 - Appointment add/edit: link multiple prescriptions + multiple test reports (chip picker + bottom sheet)
