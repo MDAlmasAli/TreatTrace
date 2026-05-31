@@ -19,13 +19,17 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.63 — Active Development |
+| **Version** | v0.64 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.64 — Search + richer labels in appointment link picker**
+- Prescription/test report link picker now has a search box (matches doctor, diagnosis/test name, date)
+- Picker items now show the diagnosis (prescription) / test name + doctor, not just doctor + date
 
 **v0.63 — Fix missing doctor name on doctor-ordered test reports**
 - `DoctorTestReportScreen` now falls back to `profiles.full_name` when userMetadata is empty, so the ordering doctor's name is always snapshotted

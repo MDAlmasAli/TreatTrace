@@ -229,17 +229,39 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
+  String _fmtDate(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
   String _prescLabel(Prescription p) {
     final doc = p.doctorName?.isNotEmpty == true
         ? 'Dr. ${p.doctorName}'
         : 'Prescription';
-    final d = p.prescriptionDate;
-    return '$doc — ${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    final diag    = p.diagnosis?.trim();
+    final dateStr = _fmtDate(p.prescriptionDate);
+    // Lead with the diagnosis so it's clear what condition the Rx is for.
+    if (diag != null && diag.isNotEmpty) {
+      return '$diag · $doc · $dateStr';
+    }
+    return '$doc · $dateStr';
   }
 
+  String _prescSearch(Prescription p) =>
+      '${p.diagnosis ?? ''} ${p.doctorName ?? ''} ${_fmtDate(p.prescriptionDate)}'
+          .toLowerCase();
+
   String _reportLabel(TestReport r) {
+    final d       = r.testDate ?? r.createdAt;
+    final dateStr = _fmtDate(d);
+    final doc     = r.doctorName?.trim();
+    if (doc != null && doc.isNotEmpty) {
+      return '${r.testName} · Dr. $doc · $dateStr';
+    }
+    return '${r.testName} · $dateStr';
+  }
+
+  String _reportSearch(TestReport r) {
     final d = r.testDate ?? r.createdAt;
-    return '${r.testName} — ${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    return '${r.testName} ${r.doctorName ?? ''} ${_fmtDate(d)}'.toLowerCase();
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -330,7 +352,11 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
                     const SizedBox(height: 12),
                     _MultiItemPicker(
                       items: _prescriptions
-                          .map((p) => _LinkItem(id: p.id, label: _prescLabel(p)))
+                          .map((p) => _LinkItem(
+                                id:         p.id,
+                                label:      _prescLabel(p),
+                                searchText: _prescSearch(p),
+                              ))
                           .toList(),
                       selectedIds: _linkedPrescIds,
                       loading:     _loadingPrescriptions,
@@ -347,7 +373,11 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
                     const SizedBox(height: 12),
                     _MultiItemPicker(
                       items: _testReports
-                          .map((r) => _LinkItem(id: r.id, label: _reportLabel(r)))
+                          .map((r) => _LinkItem(
+                                id:         r.id,
+                                label:      _reportLabel(r),
+                                searchText: _reportSearch(r),
+                              ))
                           .toList(),
                       selectedIds: _linkedTestReportIds,
                       loading:     _loadingTestReports,
@@ -408,7 +438,8 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
 class _LinkItem {
   final String id;
   final String label;
-  const _LinkItem({required this.id, required this.label});
+  final String searchText; // lowercase, concatenated fields for filtering
+  const _LinkItem({required this.id, required this.label, this.searchText = ''});
 }
 
 // ── Multi item picker ─────────────────────────────────────────────────────────
@@ -642,11 +673,21 @@ class _ItemPickerSheet extends StatefulWidget {
 
 class _ItemPickerSheetState extends State<_ItemPickerSheet> {
   late List<String> _selected;
+  final _searchCtrl = TextEditingController();
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
     _selected = List.from(widget.selectedIds);
+    _searchCtrl.addListener(
+        () => setState(() => _query = _searchCtrl.text.trim().toLowerCase()));
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   void _toggle(String id) {
@@ -664,6 +705,9 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
   Widget build(BuildContext context) {
     final c       = context.colors;
     final botPad  = MediaQuery.of(context).padding.bottom;
+    final items   = _query.isEmpty
+        ? widget.items
+        : widget.items.where((i) => i.searchText.contains(_query)).toList();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -707,20 +751,57 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
             ],
           ),
         ),
+        // search
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+          child: Container(
+            height: 42,
+            decoration: BoxDecoration(
+              color:        c.surface,
+              borderRadius: BorderRadius.circular(12),
+              border:       Border.all(color: c.border),
+            ),
+            child: TextField(
+              controller: _searchCtrl,
+              style:      GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
+              decoration: InputDecoration(
+                hintText:  'Search by doctor, name or date…',
+                hintStyle: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
+                prefixIcon: Icon(Icons.search_rounded, color: widget.color, size: 18),
+                suffixIcon: _query.isNotEmpty
+                    ? GestureDetector(
+                        onTap: () => _searchCtrl.clear(),
+                        child: Icon(Icons.close_rounded, color: c.textMuted, size: 18),
+                      )
+                    : null,
+                border:         InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 11),
+              ),
+            ),
+          ),
+        ),
         Divider(height: 1, color: c.border),
         // item list
         ConstrainedBox(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height * 0.55,
           ),
-          child: ListView.separated(
+          child: items.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 28),
+                  child: Text(
+                    'No matches found',
+                    style: GoogleFonts.poppins(fontSize: 13, color: c.textMuted),
+                  ),
+                )
+              : ListView.separated(
             shrinkWrap:  true,
-            itemCount:   widget.items.length,
+            itemCount:   items.length,
             separatorBuilder: (_, _) => Divider(
               height: 1, indent: 16, endIndent: 16, color: c.border,
             ),
             itemBuilder: (_, i) {
-              final item     = widget.items[i];
+              final item     = items[i];
               final isChosen = _selected.contains(item.id);
               return ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
