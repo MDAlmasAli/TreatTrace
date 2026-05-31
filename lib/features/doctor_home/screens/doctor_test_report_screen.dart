@@ -57,8 +57,26 @@ class _DoctorTestReportScreenState extends State<DoctorTestReportScreen> {
   }
 
   Future<void> _loadDoctorInfo() async {
-    final meta = Supabase.instance.client.auth.currentUser?.userMetadata;
-    _doctorName = meta?['full_name'] as String?;
+    final client = Supabase.instance.client;
+    final meta   = client.auth.currentUser?.userMetadata;
+    _doctorName  = (meta?['full_name'] as String?)?.trim();
+
+    // userMetadata may be empty — fall back to the reliable profiles.full_name
+    // so the ordering doctor's name is always snapshotted on the report.
+    if (_doctorName == null || _doctorName!.isEmpty) {
+      final uid = client.auth.currentUser?.id;
+      if (uid != null) {
+        try {
+          final row = await client
+              .from('profiles')
+              .select('full_name')
+              .eq('id', uid)
+              .maybeSingle();
+          final name = (row?['full_name'] as String?)?.trim();
+          if (name != null && name.isNotEmpty) _doctorName = name;
+        } catch (_) {}
+      }
+    }
     if (mounted) setState(() => _loadingDoctor = false);
   }
 

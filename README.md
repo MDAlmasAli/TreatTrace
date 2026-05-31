@@ -19,13 +19,17 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.62 — Active Development |
+| **Version** | v0.63 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.63 — Fix missing doctor name on doctor-ordered test reports**
+- `DoctorTestReportScreen` now falls back to `profiles.full_name` when userMetadata is empty, so the ordering doctor's name is always snapshotted
+- Existing test reports with a null doctor name were backfilled from `ordered_by_doctor_id`
 
 **v0.62 — Show doctor name on prescription & test report tiles (doctor patient detail)**
 - Prescription and test report tiles now show "Dr. Name · date" so it's clear which doctor wrote/ordered each
