@@ -19,13 +19,17 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.58 — Active Development |
+| **Version** | v0.59 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.59 — Fix appointment edit crash ("invalid input syntax for type uuid")**
+- Editing an appointment no longer sends an empty `user_id` to the uuid column
+- `AppointmentService.update` strips the immutable `user_id` from the payload
 
 **v0.58 — Remove bottom "Write Prescription" bar from patient profile**
 - Doctors now write prescriptions from the appointment detail page (v0.57); the redundant bottom bar on the patient profile is removed

@@ -71,7 +71,11 @@ class AppointmentService {
   }
 
   Future<void> update(Appointment appt) async {
-    await _client.from('appointments').update(appt.toMap()).eq('id', appt.id);
+    // `user_id` never changes on edit, and the edit form builds the draft with
+    // an empty user_id (only `create` fills it). Sending '' to the uuid column
+    // throws "invalid input syntax for type uuid". Strip immutable fields.
+    final payload = appt.toMap()..remove('user_id');
+    await _client.from('appointments').update(payload).eq('id', appt.id);
   }
 
   Future<void> updateStatus(String id, AppointmentStatus status) async {
