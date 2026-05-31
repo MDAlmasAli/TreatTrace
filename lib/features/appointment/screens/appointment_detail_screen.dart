@@ -96,7 +96,13 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     final doc = p.doctorName?.isNotEmpty == true ? 'Dr. ${p.doctorName}' : 'Prescription';
     final d   = p.prescriptionDate;
-    return '$doc — ${d.day} ${months[d.month - 1]} ${d.year}';
+    final dateStr = '${d.day} ${months[d.month - 1]} ${d.year}';
+    final diag = p.diagnosis?.trim();
+    // Lead with the diagnosis so the doctor knows what condition this Rx is for.
+    if (diag != null && diag.isNotEmpty) {
+      return '$diag\n$doc — $dateStr';
+    }
+    return '$doc — $dateStr';
   }
 
   Future<void> _openPrescription(String id) async {

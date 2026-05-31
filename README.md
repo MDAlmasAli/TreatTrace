@@ -19,13 +19,16 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.59 — Active Development |
+| **Version** | v0.60 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.60 — Show diagnosis on linked prescription rows in appointment detail**
+- Each linked prescription now leads with its diagnosis, then doctor name + date, so the doctor knows what condition the Rx is for
 
 **v0.59 — Fix appointment edit crash ("invalid input syntax for type uuid")**
 - Editing an appointment no longer sends an empty `user_id` to the uuid column
