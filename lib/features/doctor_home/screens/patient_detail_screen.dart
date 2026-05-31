@@ -210,6 +210,24 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
               ),
             ),
           ),
+          // Write a prescription without leaving the appointment.
+          onWritePrescription: () async {
+            final result = await Navigator.of(context).push<bool>(
+              MaterialPageRoute(
+                builder: (_) => DoctorWritePrescriptionScreen(
+                  patientId:     widget.patientId,
+                  patientName:   widget.patientName,
+                  appointmentId: appt.status == AppointmentStatus.scheduled
+                      ? appt.id
+                      : null,
+                ),
+              ),
+            );
+            if (result == true && mounted) {
+              Navigator.of(context).pop(); // close appointment detail
+              _load();
+            }
+          },
           // Already inside the patient profile — no need for the button here.
         ),
       ),

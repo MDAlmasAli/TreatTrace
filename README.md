@@ -19,13 +19,17 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.56 — Active Development |
+| **Version** | v0.57 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.57 — Write prescription from appointment detail**
+- Doctor appointment detail now has a "Write Prescription" button — no need to open the patient profile first
+- Writing from a scheduled appointment marks it completed; detail closes and list refreshes
 
 **v0.56 — Doctor-side appointment detail (read-only)**
 - Doctor view of an appointment: status / edit / delete controls hidden

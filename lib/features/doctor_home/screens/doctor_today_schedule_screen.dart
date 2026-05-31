@@ -11,6 +11,7 @@ import '../../appointment/screens/appointment_detail_screen.dart';
 import '../../prescription/services/prescription_service.dart';
 import '../../test_report/screens/test_report_detail_screen.dart';
 import 'doctor_prescription_view_screen.dart';
+import 'doctor_write_prescription_screen.dart';
 import 'patient_detail_screen.dart';
 
 class DoctorTodayScheduleScreen extends StatefulWidget {
@@ -307,6 +308,24 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
             ),
           ),
           onOpenPatientProfile: () => _openPatient(appt),
+          // Write a prescription straight from the appointment.
+          onWritePrescription: () async {
+            final result = await Navigator.of(context).push<bool>(
+              MaterialPageRoute(
+                builder: (_) => DoctorWritePrescriptionScreen(
+                  patientId:     appt.userId,
+                  patientName:   pname,
+                  appointmentId: appt.status == AppointmentStatus.scheduled
+                      ? appt.id
+                      : null,
+                ),
+              ),
+            );
+            if (result == true && mounted) {
+              Navigator.of(context).pop(); // close appointment detail
+              _load();
+            }
+          },
         ),
       ),
     );

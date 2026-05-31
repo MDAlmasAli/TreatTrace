@@ -38,6 +38,10 @@ class AppointmentDetailScreen extends StatefulWidget {
   /// Doctor view — opens the patient's full profile. Null hides the button.
   final VoidCallback? onOpenPatientProfile;
 
+  /// Doctor view — write a new prescription for this patient straight from the
+  /// appointment (no need to open the profile first). Null hides the button.
+  final VoidCallback? onWritePrescription;
+
   const AppointmentDetailScreen({
     super.key,
     required this.appointment,
@@ -46,6 +50,7 @@ class AppointmentDetailScreen extends StatefulWidget {
     this.onPrescriptionTapDoctor,
     this.onTestReportTapDoctor,
     this.onOpenPatientProfile,
+    this.onWritePrescription,
   });
 
   @override
@@ -357,13 +362,26 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                           // Doctor view — read-only; only an optional
                           // "Open Patient Profile" action.
                           if (widget.isDoctorView) ...[
-                            if (widget.onOpenPatientProfile != null) ...[
+                            if (widget.onWritePrescription != null) ...[
                               const SizedBox(height: 28),
+                              _ActionBtn(
+                                label:    'Write Prescription',
+                                icon:     Icons.medication_rounded,
+                                color:    c.accent,
+                                onTap:    widget.onWritePrescription!,
+                              ),
+                            ],
+                            if (widget.onOpenPatientProfile != null) ...[
+                              SizedBox(
+                                  height: widget.onWritePrescription != null
+                                      ? 12
+                                      : 28),
                               _ActionBtn(
                                 label:    'Open Patient Profile',
                                 icon:     Icons.person_rounded,
                                 color:    c.accent,
                                 onTap:    widget.onOpenPatientProfile!,
+                                outlined: true,
                               ),
                             ],
                           ] else ...[
