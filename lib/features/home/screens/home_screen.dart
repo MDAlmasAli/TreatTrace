@@ -17,6 +17,7 @@ import '../../test_report/screens/test_reports_screen.dart';
 import '../../appointment/screens/appointments_screen.dart';
 import '../../search/screens/global_search_screen.dart';
 import '../../doctor/screens/doctors_screen.dart';
+import '../../notification/widgets/notification_bell.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // HomeScreen
@@ -342,7 +343,7 @@ class _HomeHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              _HeaderIcon(icon: Icons.notifications_outlined),
+              const NotificationBell(),
               const SizedBox(width: 10),
               _HeaderIcon(icon: Icons.logout_rounded, onTap: onLogout),
             ],

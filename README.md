@@ -19,13 +19,18 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.65 — Active Development |
+| **Version** | v0.66 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.66 — Notifications + doctor reschedule/cancel (Phase 1)**
+- New in-app notification system: `notifications` table + RLS + realtime; bell icon now has a live unread badge and opens a NotificationsScreen inbox
+- Doctor can reschedule (new date) or cancel a scheduled appointment from the doctor appointment detail (reached via Today Schedule / patient profile)
+- A DB trigger auto-notifies the patient when their doctor reschedules or cancels; local notification pops while the app is open (push when closed = Phase 2, needs Firebase/FCM)
 
 **v0.65 — Fix appointment detail freeze (double-pop in PopScope)**
 - `canPop:true` + a manual `Navigator.pop` in `onPopInvokedWithResult` tore down two routes mid gesture-dispatch → ConcurrentModificationError froze the app

@@ -12,6 +12,7 @@ import '../../appointment/services/appointment_service.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../services/doctor_patient_link_service.dart';
+import '../../notification/widgets/notification_bell.dart';
 import 'doctor_today_schedule_screen.dart';
 import 'my_patients_screen.dart';
 
@@ -604,7 +605,7 @@ class _DoctorHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  _HeaderIcon(icon: Icons.notifications_outlined),
+                  const NotificationBell(),
                   const SizedBox(width: 10),
                   _HeaderIcon(icon: Icons.logout_rounded, onTap: onLogout),
                 ],

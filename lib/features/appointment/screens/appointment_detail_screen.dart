@@ -240,6 +240,57 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     if (mounted) Navigator.of(context).pop(true);
   }
 
+  // Doctor-only: move the appointment to a new date. Patient is notified by
+  // the DB trigger on the date change.
+  Future<void> _doctorReschedule() async {
+    final c = context.colors;
+    final initial = _appt.appointmentDate.isBefore(DateTime.now())
+        ? DateTime.now()
+        : _appt.appointmentDate;
+    final picked = await showDatePicker(
+      context:     context,
+      initialDate: initial,
+      firstDate:   DateTime.now(),
+      lastDate:    DateTime.now().add(const Duration(days: 365 * 2)),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.light(
+            primary:   c.accent,
+            onPrimary: Colors.white,
+            surface:   c.card,
+            onSurface: c.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked == null) return;
+    final newDate = DateTime(picked.year, picked.month, picked.day);
+
+    setState(() => _loading = true);
+    try {
+      await _service.reschedule(_appt.id, newDate);
+      final updated = await _service.fetchOne(_appt.id);
+      if (mounted && updated != null) {
+        setState(() {
+          _appt    = updated;
+          _changed = true;
+          _loading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Appointment rescheduled. Patient notified.',
+              style: GoogleFonts.poppins()),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e', style: GoogleFonts.poppins())));
+        setState(() => _loading = false);
+      }
+    }
+  }
+
   Future<void> _edit() async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
@@ -381,8 +432,9 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                             ],
                           ),
 
-                          // Doctor view — read-only; only an optional
-                          // "Open Patient Profile" action.
+                          // Doctor view — no patient-style status controls;
+                          // doctor can write Rx, reschedule/cancel (if still
+                          // scheduled), and open the patient profile.
                           if (widget.isDoctorView) ...[
                             if (widget.onWritePrescription != null) ...[
                               const SizedBox(height: 28),
@@ -393,11 +445,28 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                 onTap:    widget.onWritePrescription!,
                               ),
                             ],
+                            if (_appt.status ==
+                                AppointmentStatus.scheduled) ...[
+                              const SizedBox(height: 12),
+                              _ActionBtn(
+                                label:    'Reschedule',
+                                icon:     Icons.event_repeat_rounded,
+                                color:    c.amber,
+                                onTap:    _doctorReschedule,
+                                outlined: true,
+                              ),
+                              const SizedBox(height: 12),
+                              _ActionBtn(
+                                label:    'Cancel Appointment',
+                                icon:     Icons.cancel_outlined,
+                                color:    c.red,
+                                onTap:    () => _updateStatus(
+                                    AppointmentStatus.cancelled),
+                                outlined: true,
+                              ),
+                            ],
                             if (widget.onOpenPatientProfile != null) ...[
-                              SizedBox(
-                                  height: widget.onWritePrescription != null
-                                      ? 12
-                                      : 28),
+                              const SizedBox(height: 12),
                               _ActionBtn(
                                 label:    'Open Patient Profile',
                                 icon:     Icons.person_rounded,

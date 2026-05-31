@@ -91,6 +91,37 @@ class ReminderService {
     );
   }
 
+  // ── Generic instant notification (e.g. a new in-app notification) ─────────
+
+  Future<void> showNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (kIsWeb || !_initialized) return;
+    await _plugin.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000 % 2000000000,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'app_notifications',
+          'Notifications',
+          channelDescription: 'TreatTrace notifications',
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: payload,
+    );
+  }
+
   // ── Schedule reminders for all active medicines in a prescription ─────────
 
   Future<void> scheduleForPrescription(Prescription prescription) async {
