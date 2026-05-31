@@ -19,13 +19,16 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.57 — Active Development |
+| **Version** | v0.58 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.58 — Remove bottom "Write Prescription" bar from patient profile**
+- Doctors now write prescriptions from the appointment detail page (v0.57); the redundant bottom bar on the patient profile is removed
 
 **v0.57 — Write prescription from appointment detail**
 - Doctor appointment detail now has a "Write Prescription" button — no need to open the patient profile first

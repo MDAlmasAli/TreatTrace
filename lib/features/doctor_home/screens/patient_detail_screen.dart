@@ -114,17 +114,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     _load();
   }
 
-  Future<void> _goWriteRx() async {
-    final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
-      builder: (_) => DoctorWritePrescriptionScreen(
-        patientId:     widget.patientId,
-        patientName:   widget.patientName,
-        appointmentId: widget.appointmentId,
-      ),
-    ));
-    if (result == true) _load();
-  }
-
   Future<void> _goEditRx(Prescription rx) async {
     final result = await Navigator.of(context).push<bool>(MaterialPageRoute(
       builder: (_) => DoctorWritePrescriptionScreen(
@@ -245,7 +234,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
 
     return Scaffold(
       backgroundColor: c.bg,
-      bottomNavigationBar: _BottomBar(onWriteRx: _goWriteRx),
       body: Column(
         children: [
           _buildHeader(c),
@@ -1064,40 +1052,6 @@ class _ApptTileState extends State<_ApptTile> {
             const SizedBox(width: 6),
             Icon(Icons.arrow_forward_ios_rounded, size: 12, color: c.textMuted),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Bottom action bar ─────────────────────────────────────────────────────────
-
-class _BottomBar extends StatelessWidget {
-  final VoidCallback onWriteRx;
-  const _BottomBar({required this.onWriteRx});
-
-  @override
-  Widget build(BuildContext context) {
-    final c      = context.colors;
-    final botPad = MediaQuery.of(context).padding.bottom;
-    return Container(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + botPad),
-      decoration: BoxDecoration(
-        color:  c.card,
-        border: Border(top: BorderSide(color: c.border, width: 1)),
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: onWriteRx,
-          icon:  const Icon(Icons.medication_rounded, size: 18),
-          label: Text('Write Prescription', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: c.accent,
-            foregroundColor: Colors.white,
-            shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding:         const EdgeInsets.symmetric(vertical: 14),
-          ),
         ),
       ),
     );
