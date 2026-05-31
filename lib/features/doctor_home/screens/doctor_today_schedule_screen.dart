@@ -7,6 +7,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../appointment/models/appointment.dart';
 import '../../appointment/services/appointment_service.dart';
+import '../../appointment/screens/appointment_detail_screen.dart';
+import '../../prescription/services/prescription_service.dart';
+import '../../test_report/screens/test_report_detail_screen.dart';
+import 'doctor_prescription_view_screen.dart';
 import 'patient_detail_screen.dart';
 
 class DoctorTodayScheduleScreen extends StatefulWidget {
@@ -21,7 +25,10 @@ enum _ScheduleFilter { today, upcoming, completed }
 
 class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
   final _apptSvc = AppointmentService();
+  final _rxSvc   = PrescriptionService();
   final _client = Supabase.instance.client;
+
+  String? get _currentDoctorId => _client.auth.currentUser?.id;
 
   List<Appointment> _appointments = [];
   Map<String, Map<String, dynamic>> _patientById  = {};
@@ -252,6 +259,60 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
     if (mounted) _load();
   }
 
+  String _patientNameOf(Appointment appt) {
+    final prof = _patientById[appt.userId];
+    final name = (prof?['full_name'] as String?)?.trim();
+    return name?.isNotEmpty == true ? name! : 'Patient';
+  }
+
+  Future<void> _openAppointmentDetail(Appointment appt) async {
+    final pname = _patientNameOf(appt);
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AppointmentDetailScreen(
+          appointment:  appt,
+          isDoctorView: true,
+          patientName:  pname,
+          // Own prescription = editable; others = view only.
+          onPrescriptionTapDoctor: (p) => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => DoctorPrescriptionViewScreen(
+                rx:          p,
+                canEdit:     p.writtenByDoctorId == _currentDoctorId,
+                patientId:   appt.userId,
+                patientName: pname,
+              ),
+            ),
+          ),
+          // Test reports are always view-only for doctors.
+          onTestReportTapDoctor: (t) => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => TestReportDetailScreen(
+                report:    t,
+                canEdit:   false,
+                canDelete: false,
+                onPrescriptionTap: (rxId) async {
+                  final p = await _rxSvc.fetchOne(rxId);
+                  if (p == null || !mounted) return;
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => DoctorPrescriptionViewScreen(
+                      rx:          p,
+                      canEdit:     p.writtenByDoctorId == _currentDoctorId,
+                      patientId:   appt.userId,
+                      patientName: pname,
+                    ),
+                  ));
+                },
+              ),
+            ),
+          ),
+          onOpenPatientProfile: () => _openPatient(appt),
+        ),
+      ),
+    );
+    if (mounted) _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -322,7 +383,7 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
                                     (prof?['full_name'] as String?) ??
                                     'Patient',
                                 patientPhone: prof?['phone'] as String?,
-                                onTapPatient: () => _openPatient(appt),
+                                onTap: () => _openAppointmentDetail(appt),
                               ).animate().fadeIn(
                                 delay: Duration(milliseconds: i * 60),
                               );
@@ -526,14 +587,14 @@ class _ScheduleTile extends StatelessWidget {
   final bool showDate;
   final String patientName;
   final String? patientPhone;
-  final VoidCallback onTapPatient;
+  final VoidCallback onTap;
 
   const _ScheduleTile({
     required this.appointment,
     required this.showDate,
     required this.patientName,
     required this.patientPhone,
-    required this.onTapPatient,
+    required this.onTap,
   });
 
   @override
@@ -550,7 +611,9 @@ class _ScheduleTile extends StatelessWidget {
         ? 'Completed'
         : 'Cancelled';
 
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -662,14 +725,14 @@ class _ScheduleTile extends StatelessWidget {
             width: double.infinity,
             height: 40,
             child: OutlinedButton.icon(
-              onPressed: onTapPatient,
+              onPressed: onTap,
               icon: Icon(
-                Icons.person_search_rounded,
+                Icons.event_note_rounded,
                 size: 16,
                 color: c.accent,
               ),
               label: Text(
-                'Open',
+                'View Appointment',
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -685,6 +748,7 @@ class _ScheduleTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

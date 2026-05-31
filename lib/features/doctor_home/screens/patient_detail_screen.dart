@@ -182,12 +182,39 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   }
 
   Future<void> _openAppointmentDetail(Appointment appt) async {
-    final changed = await Navigator.of(context).push<bool>(
+    await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => AppointmentDetailScreen(appointment: appt),
+        builder: (_) => AppointmentDetailScreen(
+          appointment:  appt,
+          isDoctorView: true,
+          patientName:  widget.patientName,
+          // Own prescription = editable; others = view only.
+          onPrescriptionTapDoctor: (p) => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => DoctorPrescriptionViewScreen(
+                rx:          p,
+                canEdit:     p.writtenByDoctorId == _currentDoctorId,
+                patientId:   widget.patientId,
+                patientName: widget.patientName,
+              ),
+            ),
+          ),
+          // Test reports are always view-only for doctors.
+          onTestReportTapDoctor: (t) => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => TestReportDetailScreen(
+                report:            t,
+                canEdit:           false,
+                canDelete:         false,
+                onPrescriptionTap: _openLinkedRx,
+              ),
+            ),
+          ),
+          // Already inside the patient profile — no need for the button here.
+        ),
       ),
     );
-    if (changed == true) _load();
+    _load();
   }
 
   @override

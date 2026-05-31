@@ -19,7 +19,34 @@ import 'add_edit_appointment_screen.dart';
 
 class AppointmentDetailScreen extends StatefulWidget {
   final Appointment appointment;
-  const AppointmentDetailScreen({super.key, required this.appointment});
+
+  /// Doctor-side, read-only view: hides status/edit/delete controls, opens
+  /// linked items via the doctor-side callbacks below, and (optionally) shows
+  /// an "Open Patient Profile" button.
+  final bool isDoctorView;
+
+  /// Shown as the header title in doctor view (the patient who booked).
+  final String? patientName;
+
+  /// Doctor view — tapping a linked prescription. Caller decides edit rights
+  /// (own prescription = editable, others = view only).
+  final void Function(Prescription rx)? onPrescriptionTapDoctor;
+
+  /// Doctor view — tapping a linked test report (always view-only).
+  final void Function(TestReport report)? onTestReportTapDoctor;
+
+  /// Doctor view — opens the patient's full profile. Null hides the button.
+  final VoidCallback? onOpenPatientProfile;
+
+  const AppointmentDetailScreen({
+    super.key,
+    required this.appointment,
+    this.isDoctorView = false,
+    this.patientName,
+    this.onPrescriptionTapDoctor,
+    this.onTestReportTapDoctor,
+    this.onOpenPatientProfile,
+  });
 
   @override
   State<AppointmentDetailScreen> createState() =>
@@ -70,6 +97,10 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   Future<void> _openPrescription(String id) async {
     final p = _prescMap[id];
     if (p == null || !mounted) return;
+    if (widget.isDoctorView) {
+      widget.onPrescriptionTapDoctor?.call(p);
+      return;
+    }
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => PrescriptionDetailScreen(prescription: p),
     ));
@@ -78,6 +109,10 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   Future<void> _openTestReport(String id) async {
     final t = _testReportMap[id];
     if (t == null || !mounted) return;
+    if (widget.isDoctorView) {
+      widget.onTestReportTapDoctor?.call(t);
+      return;
+    }
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => TestReportDetailScreen(report: t),
     ));
@@ -238,8 +273,10 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                             children: [
                               _InfoRow(
                                 icon:  Icons.person_rounded,
-                                label: 'Doctor',
-                                value: 'Dr. ${_appt.doctorNameSnapshot}',
+                                label: widget.isDoctorView ? 'Patient' : 'Doctor',
+                                value: widget.isDoctorView
+                                    ? (widget.patientName ?? 'Patient')
+                                    : 'Dr. ${_appt.doctorNameSnapshot}',
                               ),
                               _InfoRow(
                                 icon:  Icons.calendar_today_rounded,
@@ -317,53 +354,68 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                             ],
                           ),
 
-                          const SizedBox(height: 28),
-
-                          // Action buttons — only when scheduled
-                          if (_appt.status == AppointmentStatus.scheduled) ...[
-                            _ActionBtn(
-                              label:   s.markCompleted,
-                              icon:    Icons.check_circle_outline_rounded,
-                              color:   c.green,
-                              onTap:   () => _updateStatus(
-                                  AppointmentStatus.completed),
-                            ),
-                            const SizedBox(height: 12),
-                            _ActionBtn(
-                              label:   s.cancelAppointment,
-                              icon:    Icons.cancel_outlined,
-                              color:   c.red,
-                              onTap:   () => _updateStatus(
-                                  AppointmentStatus.cancelled),
-                              outlined: true,
-                            ),
-                            const SizedBox(height: 28),
-                          ],
-
-                          // Edit / Delete row
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _ActionBtn(
-                                  label:    'Edit',
-                                  icon:     Icons.edit_rounded,
-                                  color:    c.amber,
-                                  onTap:    _edit,
-                                  outlined: true,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _ActionBtn(
-                                  label:    'Delete',
-                                  icon:     Icons.delete_outline_rounded,
-                                  color:    c.red,
-                                  onTap:    _delete,
-                                  outlined: true,
-                                ),
+                          // Doctor view — read-only; only an optional
+                          // "Open Patient Profile" action.
+                          if (widget.isDoctorView) ...[
+                            if (widget.onOpenPatientProfile != null) ...[
+                              const SizedBox(height: 28),
+                              _ActionBtn(
+                                label:    'Open Patient Profile',
+                                icon:     Icons.person_rounded,
+                                color:    c.accent,
+                                onTap:    widget.onOpenPatientProfile!,
                               ),
                             ],
-                          ),
+                          ] else ...[
+                            const SizedBox(height: 28),
+
+                            // Action buttons — only when scheduled
+                            if (_appt.status ==
+                                AppointmentStatus.scheduled) ...[
+                              _ActionBtn(
+                                label:   s.markCompleted,
+                                icon:    Icons.check_circle_outline_rounded,
+                                color:   c.green,
+                                onTap:   () => _updateStatus(
+                                    AppointmentStatus.completed),
+                              ),
+                              const SizedBox(height: 12),
+                              _ActionBtn(
+                                label:   s.cancelAppointment,
+                                icon:    Icons.cancel_outlined,
+                                color:   c.red,
+                                onTap:   () => _updateStatus(
+                                    AppointmentStatus.cancelled),
+                                outlined: true,
+                              ),
+                              const SizedBox(height: 28),
+                            ],
+
+                            // Edit / Delete row
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _ActionBtn(
+                                    label:    'Edit',
+                                    icon:     Icons.edit_rounded,
+                                    color:    c.amber,
+                                    onTap:    _edit,
+                                    outlined: true,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _ActionBtn(
+                                    label:    'Delete',
+                                    icon:     Icons.delete_outline_rounded,
+                                    color:    c.red,
+                                    onTap:    _delete,
+                                    outlined: true,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -406,7 +458,9 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Dr. ${_appt.doctorNameSnapshot}',
+                  widget.isDoctorView && widget.patientName != null
+                      ? widget.patientName!
+                      : 'Dr. ${_appt.doctorNameSnapshot}',
                   style: GoogleFonts.poppins(
                     fontSize:   18,
                     fontWeight: FontWeight.w700,

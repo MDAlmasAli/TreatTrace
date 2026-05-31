@@ -19,13 +19,19 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.55 — Active Development |
+| **Version** | v0.56 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.56 — Doctor-side appointment detail (read-only)**
+- Doctor view of an appointment: status / edit / delete controls hidden
+- Linked prescriptions open doctor view — editable only if written by the viewing doctor
+- Linked test reports open view-only (doctors can never edit or delete a test report)
+- "Open Patient Profile" button + Today Schedule appointment tap now opens this detail page
 
 **v0.55 — Fix appointment tile in doctor patient detail: navigate to full appointment detail**
 - Doctor patient detail: tapping an appointment tile now opens AppointmentDetailScreen
