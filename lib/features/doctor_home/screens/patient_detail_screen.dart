@@ -19,6 +19,7 @@ import 'all_prescriptions_screen.dart';
 import 'all_appointments_screen.dart';
 import 'doctor_prescription_view_screen.dart';
 import 'doctor_write_prescription_screen.dart';
+import '../../appointment/screens/appointment_detail_screen.dart';
 
 class PatientDetailScreen extends StatefulWidget {
   final String  patientId;
@@ -180,6 +181,15 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     ));
   }
 
+  Future<void> _openAppointmentDetail(Appointment appt) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AppointmentDetailScreen(appointment: appt),
+      ),
+    );
+    if (changed == true) _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -227,9 +237,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         ).animate().fadeIn(delay: 200.ms),
                         const SizedBox(height: 20),
                         _AppointmentsSection(
-                          list:              _appts,
-                          onShowMore:        _goShowMoreAppts,
-                          onPrescriptionTap: _openLinkedRx,
+                          list:             _appts,
+                          onShowMore:       _goShowMoreAppts,
+                          onAppointmentTap: _openAppointmentDetail,
                         ).animate().fadeIn(delay: 250.ms),
                       ],
                     ),
@@ -809,16 +819,16 @@ class _TestReportTile extends StatelessWidget {
 // ── Appointments section ──────────────────────────────────────────────────────
 
 class _AppointmentsSection extends StatelessWidget {
-  final List<Appointment>       list;
-  final VoidCallback            onShowMore;
-  final void Function(String)?  onPrescriptionTap;
+  final List<Appointment>            list;
+  final VoidCallback                 onShowMore;
+  final void Function(Appointment)?  onAppointmentTap;
 
   static const _previewCount = 3;
 
   const _AppointmentsSection({
     required this.list,
     required this.onShowMore,
-    this.onPrescriptionTap,
+    this.onAppointmentTap,
   });
 
   @override
@@ -840,7 +850,7 @@ class _AppointmentsSection extends StatelessWidget {
         if (list.isEmpty)
           _EmptySection(message: 'No appointments found.')
         else ...[
-          ...visible.map((appt) => _ApptTile(appt: appt, onPrescriptionTap: onPrescriptionTap)),
+          ...visible.map((appt) => _ApptTile(appt: appt, onAppointmentTap: onAppointmentTap)),
           if (hasMore)
             GestureDetector(
               onTap: onShowMore,
@@ -871,9 +881,9 @@ class _AppointmentsSection extends StatelessWidget {
 }
 
 class _ApptTile extends StatefulWidget {
-  final Appointment            appt;
-  final void Function(String)? onPrescriptionTap;
-  const _ApptTile({required this.appt, this.onPrescriptionTap});
+  final Appointment                 appt;
+  final void Function(Appointment)? onAppointmentTap;
+  const _ApptTile({required this.appt, this.onAppointmentTap});
 
   @override
   State<_ApptTile> createState() => _ApptTileState();
@@ -937,8 +947,8 @@ class _ApptTileState extends State<_ApptTile> {
     final hasAnyLink   = hasRx || hasTestRep;
 
     return GestureDetector(
-      onTap: hasRx && widget.onPrescriptionTap != null
-          ? () => widget.onPrescriptionTap!(appt.prescriptionIds.first)
+      onTap: widget.onAppointmentTap != null
+          ? () => widget.onAppointmentTap!(appt)
           : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -1006,10 +1016,8 @@ class _ApptTileState extends State<_ApptTile> {
               decoration: BoxDecoration(color: statusColor.withAlpha(15), borderRadius: BorderRadius.circular(8)),
               child: Text(statusLabel, style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: statusColor)),
             ),
-            if (hasRx) ...[
-              const SizedBox(width: 6),
-              Icon(Icons.arrow_forward_ios_rounded, size: 12, color: c.purpleBright),
-            ],
+            const SizedBox(width: 6),
+            Icon(Icons.arrow_forward_ios_rounded, size: 12, color: c.textMuted),
           ],
         ),
       ),

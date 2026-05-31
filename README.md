@@ -19,13 +19,18 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.54 — Active Development |
+| **Version** | v0.55 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.55 — Fix appointment tile in doctor patient detail: navigate to full appointment detail**
+- Doctor patient detail: tapping an appointment tile now opens AppointmentDetailScreen
+- All linked prescriptions and test reports visible and tappable from appointment detail
+- Removed stale single-prescription direct-navigation from appointment tile
 
 **v0.54 — Fix appointment detail: show all linked prescriptions and test reports**
 - Appointment detail: all linked prescriptions shown with doctor name + date, each tappable
