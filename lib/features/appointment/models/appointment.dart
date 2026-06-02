@@ -32,8 +32,12 @@ class Appointment {
   final String?            notes;
   final List<String>       prescriptionIds;
   final List<String>       testReportIds;
+  final DateTime?          proposedDate; // doctor-proposed reschedule (pending patient action)
   final DateTime           createdAt;
   final DateTime           updatedAt;
+
+  // True when a doctor has proposed a new date awaiting patient confirmation.
+  bool get hasPendingReschedule => proposedDate != null;
 
   // Backward-compat getter — first linked prescription id or null.
   String? get prescriptionId =>
@@ -51,6 +55,7 @@ class Appointment {
     this.notes,
     this.prescriptionIds = const [],
     this.testReportIds   = const [],
+    this.proposedDate,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -84,6 +89,9 @@ class Appointment {
       notes:           m['notes']           as String?,
       prescriptionIds: prescIds,
       testReportIds:   (m['test_report_ids'] as List<dynamic>?)?.cast<String>() ?? [],
+      proposedDate: m['proposed_date'] != null
+          ? DateTime.parse(m['proposed_date'] as String)
+          : null,
       createdAt: DateTime.parse(m['created_at'] as String),
       updatedAt: DateTime.parse(m['updated_at'] as String),
     );
@@ -117,6 +125,8 @@ class Appointment {
     bool                clearPrescriptionIds = false,
     List<String>?       testReportIds,
     bool                clearTestReportIds   = false,
+    DateTime?           proposedDate,
+    bool                clearProposedDate    = false,
     DateTime?           createdAt,
     DateTime?           updatedAt,
   }) =>
@@ -136,6 +146,9 @@ class Appointment {
         testReportIds:      clearTestReportIds
             ? []
             : (testReportIds ?? this.testReportIds),
+        proposedDate:       clearProposedDate
+            ? null
+            : (proposedDate ?? this.proposedDate),
         createdAt:          createdAt          ?? this.createdAt,
         updatedAt:          updatedAt          ?? this.updatedAt,
       );

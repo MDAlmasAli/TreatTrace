@@ -269,7 +269,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 
     setState(() => _loading = true);
     try {
-      await _service.reschedule(_appt.id, newDate);
+      await _service.proposeReschedule(_appt.id, newDate);
       final updated = await _service.fetchOne(_appt.id);
       if (mounted && updated != null) {
         setState(() {
@@ -278,7 +278,35 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
           _loading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Appointment rescheduled. Patient notified.',
+          content: Text('Reschedule requested. The patient will be asked to confirm.',
+              style: GoogleFonts.poppins()),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e', style: GoogleFonts.poppins())));
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  // Patient accepts the doctor's proposed new date.
+  Future<void> _acceptReschedule() async {
+    final proposed = _appt.proposedDate;
+    if (proposed == null) return;
+    setState(() => _loading = true);
+    try {
+      await _service.acceptReschedule(_appt.id, proposed);
+      final updated = await _service.fetchOne(_appt.id);
+      if (mounted && updated != null) {
+        setState(() {
+          _appt    = updated;
+          _changed = true;
+          _loading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('New appointment date confirmed.',
               style: GoogleFonts.poppins()),
         ));
       }
@@ -346,6 +374,18 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _StatusBanner(status: _appt.status),
+                          if (_appt.hasPendingReschedule &&
+                              _appt.status ==
+                                  AppointmentStatus.scheduled) ...[
+                            const SizedBox(height: 14),
+                            _RescheduleBanner(
+                              proposedDate: _appt.proposedDate!,
+                              isDoctorView: widget.isDoctorView,
+                              onAccept:     _acceptReschedule,
+                              onDecline:    () => _updateStatus(
+                                  AppointmentStatus.cancelled),
+                            ),
+                          ],
                           const SizedBox(height: 20),
                           _InfoCard(
                             children: [
@@ -638,6 +678,90 @@ class _StatusBanner extends StatelessWidget {
             style: GoogleFonts.poppins(
                 fontSize: 14, fontWeight: FontWeight.w700, color: col),
           ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 300.ms);
+  }
+}
+
+// ── Reschedule banner (pending doctor proposal) ─────────────────────────────
+
+class _RescheduleBanner extends StatelessWidget {
+  final DateTime     proposedDate;
+  final bool         isDoctorView;
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+
+  const _RescheduleBanner({
+    required this.proposedDate,
+    required this.isDoctorView,
+    required this.onAccept,
+    required this.onDecline,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final dateStr =
+        '${proposedDate.day} ${months[proposedDate.month - 1]} ${proposedDate.year}';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color:        c.amber.withAlpha(18),
+        borderRadius: BorderRadius.circular(16),
+        border:       Border.all(color: c.amber.withAlpha(70)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.event_repeat_rounded, color: c.amber, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  isDoctorView
+                      ? 'Reschedule requested (awaiting patient)'
+                      : 'Your doctor requested a new date',
+                  style: GoogleFonts.poppins(
+                      fontSize: 13, fontWeight: FontWeight.w700, color: c.amber),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Proposed new date: $dateStr',
+            style: GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
+          ),
+          if (!isDoctorView) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: _ActionBtn(
+                    label: 'Accept new date',
+                    icon:  Icons.check_circle_outline_rounded,
+                    color: c.green,
+                    onTap: onAccept,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _ActionBtn(
+                    label:    'Decline & cancel',
+                    icon:     Icons.cancel_outlined,
+                    color:    c.red,
+                    onTap:    onDecline,
+                    outlined: true,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     ).animate().fadeIn(duration: 300.ms);

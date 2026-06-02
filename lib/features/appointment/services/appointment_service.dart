@@ -85,12 +85,27 @@ class AppointmentService {
         .eq('id', id);
   }
 
-  // Doctor reschedules an appointment to a new date. The DB trigger notifies
-  // the patient. (RLS: only the appointment's doctor_user_id may do this.)
-  Future<void> reschedule(String id, DateTime newDate) async {
+  // Doctor proposes a new date (pending patient confirmation). Stored in
+  // proposed_date; the real appointment_date changes only on patient accept.
+  // The DB trigger notifies the patient. (RLS: only the doctor_user_id may do this.)
+  Future<void> proposeReschedule(String id, DateTime proposedDate) async {
     await _client.from('appointments').update({
-      'appointment_date': newDate.toIso8601String().substring(0, 10),
+      'proposed_date': proposedDate.toIso8601String().substring(0, 10),
     }).eq('id', id);
+  }
+
+  // Patient accepts the proposed reschedule: apply the new date, clear proposal.
+  // The DB trigger notifies the doctor.
+  Future<void> acceptReschedule(String id, DateTime proposedDate) async {
+    await _client.from('appointments').update({
+      'appointment_date': proposedDate.toIso8601String().substring(0, 10),
+      'proposed_date':    null,
+    }).eq('id', id);
+  }
+
+  // Patient declines the proposal but keeps the appointment on its original date.
+  Future<void> declineReschedule(String id) async {
+    await _client.from('appointments').update({'proposed_date': null}).eq('id', id);
   }
 
   Future<void> delete(String id) async {

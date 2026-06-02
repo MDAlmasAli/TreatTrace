@@ -19,13 +19,19 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.67 — Active Development |
+| **Version** | v0.68 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.68 — Reschedule now needs patient confirmation**
+- Doctor reschedule is now a *proposal* (stored in `proposed_date`) instead of a direct change
+- Patient gets a notification, sees a "Reschedule requested" banner in the appointment, and can **Accept new date** or **Decline & cancel**
+- Accepting applies the new date and notifies the doctor; patient cancel also notifies the doctor
+- Notification taps open the appointment only for the owning patient (doctor-facing alerts stay informational)
 
 **v0.67 — More notification events**
 - New appointment booked → notifies the doctor

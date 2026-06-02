@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../appointment/services/appointment_service.dart';
@@ -85,14 +86,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         });
       }
     }
-    // Only the patient-facing appointment notifications open the (patient-side)
-    // appointment detail. Doctor-facing ones (e.g. appointment_booked) and the
-    // prescription/test/link types stay informational.
-    const apptTypes = {'appointment_rescheduled', 'appointment_cancelled'};
+    // Open the (patient-side) appointment detail only when the current user is
+    // the patient who owns it — so doctor-facing alerts don't open a patient
+    // screen. From there the patient can accept/cancel a pending reschedule.
     final apptId = n.appointmentId;
-    if (!apptTypes.contains(n.type) || apptId == null || !mounted) return;
+    if (apptId == null || !mounted) return;
     final appt = await _apptSvc.fetchOne(apptId);
-    if (appt == null || !mounted) return;
+    final uid  = Supabase.instance.client.auth.currentUser?.id;
+    if (appt == null || appt.userId != uid || !mounted) return;
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => AppointmentDetailScreen(appointment: appt),
     ));
@@ -204,7 +205,10 @@ class _NotificationTile extends StatelessWidget {
   (IconData, Color) _visual(ThemeColors c) {
     switch (notification.type) {
       case 'appointment_rescheduled':
+      case 'appointment_reschedule_proposed':
         return (Icons.event_repeat_rounded, c.amber);
+      case 'appointment_reschedule_accepted':
+        return (Icons.event_available_rounded, c.green);
       case 'appointment_cancelled':
         return (Icons.event_busy_rounded, c.red);
       case 'appointment_booked':
