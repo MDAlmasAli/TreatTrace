@@ -3,6 +3,19 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/appointment.dart';
 
+/// Thrown when a patient tries to book a second active appointment with a
+/// doctor they already have a scheduled appointment with.
+class DuplicateActiveAppointmentException implements Exception {
+  final String message;
+  DuplicateActiveAppointmentException([
+    this.message =
+        'You already have an active appointment with this doctor. '
+        'Complete or cancel it before booking a new one.',
+  ]);
+  @override
+  String toString() => message;
+}
+
 class AppointmentService {
   final _client = Supabase.instance.client;
   String? get _uid => _client.auth.currentUser?.id;
@@ -50,6 +63,16 @@ class AppointmentService {
     if (resolvedDoctorUserId != null && resolvedDoctorUserId.isNotEmpty) {
       payload['doctor_user_id'] = resolvedDoctorUserId;
     }
+
+    // One active appointment per doctor: block if the patient already has a
+    // scheduled one with the same doctor (DB trigger enforces this too).
+    final hasActive = await _hasActiveAppointmentWithDoctor(
+      patientId:          uid,
+      doctorUserId:       resolvedDoctorUserId,
+      doctorId:           appt.doctorId,
+      doctorNameSnapshot: appt.doctorNameSnapshot,
+    );
+    if (hasActive) throw DuplicateActiveAppointmentException();
 
     try {
       final inserted = await _client
@@ -227,6 +250,32 @@ class AppointmentService {
     }
 
     return merged.values.toList();
+  }
+
+  // True if the patient already has a scheduled appointment with this doctor.
+  // Matched by doctor_user_id, else doctor_id, else doctor name snapshot.
+  Future<bool> _hasActiveAppointmentWithDoctor({
+    required String  patientId,
+    String?          doctorUserId,
+    String?          doctorId,
+    required String  doctorNameSnapshot,
+  }) async {
+    var query = _client
+        .from('appointments')
+        .select('id')
+        .eq('user_id', patientId)
+        .eq('status', 'scheduled');
+
+    if (doctorUserId != null && doctorUserId.isNotEmpty) {
+      query = query.eq('doctor_user_id', doctorUserId);
+    } else if (doctorId != null && doctorId.isNotEmpty) {
+      query = query.eq('doctor_id', doctorId);
+    } else {
+      query = query.ilike('doctor_name_snapshot', doctorNameSnapshot.trim());
+    }
+
+    final rows = await query.limit(1);
+    return (rows as List).isNotEmpty;
   }
 
   Future<String?> _resolveDoctorUserId({

@@ -218,8 +218,14 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final dup = e is DuplicateActiveAppointmentException ||
+            e.toString().contains('DUPLICATE_ACTIVE_APPOINTMENT');
+        final msg = dup
+            ? 'You already have an active appointment with this doctor. '
+                'Complete or cancel it before booking a new one.'
+            : 'Error: $e';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e', style: GoogleFonts.poppins())),
+          SnackBar(content: Text(msg, style: GoogleFonts.poppins())),
         );
       }
     } finally {

@@ -19,13 +19,17 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.68 — Active Development |
+| **Version** | v0.69 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.69 — One active appointment per doctor**
+- A patient can't book a new appointment with a doctor while they still have a scheduled one with that same doctor (must complete/cancel/delete it first)
+- Enforced both in `AppointmentService.create` (friendly message) and via a DB BEFORE INSERT trigger (hard guard)
 
 **v0.68 — Reschedule now needs patient confirmation**
 - Doctor reschedule is now a *proposal* (stored in `proposed_date`) instead of a direct change
