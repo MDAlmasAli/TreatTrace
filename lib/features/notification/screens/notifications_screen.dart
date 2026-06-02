@@ -85,8 +85,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         });
       }
     }
+    // Only the patient-facing appointment notifications open the (patient-side)
+    // appointment detail. Doctor-facing ones (e.g. appointment_booked) and the
+    // prescription/test/link types stay informational.
+    const apptTypes = {'appointment_rescheduled', 'appointment_cancelled'};
     final apptId = n.appointmentId;
-    if (apptId == null || !mounted) return;
+    if (!apptTypes.contains(n.type) || apptId == null || !mounted) return;
     final appt = await _apptSvc.fetchOne(apptId);
     if (appt == null || !mounted) return;
     await Navigator.of(context).push(MaterialPageRoute(
@@ -203,6 +207,16 @@ class _NotificationTile extends StatelessWidget {
         return (Icons.event_repeat_rounded, c.amber);
       case 'appointment_cancelled':
         return (Icons.event_busy_rounded, c.red);
+      case 'appointment_booked':
+        return (Icons.event_available_rounded, c.green);
+      case 'prescription_added':
+        return (Icons.medication_rounded, c.accent);
+      case 'test_report_added':
+        return (Icons.science_rounded, c.cyan);
+      case 'link_request':
+        return (Icons.person_add_alt_1_rounded, c.accent);
+      case 'link_accepted':
+        return (Icons.how_to_reg_rounded, c.green);
       default:
         return (Icons.notifications_rounded, c.accent);
     }

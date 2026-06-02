@@ -19,13 +19,19 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.66 — Active Development |
+| **Version** | v0.67 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.67 — More notification events**
+- New appointment booked → notifies the doctor
+- Doctor writes a prescription / orders a test → notifies the patient
+- Doctor-patient connection: request notifies the patient, accept notifies the doctor
+- NotificationsScreen: icons per type; only patient appointment notifications open the appointment detail
 
 **v0.66 — Notifications + doctor reschedule/cancel (Phase 1)**
 - New in-app notification system: `notifications` table + RLS + realtime; bell icon now has a live unread badge and opens a NotificationsScreen inbox
