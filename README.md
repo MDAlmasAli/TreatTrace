@@ -19,13 +19,18 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.69 — Active Development |
+| **Version** | v0.70 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.70 — Structured visiting days & time (doctor Visiting Info)**
+- Visiting Info sheet now has structured Visiting Days (weekday chips) + Start/End time pickers instead of a free-text "hours" field
+- `doctor_verifications` gains `visiting_days`, `visiting_start_time`, `visiting_end_time`; the human-readable `visiting_hours` is now auto-derived (so public profile keeps working)
+- Foundation for the upcoming ticket/slot/capacity scheduling feature
 
 **v0.69 — One active appointment per doctor**
 - A patient can't book a new appointment with a doctor while they still have a scheduled one with that same doctor (must complete/cancel/delete it first)

@@ -48,8 +48,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   int _pendingTasks = 0;
 
   int?    _visitingFee;
-  String? _visitingHours;
   String? _chamber;
+  List<int> _visitingDays = [];   // ISO weekdays 1=Mon..7=Sun
+  String? _visitingStart;         // 'HH:mm:ss'
+  String? _visitingEnd;           // 'HH:mm:ss'
   RealtimeChannel? _apptChannel;
 
   @override
@@ -147,8 +149,13 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       if (!mounted || data == null) return;
       setState(() {
         _visitingFee   = data['visiting_fee']   as int?;
-        _visitingHours = data['visiting_hours'] as String?;
         _chamber       = data['chamber']        as String?;
+        _visitingDays  = (data['visiting_days'] as List?)
+                ?.map((e) => (e as num).toInt())
+                .toList() ??
+            [];
+        _visitingStart = data['visiting_start_time'] as String?;
+        _visitingEnd   = data['visiting_end_time']   as String?;
       });
     } catch (_) {}
   }
@@ -168,8 +175,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
   Future<void> _showVisitingInfoSheet() async {
     final feeCtrl     = TextEditingController(text: _visitingFee?.toString() ?? '');
-    final hoursCtrl   = TextEditingController(text: _visitingHours ?? '');
     final chamberCtrl = TextEditingController(text: _chamber ?? '');
+    final selectedDays = List<int>.from(_visitingDays);
+    TimeOfDay? startTod = _todFromHms(_visitingStart);
+    TimeOfDay? endTod   = _todFromHms(_visitingEnd);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -224,13 +233,86 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                       keyboardType: TextInputType.number,
                       c: c,
                     ),
-                    const SizedBox(height: 14),
-                    _SheetField(
-                      label: 'Visiting Hours',
-                      hint: 'e.g. Sat–Thu 9am–5pm',
-                      controller: hoursCtrl,
-                      icon: Icons.access_time_rounded,
-                      c: c,
+                    const SizedBox(height: 16),
+                    Text('Visiting Days',
+                        style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: c.textSec)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: const [6, 7, 1, 2, 3, 4, 5].map((d) {
+                        const names = {
+                          1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu',
+                          5: 'Fri', 6: 'Sat', 7: 'Sun',
+                        };
+                        final sel = selectedDays.contains(d);
+                        return GestureDetector(
+                          onTap: () => setS(() {
+                            if (sel) {
+                              selectedDays.remove(d);
+                            } else {
+                              selectedDays.add(d);
+                            }
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: sel ? c.accent : c.surface,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                  color: sel ? c.accent : c.border, width: 1),
+                            ),
+                            child: Text(
+                              names[d]!,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: sel ? Colors.white : c.textSec,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _TimePickField(
+                            label: 'Start time',
+                            value: startTod,
+                            c:     c,
+                            onTap: () async {
+                              final t = await showTimePicker(
+                                context: builderCtx,
+                                initialTime: startTod ??
+                                    const TimeOfDay(hour: 17, minute: 0),
+                              );
+                              if (t != null) setS(() => startTod = t);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _TimePickField(
+                            label: 'End time',
+                            value: endTod,
+                            c:     c,
+                            onTap: () async {
+                              final t = await showTimePicker(
+                                context: builderCtx,
+                                initialTime: endTod ??
+                                    const TimeOfDay(hour: 21, minute: 0),
+                              );
+                              if (t != null) setS(() => endTod = t);
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 14),
                     _SheetField(
@@ -252,9 +334,11 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                   final fee =
                                       int.tryParse(feeCtrl.text.trim());
                                   await _verifySvc.updateVisitingInfo(
-                                    fee:     fee,
-                                    hours:   hoursCtrl.text,
-                                    chamber: chamberCtrl.text,
+                                    fee:       fee,
+                                    chamber:   chamberCtrl.text,
+                                    days:      selectedDays,
+                                    startTime: _hmsFromTod(startTod),
+                                    endTime:   _hmsFromTod(endTod),
                                   );
                                   if (sheetCtx.mounted) {
                                     Navigator.of(sheetCtx).pop();
@@ -296,9 +380,22 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     if (mounted) _loadVisitingInfo();
 
     feeCtrl.dispose();
-    hoursCtrl.dispose();
     chamberCtrl.dispose();
   }
+
+  // ── Visiting time helpers ─────────────────────────────────────────────────
+
+  TimeOfDay? _todFromHms(String? hms) {
+    if (hms == null) return null;
+    final p = hms.split(':');
+    if (p.length < 2) return null;
+    return TimeOfDay(
+        hour: int.tryParse(p[0]) ?? 0, minute: int.tryParse(p[1]) ?? 0);
+  }
+
+  String? _hmsFromTod(TimeOfDay? t) => t == null
+      ? null
+      : '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}:00';
 
   Future<void> _goMyPatients() async {
     await Navigator.of(
@@ -1102,6 +1199,58 @@ class _DoctorBottomBar extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 // _SheetField — text field used inside the visiting info bottom sheet
 // ══════════════════════════════════════════════════════════════════════════════
+class _TimePickField extends StatelessWidget {
+  final String       label;
+  final TimeOfDay?   value;
+  final ThemeColors  c;
+  final VoidCallback onTap;
+
+  const _TimePickField({
+    required this.label,
+    required this.value,
+    required this.c,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: GoogleFonts.poppins(
+                fontSize: 12, fontWeight: FontWeight.w600, color: c.textSec)),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            decoration: BoxDecoration(
+              color:        c.surface,
+              borderRadius: BorderRadius.circular(12),
+              border:       Border.all(color: c.border, width: 1),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.access_time_rounded, size: 18, color: c.accent),
+                const SizedBox(width: 8),
+                Text(
+                  value == null ? 'Select' : value!.format(context),
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: value == null ? c.textMuted : c.textPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SheetField extends StatelessWidget {
   final String             label;
   final String?            hint;

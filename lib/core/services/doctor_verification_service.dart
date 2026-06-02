@@ -40,17 +40,55 @@ class DoctorVerificationService {
   }
 
   Future<void> updateVisitingInfo({
-    int? fee,
-    String? hours,
-    String? chamber,
+    int?         fee,
+    String?      chamber,
+    List<int>?   days,       // ISO weekdays 1=Mon..7=Sun
+    String?      startTime,  // 'HH:mm:ss' or null
+    String?      endTime,    // 'HH:mm:ss' or null
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('Not logged in');
+
+    final sortedDays = (days == null || days.isEmpty)
+        ? null
+        : (List<int>.from(days)..sort());
+
     await _client.from('doctor_verifications').update({
-      'visiting_fee':   fee,
-      'visiting_hours': hours?.trim().isEmpty == true ? null : hours?.trim(),
-      'chamber':        chamber?.trim().isEmpty == true ? null : chamber?.trim(),
+      'visiting_fee':        fee,
+      'chamber':             chamber?.trim().isEmpty == true ? null : chamber?.trim(),
+      'visiting_days':       sortedDays,
+      'visiting_start_time': startTime,
+      'visiting_end_time':   endTime,
+      // Derived human-readable string so existing displays keep working.
+      'visiting_hours':      _buildHoursLabel(sortedDays, startTime, endTime),
     }).eq('id', userId);
+  }
+
+  // Builds e.g. "Sat, Sun, Mon · 5:00 PM – 9:00 PM" from the structured fields.
+  static String? _buildHoursLabel(
+      List<int>? days, String? start, String? end) {
+    const names = {1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun'};
+    const order = [6, 7, 1, 2, 3, 4, 5]; // Sat-first (BD week)
+    String? dayStr;
+    if (days != null && days.isNotEmpty) {
+      dayStr = order.where(days.contains).map((d) => names[d]).join(', ');
+    }
+    String? timeStr;
+    if (start != null && end != null) {
+      timeStr = '${_fmtTime(start)} – ${_fmtTime(end)}';
+    }
+    final parts = [?dayStr, ?timeStr];
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
+
+  static String _fmtTime(String hms) {
+    final p = hms.split(':');
+    var h = int.tryParse(p[0]) ?? 0;
+    final m = p.length > 1 ? (int.tryParse(p[1]) ?? 0) : 0;
+    final ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    if (h == 0) h = 12;
+    return '$h:${m.toString().padLeft(2, '0')} $ap';
   }
 
   Future<List<Map<String, dynamic>>> fetchAllVerifications() async {
