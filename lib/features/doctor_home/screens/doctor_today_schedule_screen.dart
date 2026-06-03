@@ -776,6 +776,10 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(children: [
               _FilterChip(
                 label: 'Today',
                 selected: _filter == _ScheduleFilter.today,
@@ -809,7 +813,10 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
                   _selectedIds.clear();
                 }),
               ),
-              const Spacer(),
+                  ]),
+                ),
+              ),
+              const SizedBox(width: 8),
               if (_filter == _ScheduleFilter.upcoming)
                 GestureDetector(
                   onTap: _pickUpcomingDate,

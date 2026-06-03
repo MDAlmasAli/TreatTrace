@@ -19,13 +19,17 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.78 — Active Development |
+| **Version** | v0.79 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.79 — Fix no-show DB error + Pick Date overflow**
+- Marking an appointment **No-show** failed with `appointments_status_check` violation — the table's status CHECK constraint didn't include `no_show`; added it
+- The schedule filter row's **Pick Date** button ran off-screen on large fonts; the filter chips now scroll horizontally while Pick Date stays pinned
 
 **v0.78 — Fix clipped "View Appointment" button in Today's Schedule**
 - The button was locked to a 40px height, which clipped its label on larger system font scales
