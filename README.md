@@ -19,13 +19,17 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.76 — Active Development |
+| **Version** | v0.77 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.77 — Fix: no network in release APK (missing INTERNET permission)**
+- Release builds failed every request with "Failed host lookup … errno = 7" because `android.permission.INTERNET` was only auto-added to debug/profile manifests, not the release manifest
+- Added `<uses-permission android:name="android.permission.INTERNET"/>` to the main `AndroidManifest.xml`
 
 **v0.76 — Remove standalone "Write Prescription" from doctor home**
 - Doctors write prescriptions only from an appointment, so the redundant "Write Prescription" shortcut is removed from the doctor portal grid
