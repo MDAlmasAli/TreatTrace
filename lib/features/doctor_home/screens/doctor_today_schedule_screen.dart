@@ -1053,7 +1053,6 @@ class _ScheduleTile extends StatelessWidget {
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
-              height: 40,
               child: OutlinedButton.icon(
                 onPressed: onTap,
                 icon: Icon(
@@ -1070,6 +1069,8 @@ class _ScheduleTile extends StatelessWidget {
                   ),
                 ),
                 style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(44),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   side: BorderSide(color: c.accent.withAlpha(90)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),

@@ -19,13 +19,17 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.77 — Active Development |
+| **Version** | v0.78 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.78 — Fix clipped "View Appointment" button in Today's Schedule**
+- The button was locked to a 40px height, which clipped its label on larger system font scales
+- Removed the fixed height; it now uses a 44px minimum and natural padding so the text is never cut
 
 **v0.77 — Fix: no network in release APK (missing INTERNET permission)**
 - Release builds failed every request with "Failed host lookup … errno = 7" because `android.permission.INTERNET` was only auto-added to debug/profile manifests, not the release manifest
