@@ -15,6 +15,7 @@ import '../services/doctor_patient_link_service.dart';
 import '../../notification/widgets/notification_bell.dart';
 import 'doctor_today_schedule_screen.dart';
 import 'my_patients_screen.dart';
+import '../../review/screens/doctor_own_reviews_screen.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
   final void Function(String) onThemeChanged;
@@ -449,6 +450,14 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     _loadDashboardStats();
   }
 
+  void _goMyReviews() {
+    final id = Supabase.instance.client.auth.currentUser?.id;
+    if (id == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => DoctorOwnReviewsScreen(doctorId: id)),
+    );
+  }
+
   Future<void> _loadDashboardStats() async {
     try {
       final results = await Future.wait([
@@ -645,6 +654,25 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                   accentColor: c.accent,
                                   onTap: _showVisitingInfoSheet,
                                 ).animate().fadeIn(delay: 280.ms).slideY(begin: 0.08),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _ActionCard(
+                                  icon: Icons.star_rounded,
+                                  label: 'My Reviews',
+                                  subtitle: 'Patient ratings',
+                                  accentColor: c.amber,
+                                  onTap: _goMyReviews,
+                                ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.08),
                               ),
                             ],
                           ),

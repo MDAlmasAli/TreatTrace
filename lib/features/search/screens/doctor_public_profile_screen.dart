@@ -8,6 +8,7 @@ import '../../appointment/screens/add_edit_appointment_screen.dart';
 import '../../doctor/models/doctor.dart';
 import '../../doctor/services/doctor_service.dart';
 import '../../doctor_home/services/doctor_patient_link_service.dart';
+import '../../review/widgets/review_widgets.dart';
 
 class DoctorPublicProfileScreen extends StatefulWidget {
   final String  doctorId;
@@ -221,6 +222,8 @@ class _DoctorPublicProfileScreenState
     final about         = d['about']         as String?;
     final email         = d['email']         as String?;
     final avatar        = d['avatar_url']    as String?;
+    final ratingAvg     = (d['rating_avg']   as num?)?.toDouble() ?? 0;
+    final ratingCount   = (d['rating_count'] as num?)?.toInt() ?? 0;
 
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
@@ -290,6 +293,24 @@ class _DoctorPublicProfileScreenState
                       fontWeight: FontWeight.w500,
                       color: c.accent,
                     ),
+                  ),
+                ],
+                if (ratingCount > 0) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      StarRow(rating: ratingAvg, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${ratingAvg.toStringAsFixed(1)} ($ratingCount)',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: c.textSec,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
                 if (visitingFee != null) ...[
@@ -365,6 +386,18 @@ class _DoctorPublicProfileScreenState
               child: _AboutCard(c: c, about: about!).animate().fadeIn(delay: 230.ms).slideY(begin: 0.04),
             ),
           ),
+
+        // ── Ratings & Reviews ─────────────────────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: DoctorReviewsSection(
+              doctorId:     widget.doctorId,
+              initialAvg:   ratingAvg,
+              initialCount: ratingCount,
+            ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.04),
+          ),
+        ),
 
         // ── Action buttons ────────────────────────────────────────────────
         SliverToBoxAdapter(

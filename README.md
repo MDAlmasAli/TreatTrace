@@ -19,13 +19,20 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.74 — Active Development |
+| **Version** | v0.75 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.75 — Doctor review system (anonymous, verified)**
+- Patients can rate (1–5) + review a doctor **only after a completed appointment** (enforced by a DB trigger)
+- Reviews are **anonymous**: the public list comes from a `get_doctor_reviews` RPC that never returns patient identity; base-table RLS lets a patient see/edit only their own review
+- One review per patient per doctor (editable/deletable); aggregate `rating_avg` + `rating_count` kept on `doctor_verifications` via trigger
+- Rating shown on the **doctor public profile** (stars + "Ratings & Reviews" section with write/edit), **search result cards** (⭐ badge), and the **doctor's own portal** ("My Reviews", read-only)
+- No notification on new review (by design)
 
 **v0.74 — Live queue serial, no-show status & reschedule renumber**
 - Serial number shown to a patient is now a **live queue position** (still-scheduled patients ahead + 1) — when someone ahead cancels, no-shows, or reschedules away, everyone behind moves up automatically; no gaps, earlier estimated times

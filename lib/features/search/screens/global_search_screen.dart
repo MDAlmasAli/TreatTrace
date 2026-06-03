@@ -15,6 +15,7 @@ import '../../prescription/screens/prescription_detail_screen.dart';
 import '../../test_report/models/test_report.dart';
 import '../../test_report/services/test_report_service.dart';
 import '../../test_report/screens/test_report_detail_screen.dart';
+import '../../review/widgets/review_widgets.dart';
 
 class GlobalSearchScreen extends StatefulWidget {
   const GlobalSearchScreen({super.key});
@@ -298,6 +299,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               hospital: d['hospital'] as String?,
               visitingFee: d['visiting_fee'] as int?,
               imageUrl: d['avatar_url'] as String?,
+              ratingAvg: (d['rating_avg'] as num?)?.toDouble() ?? 0,
+              ratingCount: (d['rating_count'] as num?)?.toInt() ?? 0,
               badge: isLinked ? 'My Doctor' : 'Doctor',
               badgeColor: isLinked ? c.green : c.accent,
               onTap: () => _openDoctorProfile(d),
@@ -469,6 +472,8 @@ class _DoctorResultTile extends StatelessWidget {
   final String? hospital;
   final int? visitingFee;
   final String? imageUrl;
+  final double ratingAvg;
+  final int ratingCount;
   final String badge;
   final Color badgeColor;
   final VoidCallback onTap;
@@ -480,6 +485,8 @@ class _DoctorResultTile extends StatelessWidget {
     required this.hospital,
     this.visitingFee,
     required this.imageUrl,
+    this.ratingAvg = 0,
+    this.ratingCount = 0,
     required this.badge,
     required this.badgeColor,
     required this.onTap,
@@ -578,17 +585,25 @@ class _DoctorResultTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                  if (visitingFee != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      'BDT $visitingFee',
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: c.green,
-                      ),
-                    ),
-                  ],
+                  Row(
+                    children: [
+                      if (visitingFee != null)
+                        Text(
+                          'BDT $visitingFee',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: c.green,
+                          ),
+                        ),
+                      if (visitingFee != null && ratingCount > 0)
+                        Text('  ·  ',
+                            style: GoogleFonts.poppins(
+                                fontSize: 10, color: c.textMuted)),
+                      if (ratingCount > 0)
+                        RatingBadge(avg: ratingAvg, count: ratingCount),
+                    ],
+                  ),
                 ],
               ),
             ),

@@ -164,7 +164,7 @@ class DoctorPatientLinkService {
     final ids = profiles.map((p) => p['id'] as String).toList();
     final verifs = await _client
         .from('doctor_verifications')
-        .select('id, specialty, hospital, visiting_fee, degree')
+        .select('id, specialty, hospital, visiting_fee, degree, rating_avg, rating_count')
         .eq('status', 'approved')
         .inFilter('id', ids) as List;
 
@@ -180,6 +180,8 @@ class DoctorPatientLinkService {
               'hospital':     approvedMap[p['id'] as String]?['hospital'],
               'visiting_fee': approvedMap[p['id'] as String]?['visiting_fee'],
               'degree':       approvedMap[p['id'] as String]?['degree'],
+              'rating_avg':   approvedMap[p['id'] as String]?['rating_avg'],
+              'rating_count': approvedMap[p['id'] as String]?['rating_count'],
             })
         .toList();
   }
@@ -268,7 +270,7 @@ class DoctorPatientLinkService {
           .maybeSingle(),
       _client
           .from('doctor_verifications')
-          .select('specialty, hospital, degree, visiting_fee, visiting_hours, chamber, about')
+          .select('specialty, hospital, degree, visiting_fee, visiting_hours, chamber, about, rating_avg, rating_count')
           .eq('id', doctorId)
           .eq('status', 'approved')
           .maybeSingle(),
@@ -291,6 +293,8 @@ class DoctorPatientLinkService {
       'visiting_hours': verif?['visiting_hours'],
       'chamber':        verif?['chamber'],
       'about':          verif?['about'],
+      'rating_avg':     verif?['rating_avg'],
+      'rating_count':   verif?['rating_count'],
     };
   }
 
