@@ -207,6 +207,20 @@ class AppointmentService {
     await _client.from('appointments').update({'proposed_date': null}).eq('id', id);
   }
 
+  // ── Doctor: bulk actions on several appointments at once ──────────────────
+  Future<void> cancelMany(Iterable<String> ids) async {
+    for (final id in ids) {
+      await updateStatus(id, AppointmentStatus.cancelled);
+    }
+  }
+
+  Future<void> proposeRescheduleMany(
+      Iterable<String> ids, DateTime proposedDate) async {
+    for (final id in ids) {
+      await proposeReschedule(id, proposedDate);
+    }
+  }
+
   Future<void> delete(String id) async {
     await _client.from('appointments').delete().eq('id', id);
   }

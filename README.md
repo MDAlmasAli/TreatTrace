@@ -19,13 +19,19 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.72 — Active Development |
+| **Version** | v0.73 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.73 — Bulk reschedule / cancel from doctor schedule**
+- Long-press an appointment in Today or Upcoming to enter multi-select; tap to add/remove, "Select all" / "Clear all" in the toolbar
+- Bottom action bar to **Reschedule** (proposes the same new date to every selected appointment — patients still confirm) or **Cancel** all selected at once
+- Selection clears on filter change; hardware back exits selection instead of leaving the screen
+- Service gains `cancelMany` / `proposeRescheduleMany`
 
 **v0.72 — No past-date booking + auto-expire past appointments**
 - Booking date picker now starts at today; past dates are disabled — you can't book an appointment in the past

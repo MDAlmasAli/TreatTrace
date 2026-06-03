@@ -42,6 +42,10 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
   final _completedSearchCtrl = TextEditingController();
   bool _loading = true;
 
+  // Multi-select (Today + Upcoming only).
+  bool _selectionMode = false;
+  final Set<String> _selectedIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -104,6 +108,131 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
       });
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // ── Multi-select helpers ────────────────────────────────────────────────
+  bool get _selectionAllowed =>
+      _filter == _ScheduleFilter.today || _filter == _ScheduleFilter.upcoming;
+
+  void _exitSelection() {
+    setState(() {
+      _selectionMode = false;
+      _selectedIds.clear();
+    });
+  }
+
+  void _enterSelection(Appointment appt) {
+    if (!_selectionAllowed) return;
+    setState(() {
+      _selectionMode = true;
+      _selectedIds.add(appt.id);
+    });
+  }
+
+  void _toggleSelect(Appointment appt) {
+    setState(() {
+      if (!_selectedIds.remove(appt.id)) _selectedIds.add(appt.id);
+      if (_selectedIds.isEmpty) _selectionMode = false;
+    });
+  }
+
+  void _selectAll(List<Appointment> visible) {
+    setState(() {
+      _selectionMode = true;
+      _selectedIds
+        ..clear()
+        ..addAll(visible.map((a) => a.id));
+    });
+  }
+
+  Future<void> _bulkCancel() async {
+    final ids = _selectedIds.toList();
+    if (ids.isEmpty) return;
+    final c = context.colors;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text('Cancel appointments',
+            style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700, color: c.textPrimary)),
+        content: Text(
+          'Cancel ${ids.length} selected appointment${ids.length == 1 ? '' : 's'}? '
+          'The patient${ids.length == 1 ? '' : 's'} will be notified.',
+          style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Keep',
+                style: GoogleFonts.poppins(color: c.textSec)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Cancel them',
+                style: GoogleFonts.poppins(
+                    color: c.red, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _apptSvc.cancelMany(ids);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            '${ids.length} appointment${ids.length == 1 ? '' : 's'} cancelled'),
+      ));
+      _exitSelection();
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not cancel: $e')));
+    }
+  }
+
+  Future<void> _bulkReschedule() async {
+    final ids = _selectedIds.toList();
+    if (ids.isEmpty) return;
+    final c = context.colors;
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(now.year, now.month, now.day),
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(now.year + 2, 12, 31),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.light(
+            primary: c.accent,
+            onPrimary: Colors.white,
+            surface: c.card,
+            onSurface: c.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked == null) return;
+    final date = DateTime(picked.year, picked.month, picked.day);
+    try {
+      await _apptSvc.proposeRescheduleMany(ids, date);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            'Reschedule requested for ${ids.length} appointment${ids.length == 1 ? '' : 's'}. '
+            'Patients will be asked to confirm.'),
+      ));
+      _exitSelection();
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not reschedule: $e')));
     }
   }
 
@@ -343,11 +472,20 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
     );
 
     final visible = _visibleAppointments;
-    return Scaffold(
+    return PopScope(
+      canPop: !_selectionMode,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _exitSelection();
+      },
+      child: Scaffold(
       backgroundColor: c.bg,
+      bottomNavigationBar:
+          _selectionMode ? _buildSelectionActionBar(c) : null,
       body: Column(
         children: [
           _buildHeader(c, visible.length),
+          if (_selectionMode) _buildSelectionToolbar(c, visible),
           if (_filter == _ScheduleFilter.completed)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
@@ -402,7 +540,16 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
                                     (prof?['full_name'] as String?) ??
                                     'Patient',
                                 patientPhone: prof?['phone'] as String?,
-                                onTap: () => _openAppointmentDetail(appt),
+                                selectionMode: _selectionMode,
+                                selected: _selectedIds.contains(appt.id),
+                                onTap: () => _selectionMode
+                                    ? _toggleSelect(appt)
+                                    : _openAppointmentDetail(appt),
+                                onLongPress: _selectionAllowed
+                                    ? () => _selectionMode
+                                        ? _toggleSelect(appt)
+                                        : _enterSelection(appt)
+                                    : null,
                               ).animate().fadeIn(
                                 delay: Duration(milliseconds: i * 60),
                               );
@@ -411,6 +558,93 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
                   ),
           ),
         ],
+      ),
+      ),
+    );
+  }
+
+  Widget _buildSelectionToolbar(ThemeColors c, List<Appointment> visible) {
+    final allSelected =
+        visible.isNotEmpty && _selectedIds.length >= visible.length;
+    return Container(
+      color: c.accent.withAlpha(12),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: _exitSelection,
+            child: Icon(Icons.close_rounded, size: 22, color: c.textSec),
+          ),
+          const SizedBox(width: 14),
+          Text(
+            '${_selectedIds.length} selected',
+            style: GoogleFonts.poppins(
+                fontSize: 14, fontWeight: FontWeight.w700, color: c.textPrimary),
+          ),
+          const Spacer(),
+          GestureDetector(
+            onTap: () =>
+                allSelected ? _exitSelection() : _selectAll(visible),
+            child: Text(
+              allSelected ? 'Clear all' : 'Select all',
+              style: GoogleFonts.poppins(
+                  fontSize: 13, fontWeight: FontWeight.w600, color: c.accent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectionActionBar(ThemeColors c) {
+    final n = _selectedIds.length;
+    final enabled = n > 0;
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        decoration: BoxDecoration(
+          color: c.card,
+          border: Border(top: BorderSide(color: c.border)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: enabled ? _bulkReschedule : null,
+                icon: Icon(Icons.event_repeat_rounded, size: 18, color: c.accent),
+                label: Text('Reschedule',
+                    style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: c.accent)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(46),
+                  side: BorderSide(color: c.accent.withAlpha(110)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: enabled ? _bulkCancel : null,
+                icon: const Icon(Icons.cancel_rounded, size: 18),
+                label: Text('Cancel',
+                    style: GoogleFonts.poppins(
+                        fontSize: 13, fontWeight: FontWeight.w700)),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(46),
+                  backgroundColor: c.red,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -531,6 +765,8 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
                 onTap: () => setState(() {
                   _filter = _ScheduleFilter.today;
                   _selectedUpcomingDate = null;
+                  _selectionMode = false;
+                  _selectedIds.clear();
                 }),
               ),
               const SizedBox(width: 8),
@@ -539,7 +775,11 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
                     ? 'Upcoming'
                     : 'Upcoming: ${_selectedUpcomingDate!.day}/${_selectedUpcomingDate!.month}',
                 selected: _filter == _ScheduleFilter.upcoming,
-                onTap: () => setState(() => _filter = _ScheduleFilter.upcoming),
+                onTap: () => setState(() {
+                  _filter = _ScheduleFilter.upcoming;
+                  _selectionMode = false;
+                  _selectedIds.clear();
+                }),
               ),
               const SizedBox(width: 8),
               _FilterChip(
@@ -548,6 +788,8 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
                 onTap: () => setState(() {
                   _filter = _ScheduleFilter.completed;
                   _selectedUpcomingDate = null;
+                  _selectionMode = false;
+                  _selectedIds.clear();
                 }),
               ),
               const Spacer(),
@@ -607,6 +849,9 @@ class _ScheduleTile extends StatelessWidget {
   final String patientName;
   final String? patientPhone;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final bool selectionMode;
+  final bool selected;
 
   const _ScheduleTile({
     required this.appointment,
@@ -614,6 +859,9 @@ class _ScheduleTile extends StatelessWidget {
     required this.patientName,
     required this.patientPhone,
     required this.onTap,
+    this.onLongPress,
+    this.selectionMode = false,
+    this.selected = false,
   });
 
   @override
@@ -632,19 +880,33 @@ class _ScheduleTile extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: c.card,
+        color: selected ? c.accent.withAlpha(16) : c.card,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: c.border),
+        border: Border.all(
+          color: selected ? c.accent : c.border,
+          width: selected ? 1.5 : 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
+              if (selectionMode) ...[
+                Icon(
+                  selected
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  size: 20,
+                  color: selected ? c.accent : c.textMuted,
+                ),
+                const SizedBox(width: 10),
+              ],
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
@@ -764,33 +1026,35 @@ class _ScheduleTile extends StatelessWidget {
               ],
             ),
           ],
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 40,
-            child: OutlinedButton.icon(
-              onPressed: onTap,
-              icon: Icon(
-                Icons.event_note_rounded,
-                size: 16,
-                color: c.accent,
-              ),
-              label: Text(
-                'View Appointment',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+          if (!selectionMode) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 40,
+              child: OutlinedButton.icon(
+                onPressed: onTap,
+                icon: Icon(
+                  Icons.event_note_rounded,
+                  size: 16,
                   color: c.accent,
                 ),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: c.accent.withAlpha(90)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                label: Text(
+                  'View Appointment',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: c.accent,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: c.accent.withAlpha(90)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
       ),
