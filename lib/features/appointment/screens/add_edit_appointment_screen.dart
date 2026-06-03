@@ -185,52 +185,129 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
           : (_selectedDoctor?.name ??
                 (_isEdit ? widget.existing!.doctorNameSnapshot : 'Unknown'));
 
-      final draft = Appointment(
-        id:                 _isEdit ? widget.existing!.id : '',
-        userId:             '',
-        doctorId:           useFixedDoctor ? null : _selectedDoctor?.id,
-        doctorNameSnapshot: doctorName,
-        appointmentDate:    _date!,
-        appointmentTime:    null,
-        visitReason:        _reasonCtrl.text.trim().nullIfEmpty,
-        status:             _status,
-        notes:              _notesCtrl.text.trim().nullIfEmpty,
-        prescriptionIds:    _linkedPrescIds,
-        testReportIds:      _linkedTestReportIds,
-        createdAt:          DateTime.now(),
-        updatedAt:          DateTime.now(),
-      );
+      Appointment draftFor(DateTime date) => Appointment(
+            id:                 _isEdit ? widget.existing!.id : '',
+            userId:             '',
+            doctorId:           useFixedDoctor ? null : _selectedDoctor?.id,
+            doctorNameSnapshot: doctorName,
+            appointmentDate:    date,
+            appointmentTime:    null,
+            visitReason:        _reasonCtrl.text.trim().nullIfEmpty,
+            status:             _status,
+            notes:              _notesCtrl.text.trim().nullIfEmpty,
+            prescriptionIds:    _linkedPrescIds,
+            testReportIds:      _linkedTestReportIds,
+            createdAt:          DateTime.now(),
+            updatedAt:          DateTime.now(),
+          );
 
       if (_isEdit) {
-        await _apptSvc.update(draft);
-      } else {
-        await _apptSvc.create(draft, doctorUserId: useFixedDoctor ? _fixedDoctorUserId : null);
+        await _apptSvc.update(draftFor(_date!));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Appointment updated.', style: GoogleFonts.poppins())));
+          Navigator.of(context).pop(true);
+        }
+        return;
+      }
+
+      // Create — retry on the next available day if the chosen date is full.
+      var date = _date!;
+      Appointment? created;
+      while (created == null) {
+        try {
+          created = await _apptSvc.create(
+            draftFor(date),
+            doctorUserId: useFixedDoctor ? _fixedDoctorUserId : null,
+          );
+        } on NoSlotAvailableException catch (e) {
+          final next = await _showNoSlotDialog(e);
+          if (next == null) {
+            if (mounted) setState(() => _saving = false);
+            return; // user cancelled
+          }
+          date = next;
+          if (mounted) setState(() => _date = next);
+        }
       }
 
       if (mounted) {
+        final t = created.ticketNo;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
-            _isEdit ? 'Appointment updated.' : 'Appointment saved.',
+            t != null ? 'Appointment booked — Ticket #$t' : 'Appointment saved.',
             style: GoogleFonts.poppins(),
           ),
         ));
         Navigator.of(context).pop(true);
       }
+    } on DuplicateActiveAppointmentException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            'You already have an active appointment with this doctor. '
+            'Complete or cancel it before booking a new one.',
+            style: GoogleFonts.poppins(),
+          ),
+        ));
+      }
     } catch (e) {
       if (mounted) {
-        final dup = e is DuplicateActiveAppointmentException ||
-            e.toString().contains('DUPLICATE_ACTIVE_APPOINTMENT');
-        final msg = dup
-            ? 'You already have an active appointment with this doctor. '
-                'Complete or cancel it before booking a new one.'
-            : 'Error: $e';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg, style: GoogleFonts.poppins())),
-        );
+        final dup = e.toString().contains('DUPLICATE_ACTIVE_APPOINTMENT');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            dup
+                ? 'You already have an active appointment with this doctor. '
+                    'Complete or cancel it before booking a new one.'
+                : 'Error: $e',
+            style: GoogleFonts.poppins(),
+          ),
+        ));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  // Shows the "no slot" warning. Returns the next available date if the user
+  // chooses to book then, or null if they cancel.
+  Future<DateTime?> _showNoSlotDialog(NoSlotAvailableException e) async {
+    final c = context.colors;
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    String fmt(DateTime d) => '${d.day} ${months[d.month - 1]} ${d.year}';
+    final reasonMsg = e.reason == 'not_visiting_day'
+        ? "The doctor doesn't sit on ${fmt(_date!)}."
+        : 'This doctor is fully booked on ${fmt(_date!)}.';
+    final next = e.nextAvailable;
+
+    return showDialog<DateTime>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.card,
+        title: Text('No slot available',
+            style: GoogleFonts.poppins(
+                color: c.textPrimary, fontWeight: FontWeight.w700)),
+        content: Text(
+          next != null
+              ? '$reasonMsg\n\nNext available: ${fmt(next)}.'
+              : '$reasonMsg\n\nNo open day found in the next 60 days.',
+          style: GoogleFonts.poppins(fontSize: 13, color: c.textSec, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: c.textSec)),
+          ),
+          if (next != null)
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(next),
+              child: Text('Book on ${fmt(next)}',
+                  style: GoogleFonts.poppins(
+                      color: c.accent, fontWeight: FontWeight.w700)),
+            ),
+        ],
+      ),
+    );
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

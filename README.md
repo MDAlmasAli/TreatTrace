@@ -19,13 +19,20 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.70 — Active Development |
+| **Version** | v0.71 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-05-31 |
 
 ---
 
 ## Recent Updates
+
+**v0.71 — Ticket system + capacity + time control**
+- Doctor sets daily patient limit + minutes/patient (Visiting Info); visiting days/time already structured
+- Each booking gets a per-doctor/per-day **ticket number** (DB trigger, race-safe) + an estimated visit time (start + ticket × minutes)
+- Booking blocks non-visiting days and full days; patient is warned **"No slot available"** and offered the **next available day** or **Cancel**
+- Ticket # + estimated time shown in appointment detail and the doctor's Today Schedule
+- Enforced server-side via trigger + a `check_appointment_availability` RPC
 
 **v0.70 — Structured visiting days & time (doctor Visiting Info)**
 - Visiting Info sheet now has structured Visiting Days (weekday chips) + Start/End time pickers instead of a free-text "hours" field

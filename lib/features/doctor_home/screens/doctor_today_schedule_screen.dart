@@ -661,6 +661,31 @@ class _ScheduleTile extends StatelessWidget {
                   ),
                 ),
               ),
+              if (appointment.ticketNo != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: c.green.withAlpha(20),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: c.green.withAlpha(70)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.confirmation_number_rounded,
+                          size: 11, color: c.green),
+                      const SizedBox(width: 3),
+                      Text(
+                        '#${appointment.ticketNo}',
+                        style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: c.green),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const Spacer(),
               if ((appointment.appointmentTime ?? '').isNotEmpty)
                 Row(

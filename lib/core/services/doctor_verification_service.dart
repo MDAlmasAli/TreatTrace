@@ -45,6 +45,8 @@ class DoctorVerificationService {
     List<int>?   days,       // ISO weekdays 1=Mon..7=Sun
     String?      startTime,  // 'HH:mm:ss' or null
     String?      endTime,    // 'HH:mm:ss' or null
+    int?         dailyLimit,        // max patients/day (null/0 = unlimited)
+    int?         minutesPerPatient, // avg minutes per patient
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('Not logged in');
@@ -59,6 +61,8 @@ class DoctorVerificationService {
       'visiting_days':       sortedDays,
       'visiting_start_time': startTime,
       'visiting_end_time':   endTime,
+      'daily_patient_limit': dailyLimit,
+      'minutes_per_patient': minutesPerPatient,
       // Derived human-readable string so existing displays keep working.
       'visiting_hours':      _buildHoursLabel(sortedDays, startTime, endTime),
     }).eq('id', userId);

@@ -33,6 +33,8 @@ class Appointment {
   final List<String>       prescriptionIds;
   final List<String>       testReportIds;
   final DateTime?          proposedDate; // doctor-proposed reschedule (pending patient action)
+  final String?            doctorUserId; // the doctor's account id (if registered)
+  final int?               ticketNo;     // per-doctor, per-day serial
   final DateTime           createdAt;
   final DateTime           updatedAt;
 
@@ -56,6 +58,8 @@ class Appointment {
     this.prescriptionIds = const [],
     this.testReportIds   = const [],
     this.proposedDate,
+    this.doctorUserId,
+    this.ticketNo,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -92,6 +96,8 @@ class Appointment {
       proposedDate: m['proposed_date'] != null
           ? DateTime.parse(m['proposed_date'] as String)
           : null,
+      doctorUserId: m['doctor_user_id'] as String?,
+      ticketNo:     (m['ticket_no'] as num?)?.toInt(),
       createdAt: DateTime.parse(m['created_at'] as String),
       updatedAt: DateTime.parse(m['updated_at'] as String),
     );
@@ -127,6 +133,8 @@ class Appointment {
     bool                clearTestReportIds   = false,
     DateTime?           proposedDate,
     bool                clearProposedDate    = false,
+    String?             doctorUserId,
+    int?                ticketNo,
     DateTime?           createdAt,
     DateTime?           updatedAt,
   }) =>
@@ -149,6 +157,8 @@ class Appointment {
         proposedDate:       clearProposedDate
             ? null
             : (proposedDate ?? this.proposedDate),
+        doctorUserId:       doctorUserId       ?? this.doctorUserId,
+        ticketNo:           ticketNo           ?? this.ticketNo,
         createdAt:          createdAt          ?? this.createdAt,
         updatedAt:          updatedAt          ?? this.updatedAt,
       );

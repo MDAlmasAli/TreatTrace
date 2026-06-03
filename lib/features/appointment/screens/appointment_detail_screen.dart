@@ -70,11 +70,35 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   final Map<String, Prescription> _prescMap      = {};
   final Map<String, TestReport>   _testReportMap = {};
 
+  String? _estTime; // estimated visit time from ticket + doctor schedule
+
   @override
   void initState() {
     super.initState();
     _appt = widget.appointment;
     _fetchLinkedData();
+    _loadEstimatedTime();
+  }
+
+  Future<void> _loadEstimatedTime() async {
+    final docId  = _appt.doctorUserId;
+    final ticket = _appt.ticketNo;
+    if (docId == null || ticket == null) return;
+    final s = await _service.fetchScheduleTimes(docId);
+    if (!mounted || s.startTime == null || s.minutesPerPatient == null) return;
+    setState(() => _estTime = _estimate(s.startTime!, s.minutesPerPatient!, ticket));
+  }
+
+  String _estimate(String startHms, int mins, int ticket) {
+    final p = startHms.split(':');
+    final base = (int.tryParse(p[0]) ?? 0) * 60 +
+        (p.length > 1 ? (int.tryParse(p[1]) ?? 0) : 0);
+    final total = base + (ticket - 1) * mins;
+    var h = (total ~/ 60) % 24;
+    final m = total % 60;
+    final ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if (h == 0) h = 12;
+    return '$h:${m.toString().padLeft(2, '0')} $ap';
   }
 
   Future<void> _fetchLinkedData() async {
@@ -401,6 +425,16 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                 label: s.appointmentDate,
                                 value: _fmtDate(_appt.appointmentDate),
                               ),
+                              if (_appt.ticketNo != null)
+                                _InfoRow(
+                                  icon:      Icons.confirmation_number_rounded,
+                                  iconColor: c.green,
+                                  label:     'Ticket',
+                                  value:     _estTime != null
+                                      ? '#${_appt.ticketNo}  ·  ~$_estTime'
+                                      : '#${_appt.ticketNo}',
+                                  valueColor: c.green,
+                                ),
                               if (_appt.appointmentTime?.isNotEmpty == true)
                                 _InfoRow(
                                   icon:  Icons.access_time_rounded,

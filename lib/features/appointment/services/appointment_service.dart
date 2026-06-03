@@ -16,6 +16,16 @@ class DuplicateActiveAppointmentException implements Exception {
   String toString() => message;
 }
 
+/// Thrown when the requested date is full or not a visiting day. Carries the
+/// next available date (if any) so the UI can offer it.
+class NoSlotAvailableException implements Exception {
+  final String    reason;        // 'full' | 'not_visiting_day'
+  final DateTime? nextAvailable;
+  NoSlotAvailableException({required this.reason, this.nextAvailable});
+  @override
+  String toString() => 'No slot available ($reason)';
+}
+
 class AppointmentService {
   final _client = Supabase.instance.client;
   String? get _uid => _client.auth.currentUser?.id;
@@ -74,6 +84,15 @@ class AppointmentService {
     );
     if (hasActive) throw DuplicateActiveAppointmentException();
 
+    // Slot availability (registered doctors only — they have a schedule).
+    if (resolvedDoctorUserId != null && resolvedDoctorUserId.isNotEmpty) {
+      final a = await _availability(resolvedDoctorUserId, appt.appointmentDate);
+      if (!a.requestedOk) {
+        throw NoSlotAvailableException(
+            reason: a.reason, nextAvailable: a.nextAvailable);
+      }
+    }
+
     try {
       final inserted = await _client
           .from('appointments')
@@ -81,15 +100,58 @@ class AppointmentService {
           .select()
           .single();
       return Appointment.fromMap(inserted);
+    } on PostgrestException catch (e) {
+      // Race: the DB trigger rejected it after our pre-check. Re-probe so the
+      // UI can offer the next available date.
+      if (e.message.contains('NO_SLOT_AVAILABLE') ||
+          e.message.contains('INVALID_VISITING_DAY')) {
+        DateTime? next;
+        if (resolvedDoctorUserId != null && resolvedDoctorUserId.isNotEmpty) {
+          next = (await _availability(resolvedDoctorUserId, appt.appointmentDate))
+              .nextAvailable;
+        }
+        throw NoSlotAvailableException(
+            reason: e.message.contains('INVALID_VISITING_DAY')
+                ? 'not_visiting_day'
+                : 'full',
+            nextAvailable: next);
+      }
+      rethrow;
+    }
+  }
+
+  // Calls the availability RPC for a doctor + date.
+  Future<({bool requestedOk, String reason, DateTime? nextAvailable})>
+      _availability(String doctorUserId, DateTime date) async {
+    final res = await _client.rpc('check_appointment_availability', params: {
+      'p_doctor': doctorUserId,
+      'p_date':   date.toIso8601String().substring(0, 10),
+    });
+    final m = (res as Map).cast<String, dynamic>();
+    return (
+      requestedOk:   m['requested_ok'] == true,
+      reason:        (m['reason'] as String?) ?? 'ok',
+      nextAvailable: m['next_available'] != null
+          ? DateTime.parse(m['next_available'] as String)
+          : null,
+    );
+  }
+
+  // Doctor's start time + minutes-per-patient (for estimated-time display).
+  Future<({String? startTime, int? minutesPerPatient})> fetchScheduleTimes(
+      String doctorUserId) async {
+    try {
+      final row = await _client
+          .from('doctor_verifications')
+          .select('visiting_start_time, minutes_per_patient')
+          .eq('id', doctorUserId)
+          .maybeSingle();
+      return (
+        startTime:         row?['visiting_start_time'] as String?,
+        minutesPerPatient: (row?['minutes_per_patient'] as num?)?.toInt(),
+      );
     } catch (_) {
-      // Fallback for schema versions without `doctor_user_id`.
-      payload.remove('doctor_user_id');
-      final inserted = await _client
-          .from('appointments')
-          .insert(payload)
-          .select()
-          .single();
-      return Appointment.fromMap(inserted);
+      return (startTime: null, minutesPerPatient: null);
     }
   }
 

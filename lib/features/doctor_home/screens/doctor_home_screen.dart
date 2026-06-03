@@ -52,6 +52,8 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   List<int> _visitingDays = [];   // ISO weekdays 1=Mon..7=Sun
   String? _visitingStart;         // 'HH:mm:ss'
   String? _visitingEnd;           // 'HH:mm:ss'
+  int?    _dailyLimit;
+  int?    _minutesPerPatient;
   RealtimeChannel? _apptChannel;
 
   @override
@@ -156,6 +158,8 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             [];
         _visitingStart = data['visiting_start_time'] as String?;
         _visitingEnd   = data['visiting_end_time']   as String?;
+        _dailyLimit        = (data['daily_patient_limit'] as num?)?.toInt();
+        _minutesPerPatient = (data['minutes_per_patient'] as num?)?.toInt();
       });
     } catch (_) {}
   }
@@ -176,6 +180,8 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   Future<void> _showVisitingInfoSheet() async {
     final feeCtrl     = TextEditingController(text: _visitingFee?.toString() ?? '');
     final chamberCtrl = TextEditingController(text: _chamber ?? '');
+    final limitCtrl   = TextEditingController(text: _dailyLimit?.toString() ?? '');
+    final minsCtrl    = TextEditingController(text: _minutesPerPatient?.toString() ?? '');
     final selectedDays = List<int>.from(_visitingDays);
     TimeOfDay? startTod = _todFromHms(_visitingStart);
     TimeOfDay? endTod   = _todFromHms(_visitingEnd);
@@ -315,6 +321,32 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _SheetField(
+                            label: 'Patients/day',
+                            hint: 'e.g. 20',
+                            controller: limitCtrl,
+                            icon: Icons.groups_rounded,
+                            keyboardType: TextInputType.number,
+                            c: c,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _SheetField(
+                            label: 'Min/patient',
+                            hint: 'e.g. 10',
+                            controller: minsCtrl,
+                            icon: Icons.timelapse_rounded,
+                            keyboardType: TextInputType.number,
+                            c: c,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
                     _SheetField(
                       label: 'Chamber / Location',
                       hint: 'e.g. Room 203, City Hospital',
@@ -339,6 +371,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                     days:      selectedDays,
                                     startTime: _hmsFromTod(startTod),
                                     endTime:   _hmsFromTod(endTod),
+                                    dailyLimit:
+                                        int.tryParse(limitCtrl.text.trim()),
+                                    minutesPerPatient:
+                                        int.tryParse(minsCtrl.text.trim()),
                                   );
                                   if (sheetCtx.mounted) {
                                     Navigator.of(sheetCtx).pop();
@@ -381,6 +417,8 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
     feeCtrl.dispose();
     chamberCtrl.dispose();
+    limitCtrl.dispose();
+    minsCtrl.dispose();
   }
 
   // ── Visiting time helpers ─────────────────────────────────────────────────
