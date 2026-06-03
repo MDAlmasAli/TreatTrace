@@ -211,6 +211,8 @@ class _NotificationTile extends StatelessWidget {
         return (Icons.event_available_rounded, c.green);
       case 'appointment_cancelled':
         return (Icons.event_busy_rounded, c.red);
+      case 'appointment_missed':
+        return (Icons.person_off_rounded, c.amber);
       case 'appointment_booked':
         return (Icons.event_available_rounded, c.green);
       case 'prescription_added':

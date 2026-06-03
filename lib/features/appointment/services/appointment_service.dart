@@ -194,13 +194,40 @@ class AppointmentService {
   }
 
   // Patient accepts the proposed reschedule: apply the new date, clear proposal.
-  // The DB trigger notifies the doctor.
+  // The DB trigger re-checks the new day (capacity / visiting day) and moves the
+  // appointment to the end of that day's queue, then notifies the doctor.
   Future<void> acceptReschedule(String id, DateTime proposedDate) async {
-    await _client.from('appointments').update({
-      'appointment_date': proposedDate.toIso8601String().substring(0, 10),
-      'proposed_date':    null,
-    }).eq('id', id);
+    try {
+      await _client.from('appointments').update({
+        'appointment_date': proposedDate.toIso8601String().substring(0, 10),
+        'proposed_date':    null,
+      }).eq('id', id);
+    } on PostgrestException catch (e) {
+      if (e.message.contains('NO_SLOT_AVAILABLE') ||
+          e.message.contains('INVALID_VISITING_DAY')) {
+        throw NoSlotAvailableException(
+            reason: e.message.contains('INVALID_VISITING_DAY')
+                ? 'not_visiting_day'
+                : 'full');
+      }
+      rethrow;
+    }
   }
+
+  // Returns the appointment's live queue position for its doctor+day (how many
+  // still-scheduled patients are ahead, + 1). Null if not scheduled.
+  Future<int?> queuePosition(String appointmentId) async {
+    try {
+      final res = await _client
+          .rpc('get_queue_position', params: {'p_appt_id': appointmentId});
+      return (res as num?)?.toInt();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> markNoShow(String id) =>
+      updateStatus(id, AppointmentStatus.noShow);
 
   // Patient declines the proposal but keeps the appointment on its original date.
   Future<void> declineReschedule(String id) async {

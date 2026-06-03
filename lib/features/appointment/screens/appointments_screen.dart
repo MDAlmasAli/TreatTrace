@@ -308,6 +308,7 @@ class _AppointmentCard extends StatelessWidget {
     final a = appt;
     final barColor = appt.status == AppointmentStatus.scheduled ? c.accent
         : appt.status == AppointmentStatus.completed ? c.green
+        : appt.status == AppointmentStatus.noShow ? c.amber
         : c.red;
 
     return Material(
@@ -441,13 +442,17 @@ class _StatusBadge extends StatelessWidget {
         ? s.statusScheduled
         : status == AppointmentStatus.completed
             ? s.statusCompleted
-            : s.statusCancelled;
+            : status == AppointmentStatus.noShow
+                ? s.statusNoShow
+                : s.statusCancelled;
     final c = context.colors;
     final color = status == AppointmentStatus.scheduled
         ? c.accent
         : status == AppointmentStatus.completed
             ? c.green
-            : c.red;
+            : status == AppointmentStatus.noShow
+                ? c.amber
+                : c.red;
 
     return Container(
       margin: const EdgeInsets.only(left: 6),

@@ -319,6 +319,22 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
   bool _isSameDate(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
+  // Live serial = how many still-scheduled patients that day are ahead, + 1.
+  // Closes gaps left by cancelled / no-show / rescheduled-away appointments.
+  int? _queueSerial(Appointment a) {
+    if (a.status != AppointmentStatus.scheduled || a.ticketNo == null) {
+      return null;
+    }
+    final ahead = _appointments
+        .where((o) =>
+            o.status == AppointmentStatus.scheduled &&
+            o.ticketNo != null &&
+            _isSameDate(o.appointmentDate, a.appointmentDate) &&
+            o.ticketNo! < a.ticketNo!)
+        .length;
+    return ahead + 1;
+  }
+
   Future<void> _pickCompletedDate() async {
     final picked = await showDatePicker(
       context:     context,
@@ -540,6 +556,7 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
                                     (prof?['full_name'] as String?) ??
                                     'Patient',
                                 patientPhone: prof?['phone'] as String?,
+                                displaySerial: _queueSerial(appt),
                                 selectionMode: _selectionMode,
                                 selected: _selectedIds.contains(appt.id),
                                 onTap: () => _selectionMode
@@ -848,6 +865,7 @@ class _ScheduleTile extends StatelessWidget {
   final bool showDate;
   final String patientName;
   final String? patientPhone;
+  final int? displaySerial;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final bool selectionMode;
@@ -858,6 +876,7 @@ class _ScheduleTile extends StatelessWidget {
     required this.showDate,
     required this.patientName,
     required this.patientPhone,
+    this.displaySerial,
     required this.onTap,
     this.onLongPress,
     this.selectionMode = false,
@@ -871,11 +890,15 @@ class _ScheduleTile extends StatelessWidget {
         ? c.accent
         : appointment.status == AppointmentStatus.completed
         ? c.green
+        : appointment.status == AppointmentStatus.noShow
+        ? c.amber
         : c.red;
     final statusText = appointment.status == AppointmentStatus.scheduled
         ? 'Scheduled'
         : appointment.status == AppointmentStatus.completed
         ? 'Completed'
+        : appointment.status == AppointmentStatus.noShow
+        ? 'No-show'
         : 'Cancelled';
 
     return GestureDetector(
@@ -923,7 +946,7 @@ class _ScheduleTile extends StatelessWidget {
                   ),
                 ),
               ),
-              if (appointment.ticketNo != null) ...[
+              if (displaySerial != null) ...[
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
@@ -938,7 +961,7 @@ class _ScheduleTile extends StatelessWidget {
                           size: 11, color: c.green),
                       const SizedBox(width: 3),
                       Text(
-                        '#${appointment.ticketNo}',
+                        '#$displaySerial',
                         style: GoogleFonts.poppins(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,

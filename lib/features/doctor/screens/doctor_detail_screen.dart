@@ -492,6 +492,8 @@ class _ApptRow extends StatelessWidget {
         return c.green;
       case AppointmentStatus.cancelled:
         return c.red;
+      case AppointmentStatus.noShow:
+        return c.amber;
     }
   }
 
@@ -589,11 +591,15 @@ class _StatusDot extends StatelessWidget {
         ? s.statusScheduled
         : status == AppointmentStatus.completed
         ? s.statusCompleted
+        : status == AppointmentStatus.noShow
+        ? s.statusNoShow
         : s.statusCancelled;
     final color = status == AppointmentStatus.scheduled
         ? c.amber
         : status == AppointmentStatus.completed
         ? c.green
+        : status == AppointmentStatus.noShow
+        ? c.amber
         : c.red;
 
     return Container(

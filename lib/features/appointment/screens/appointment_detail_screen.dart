@@ -70,7 +70,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   final Map<String, Prescription> _prescMap      = {};
   final Map<String, TestReport>   _testReportMap = {};
 
-  String? _estTime; // estimated visit time from ticket + doctor schedule
+  String? _estTime;  // estimated visit time from live queue position + schedule
+  int?    _position; // live queue position (patients still ahead + 1)
 
   @override
   void initState() {
@@ -81,19 +82,24 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   }
 
   Future<void> _loadEstimatedTime() async {
-    final docId  = _appt.doctorUserId;
-    final ticket = _appt.ticketNo;
-    if (docId == null || ticket == null) return;
-    final s = await _service.fetchScheduleTimes(docId);
-    if (!mounted || s.startTime == null || s.minutesPerPatient == null) return;
-    setState(() => _estTime = _estimate(s.startTime!, s.minutesPerPatient!, ticket));
+    final docId = _appt.doctorUserId;
+    if (docId == null || _appt.ticketNo == null) return;
+    final pos = await _service.queuePosition(_appt.id);
+    final s   = await _service.fetchScheduleTimes(docId);
+    if (!mounted) return;
+    setState(() {
+      _position = pos;
+      if (pos != null && s.startTime != null && s.minutesPerPatient != null) {
+        _estTime = _estimate(s.startTime!, s.minutesPerPatient!, pos);
+      }
+    });
   }
 
-  String _estimate(String startHms, int mins, int ticket) {
+  String _estimate(String startHms, int mins, int position) {
     final p = startHms.split(':');
     final base = (int.tryParse(p[0]) ?? 0) * 60 +
         (p.length > 1 ? (int.tryParse(p[1]) ?? 0) : 0);
-    final total = base + (ticket - 1) * mins;
+    final total = base + (position - 1) * mins;
     var h = (total ~/ 60) % 24;
     final m = total % 60;
     final ap = h >= 12 ? 'PM' : 'AM';
@@ -169,21 +175,32 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     final s = S.of(context);
     final label = status == AppointmentStatus.completed
         ? s.markCompleted
-        : s.cancelAppointment;
+        : status == AppointmentStatus.noShow
+            ? 'Mark as no-show'
+            : s.cancelAppointment;
+    final message = status == AppointmentStatus.completed
+        ? 'Mark this appointment as completed?'
+        : status == AppointmentStatus.noShow
+            ? 'Mark this patient as no-show (did not come)? '
+                'The patient will be notified.'
+            : 'Cancel this appointment?';
 
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) {
         final c = context.colors;
+        final cColor = status == AppointmentStatus.completed
+            ? c.green
+            : status == AppointmentStatus.noShow
+                ? c.amber
+                : c.red;
         return AlertDialog(
           backgroundColor: c.card,
           title: Text(label,
               style: GoogleFonts.poppins(
                   color: c.textPrimary, fontWeight: FontWeight.w600)),
           content: Text(
-            status == AppointmentStatus.completed
-                ? 'Mark this appointment as completed?'
-                : 'Cancel this appointment?',
+            message,
             style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
           ),
           actions: [
@@ -197,9 +214,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
               child: Text(
                 s.confirm,
                 style: GoogleFonts.poppins(
-                  color: status == AppointmentStatus.completed
-                      ? c.green
-                      : c.red,
+                  color: cColor,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -334,6 +349,18 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
               style: GoogleFonts.poppins()),
         ));
       }
+    } on NoSlotAvailableException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            e.reason == 'not_visiting_day'
+                ? 'The doctor is not available on that day anymore. Please decline and rebook.'
+                : 'That day is fully booked now. Please decline and rebook.',
+            style: GoogleFonts.poppins(),
+          ),
+        ));
+        setState(() => _loading = false);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -425,14 +452,15 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                 label: s.appointmentDate,
                                 value: _fmtDate(_appt.appointmentDate),
                               ),
-                              if (_appt.ticketNo != null)
+                              if (_appt.ticketNo != null &&
+                                  _appt.status == AppointmentStatus.scheduled)
                                 _InfoRow(
                                   icon:      Icons.confirmation_number_rounded,
                                   iconColor: c.green,
-                                  label:     'Ticket',
+                                  label:     'Serial',
                                   value:     _estTime != null
-                                      ? '#${_appt.ticketNo}  ·  ~$_estTime'
-                                      : '#${_appt.ticketNo}',
+                                      ? '#${_position ?? _appt.ticketNo}  ·  ~$_estTime'
+                                      : '#${_position ?? _appt.ticketNo}',
                                   valueColor: c.green,
                                 ),
                               if (_appt.appointmentTime?.isNotEmpty == true)
@@ -527,6 +555,15 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                 icon:     Icons.event_repeat_rounded,
                                 color:    c.amber,
                                 onTap:    _doctorReschedule,
+                                outlined: true,
+                              ),
+                              const SizedBox(height: 12),
+                              _ActionBtn(
+                                label:    'No-show (didn\'t come)',
+                                icon:     Icons.person_off_outlined,
+                                color:    c.amber,
+                                onTap:    () => _updateStatus(
+                                    AppointmentStatus.noShow),
                                 outlined: true,
                               ),
                               const SizedBox(height: 12),
@@ -683,17 +720,23 @@ class _StatusBanner extends StatelessWidget {
         ? c.amber
         : status == AppointmentStatus.completed
             ? c.green
-            : c.red;
+            : status == AppointmentStatus.noShow
+                ? c.amber
+                : c.red;
     final label = status == AppointmentStatus.scheduled
         ? s.statusScheduled
         : status == AppointmentStatus.completed
             ? s.statusCompleted
-            : s.statusCancelled;
+            : status == AppointmentStatus.noShow
+                ? s.statusNoShow
+                : s.statusCancelled;
     final icon = status == AppointmentStatus.scheduled
         ? Icons.schedule_rounded
         : status == AppointmentStatus.completed
             ? Icons.check_circle_rounded
-            : Icons.cancel_rounded;
+            : status == AppointmentStatus.noShow
+                ? Icons.person_off_rounded
+                : Icons.cancel_rounded;
 
     return Container(
       width: double.infinity,

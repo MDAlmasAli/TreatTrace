@@ -144,6 +144,7 @@ class S {
   String get statusScheduled      => get('status_scheduled');
   String get statusCompleted      => get('status_completed');
   String get statusCancelled      => get('status_cancelled');
+  String get statusNoShow         => get('status_no_show');
   String get upcoming             => get('upcoming');
   String get past                 => get('past');
   String get noAppointments       => get('no_appointments');
@@ -277,6 +278,7 @@ class S {
       'status_scheduled':       'Scheduled',
       'status_completed':       'Completed',
       'status_cancelled':       'Cancelled',
+      'status_no_show':         'No-show',
       'upcoming':               'Upcoming',
       'past':                   'Past',
       'no_appointments':        'No appointments here',
@@ -400,6 +402,7 @@ class S {
       'status_scheduled':       'নির্ধারিত',
       'status_completed':       'সম্পন্ন',
       'status_cancelled':       'বাতিল',
+      'status_no_show':         'আসেননি',
       'upcoming':               'আসন্ন',
       'past':                   'অতীত',
       'no_appointments':        'এখানে কোনো অ্যাপয়েন্টমেন্ট নেই',

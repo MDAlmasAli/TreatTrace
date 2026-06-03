@@ -19,13 +19,20 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.73 — Active Development |
+| **Version** | v0.74 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.74 — Live queue serial, no-show status & reschedule renumber**
+- Serial number shown to a patient is now a **live queue position** (still-scheduled patients ahead + 1) — when someone ahead cancels, no-shows, or reschedules away, everyone behind moves up automatically; no gaps, earlier estimated times
+- New **No-show** status: doctor can mark "didn't come" from the appointment detail (distinct from Cancel); the patient is notified
+- Auto-expire (day passed) now marks unresolved scheduled appointments as **no_show** (presumed missed) instead of cancelled, and notifies the patient
+- Reschedule accept now re-checks the new day's visiting-day + capacity via a `BEFORE UPDATE` trigger and re-assigns the serial for that day (no stale/colliding tickets)
+- New `get_queue_position` RPC (RLS-safe); status colours/labels for no-show across patient & doctor screens; no-show lands in the patient's "Past" tab
 
 **v0.73 — Bulk reschedule / cancel from doctor schedule**
 - Long-press an appointment in Today or Upcoming to enter multi-select; tap to add/remove, "Select all" / "Clear all" in the toolbar

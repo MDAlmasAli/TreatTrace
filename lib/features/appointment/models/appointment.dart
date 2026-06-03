@@ -1,6 +1,6 @@
 // appointment.dart — Pure Dart model. No Flutter imports.
 
-enum AppointmentStatus { scheduled, completed, cancelled }
+enum AppointmentStatus { scheduled, completed, cancelled, noShow }
 
 extension AppointmentStatusX on AppointmentStatus {
   String get value {
@@ -8,6 +8,7 @@ extension AppointmentStatusX on AppointmentStatus {
       case AppointmentStatus.scheduled:  return 'scheduled';
       case AppointmentStatus.completed:  return 'completed';
       case AppointmentStatus.cancelled:  return 'cancelled';
+      case AppointmentStatus.noShow:     return 'no_show';
     }
   }
 
@@ -15,6 +16,7 @@ extension AppointmentStatusX on AppointmentStatus {
     switch (s) {
       case 'completed':  return AppointmentStatus.completed;
       case 'cancelled':  return AppointmentStatus.cancelled;
+      case 'no_show':    return AppointmentStatus.noShow;
       default:           return AppointmentStatus.scheduled;
     }
   }
@@ -67,9 +69,11 @@ class Appointment {
   bool get isUpcoming  => status == AppointmentStatus.scheduled &&
       appointmentDate.isAfter(DateTime.now().subtract(const Duration(days: 1)));
   bool get isPast      => status == AppointmentStatus.completed ||
+      status == AppointmentStatus.noShow ||
       (status == AppointmentStatus.scheduled &&
           appointmentDate.isBefore(DateTime.now().subtract(const Duration(days: 1))));
   bool get isCancelled => status == AppointmentStatus.cancelled;
+  bool get isNoShow    => status == AppointmentStatus.noShow;
 
   factory Appointment.fromMap(Map<String, dynamic> m) {
     // Read new array column; fall back to old single-id column.
