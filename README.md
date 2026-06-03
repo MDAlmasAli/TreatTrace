@@ -19,13 +19,19 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.71 — Active Development |
+| **Version** | v0.72 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-05-31 |
+| **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.72 — No past-date booking + auto-expire past appointments**
+- Booking date picker now starts at today; past dates are disabled — you can't book an appointment in the past
+- A scheduled appointment whose date has passed is auto-cancelled: a daily DB cron (`pg_cron`) runs `expire_past_appointments()`, and the app also expires lazily on list load / before booking for immediate effect
+- Auto-expiry is silent (the cancel notification trigger skips past-date scheduled→cancelled transitions, so no misleading "cancelled" alert)
+- Frees the "one active appointment per doctor" guard once an old appointment's date passes
 
 **v0.71 — Ticket system + capacity + time control**
 - Doctor sets daily patient limit + minutes/patient (Visiting Info); visiting days/time already structured

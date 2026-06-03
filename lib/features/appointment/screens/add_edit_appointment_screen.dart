@@ -148,11 +148,14 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
   }
 
   Future<void> _pickDate() async {
+    final now   = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final init  = (_date != null && !_date!.isBefore(today)) ? _date! : today;
     final picked = await showDatePicker(
       context:     context,
-      initialDate: _date ?? DateTime.now(),
-      firstDate:   DateTime(2000),
-      lastDate:    DateTime.now().add(const Duration(days: 365 * 5)),
+      initialDate: init,
+      firstDate:   today,
+      lastDate:    today.add(const Duration(days: 365 * 5)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
           colorScheme: ColorScheme.dark(

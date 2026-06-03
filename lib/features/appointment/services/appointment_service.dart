@@ -32,9 +32,19 @@ class AppointmentService {
   String? get _doctorName =>
       _client.auth.currentUser?.userMetadata?['full_name'] as String?;
 
+  /// Auto-cancel the caller's scheduled appointments whose date has already
+  /// passed (a daily DB cron does this too; this makes it immediate). Silent
+  /// on the DB side — no cancel notification is sent for an auto-expiry.
+  Future<void> expirePast() async {
+    try {
+      await _client.rpc('expire_past_appointments');
+    } catch (_) {}
+  }
+
   Future<List<Appointment>> fetchAll() async {
     final uid = _uid;
     if (uid == null) return [];
+    await expirePast();
     final rows = await _client
         .from('appointments')
         .select()
@@ -64,6 +74,10 @@ class AppointmentService {
   Future<Appointment> create(Appointment appt, {String? doctorUserId}) async {
     final uid = _uid;
     if (uid == null) throw Exception('Not authenticated');
+
+    // Free up any past scheduled appointments first so the one-active-per-doctor
+    // check below doesn't block on an appointment whose date already passed.
+    await expirePast();
 
     final payload = <String, dynamic>{...appt.toMap(), 'user_id': uid};
     final resolvedDoctorUserId = await _resolveDoctorUserId(
