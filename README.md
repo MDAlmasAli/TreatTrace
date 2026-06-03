@@ -19,13 +19,17 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.75 — Active Development |
+| **Version** | v0.76 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.76 — Remove standalone "Write Prescription" from doctor home**
+- Doctors write prescriptions only from an appointment, so the redundant "Write Prescription" shortcut is removed from the doctor portal grid
+- "My Reviews" now sits beside "Visiting Info" in its place
 
 **v0.75 — Doctor review system (anonymous, verified)**
 - Patients can rate (1–5) + review a doctor **only after a completed appointment** (enforced by a DB trigger)

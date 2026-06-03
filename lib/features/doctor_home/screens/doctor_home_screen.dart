@@ -638,33 +638,14 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                             children: [
                               Expanded(
                                 child: _ActionCard(
-                                  icon: Icons.edit_document,
-                                  label: 'Write Prescription',
-                                  subtitle: 'Select patient to write',
-                                  accentColor: c.amber,
-                                  onTap: _goMyPatients,
-                                ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.08),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: _ActionCard(
                                   icon: Icons.schedule_rounded,
                                   label: 'Visiting Info',
                                   subtitle: 'Hours, fee & chamber',
                                   accentColor: c.accent,
                                   onTap: _showVisitingInfoSheet,
-                                ).animate().fadeIn(delay: 280.ms).slideY(begin: 0.08),
+                                ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.08),
                               ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 14),
-
-                        IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
+                              const SizedBox(width: 14),
                               Expanded(
                                 child: _ActionCard(
                                   icon: Icons.star_rounded,
@@ -672,7 +653,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                   subtitle: 'Patient ratings',
                                   accentColor: c.amber,
                                   onTap: _goMyReviews,
-                                ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.08),
+                                ).animate().fadeIn(delay: 280.ms).slideY(begin: 0.08),
                               ),
                             ],
                           ),
