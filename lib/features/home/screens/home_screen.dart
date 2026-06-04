@@ -18,6 +18,8 @@ import '../../appointment/screens/appointments_screen.dart';
 import '../../search/screens/global_search_screen.dart';
 import '../../doctor/screens/doctors_screen.dart';
 import '../../notification/widgets/notification_bell.dart';
+import '../../review/services/review_service.dart';
+import '../../review/widgets/review_widgets.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // HomeScreen
@@ -43,12 +45,35 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _authService  = AuthService();
   final _searchCtrl   = TextEditingController();
+  final _reviewSvc    = ReviewService();
   String? _avatarUrl;
 
   @override
   void initState() {
     super.initState();
     _loadAvatar();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _maybeShowReviewPrompt();
+    });
+  }
+
+  // After each completed appointment, prompt the patient to rate the doctor once.
+  Future<void> _maybeShowReviewPrompt() async {
+    final pending = await _reviewSvc.fetchPendingReviewAppointment();
+    if (pending == null || !mounted) return;
+    final mine = await _reviewSvc.myReview(pending.doctorId);
+    if (!mounted) return;
+    final result = await showAppointmentReviewSheet(
+      context,
+      doctorId:        pending.doctorId,
+      doctorName:      pending.doctorName,
+      existingRating:  mine?.rating,
+      existingComment: mine?.comment,
+    );
+    // Submitted (true) or skipped (false) → don't ask again for this appointment.
+    if (result != null) {
+      await _reviewSvc.markPrompted(pending.appointmentId);
+    }
   }
 
   Future<void> _loadAvatar() async {

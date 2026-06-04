@@ -320,6 +320,231 @@ class _ReviewTile extends StatelessWidget {
   }
 }
 
+// ── Post-appointment "Rate your visit" sheet (Submit / Skip) ──────────────────
+// Returns true if a review was submitted, false if skipped. Not dismissible by
+// barrier/drag so the patient makes a deliberate choice.
+Future<bool?> showAppointmentReviewSheet(
+  BuildContext context, {
+  required String doctorId,
+  required String doctorName,
+  int? existingRating,
+  String? existingComment,
+}) {
+  return showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    isDismissible: false,
+    enableDrag: false,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _AppointmentReviewSheet(
+      doctorId: doctorId,
+      doctorName: doctorName,
+      existingRating: existingRating,
+      existingComment: existingComment,
+    ),
+  );
+}
+
+class _AppointmentReviewSheet extends StatefulWidget {
+  final String doctorId;
+  final String doctorName;
+  final int? existingRating;
+  final String? existingComment;
+
+  const _AppointmentReviewSheet({
+    required this.doctorId,
+    required this.doctorName,
+    this.existingRating,
+    this.existingComment,
+  });
+
+  @override
+  State<_AppointmentReviewSheet> createState() =>
+      _AppointmentReviewSheetState();
+}
+
+class _AppointmentReviewSheetState extends State<_AppointmentReviewSheet> {
+  final _svc = ReviewService();
+  late int _rating = widget.existingRating ?? 0;
+  late final TextEditingController _ctrl =
+      TextEditingController(text: widget.existingComment ?? '');
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_rating < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a star rating.')));
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await _svc.upsertReview(widget.doctorId, _rating, _ctrl.text);
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } on ReviewNotAllowedException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: c.amber.withAlpha(20),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(Icons.star_rounded, color: c.amber, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Rate your visit',
+                          style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: c.textPrimary)),
+                      Text('How was your appointment with Dr. ${widget.doctorName}?',
+                          style: GoogleFonts.poppins(
+                              fontSize: 12, color: c.textSec)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(5, (i) {
+                  final filled = i < _rating;
+                  return GestureDetector(
+                    onTap: () => setState(() => _rating = i + 1),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(
+                        filled
+                            ? Icons.star_rounded
+                            : Icons.star_outline_rounded,
+                        size: 40,
+                        color: c.amber,
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _ctrl,
+              maxLines: 3,
+              maxLength: 500,
+              style: GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Write a short comment (optional)…',
+                hintStyle:
+                    GoogleFonts.poppins(fontSize: 13, color: c.textMuted),
+                filled: true,
+                fillColor: c.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: c.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: c.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: c.amber),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed:
+                        _busy ? null : () => Navigator.of(context).pop(false),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      side: BorderSide(color: c.border),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: Text('Skip',
+                        style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: c.textSec)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _busy ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      backgroundColor: c.amber,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: _busy
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : Text(
+                            widget.existingRating != null ? 'Update' : 'Submit',
+                            style: GoogleFonts.poppins(
+                                fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Write / edit review bottom sheet ──────────────────────────────────────────
 Future<bool?> showWriteReviewSheet(
   BuildContext context, {

@@ -87,6 +87,46 @@ class ReviewService {
         .eq('patient_id', uid);
   }
 
+  // The most recent completed appointment (with a registered doctor) that the
+  // patient hasn't been prompted to review yet. Null if none.
+  Future<({String appointmentId, String doctorId, String doctorName})?>
+      fetchPendingReviewAppointment() async {
+    final uid = _uid;
+    if (uid == null) return null;
+    try {
+      final row = await _client
+          .from('appointments')
+          .select('id, doctor_user_id, doctor_name_snapshot')
+          .eq('user_id', uid)
+          .eq('status', 'completed')
+          .eq('review_prompted', false)
+          .not('doctor_user_id', 'is', null)
+          .order('appointment_date', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (row == null) return null;
+      return (
+        appointmentId: row['id'] as String,
+        doctorId:      row['doctor_user_id'] as String,
+        doctorName:    (row['doctor_name_snapshot'] as String?)?.trim().isNotEmpty == true
+            ? row['doctor_name_snapshot'] as String
+            : 'your doctor',
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Mark an appointment as already prompted (after submit or skip).
+  Future<void> markPrompted(String appointmentId) async {
+    try {
+      await _client
+          .from('appointments')
+          .update({'review_prompted': true})
+          .eq('id', appointmentId);
+    } catch (_) {}
+  }
+
   // Aggregate for a doctor (used by the doctor's own portal).
   Future<({double avg, int count})> rating(String doctorId) async {
     try {

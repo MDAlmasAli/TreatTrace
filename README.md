@@ -19,13 +19,18 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.84 — Active Development |
+| **Version** | v0.85 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.85 — Post-appointment review prompt**
+- After a completed appointment, the patient is prompted once on the home screen to rate that doctor (Submit or Skip)
+- Submitting updates the patient's single review for that doctor (pre-filled with any existing rating); skipping dismisses it
+- Tracked per appointment via a new `appointments.review_prompted` flag, so it never nags twice; only shows for registered doctors
 
 **v0.84 — Clearer label in doctor picker**
 - Renamed the doctor picker's "No Doctor Linked" option to "Clear selection" so it reads as an action, not a status
