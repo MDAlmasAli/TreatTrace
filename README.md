@@ -19,9 +19,9 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.93 — Active Development |
+| **Version** | v0.94 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-06-04 |
+| **Last Updated** | 2026-06-05 |
 
 ---
 
@@ -167,6 +167,8 @@ flutter run
 ---
 
 ## 8. Changelog (highlights)
+
+**v0.94** — Three scheduling refinements: (1) a doctor can write a prescription only on the appointment's own date — earlier/later dates show a locked note instead of the button; (2) when someone ahead leaves the queue (cancel / no-show / reschedule away), every patient behind is notified that their serial moved up ("You are now #N"), today/future queues only; (3) accepting a doctor-proposed reschedule no longer fails when the chosen date isn't a visiting day or is full — the doctor picked it, so the patient can just accept (a ticket is still assigned).
 
 **v0.93** — Write Prescription: the prescription date is now set automatically (today) and shown read-only — no date picker. Medicines gain a free-text **Quantity** field (e.g. "10 tablets", "1 strip"), shown on the prescription detail and PDF. Patient home's "Last Prescribed" button now opens the most recent prescription directly. Doctors can also revise a still-pending credential edit (a prominent "Edit Submission" button; re-submitting overwrites the pending one).
 

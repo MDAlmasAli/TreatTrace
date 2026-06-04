@@ -223,6 +223,14 @@ class _NotificationTile extends StatelessWidget {
         return (Icons.person_add_alt_1_rounded, c.accent);
       case 'link_accepted':
         return (Icons.how_to_reg_rounded, c.green);
+      case 'queue_moved_up':
+        return (Icons.trending_up_rounded, c.green);
+      case 'doctor_under_review':
+        return (Icons.hourglass_top_rounded, c.amber);
+      case 'doctor_available':
+        return (Icons.verified_rounded, c.green);
+      case 'edit_rejected':
+        return (Icons.cancel_rounded, c.red);
       default:
         return (Icons.notifications_rounded, c.accent);
     }

@@ -281,6 +281,13 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 
   // Doctor-only: move the appointment to a new date. Patient is notified by
   // the DB trigger on the date change.
+  // A prescription may be written only on the appointment's own date.
+  bool get _isAppointmentToday {
+    final now = DateTime.now();
+    final d   = _appt.appointmentDate;
+    return d.year == now.year && d.month == now.month && d.day == now.day;
+  }
+
   Future<void> _doctorReschedule() async {
     final c = context.colors;
     final initial = _appt.appointmentDate.isBefore(DateTime.now())
@@ -546,12 +553,41 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                 _appt.status ==
                                     AppointmentStatus.scheduled) ...[
                               const SizedBox(height: 28),
-                              _ActionBtn(
-                                label:    'Write Prescription',
-                                icon:     Icons.medication_rounded,
-                                color:    c.accent,
-                                onTap:    widget.onWritePrescription!,
-                              ),
+                              if (_isAppointmentToday)
+                                _ActionBtn(
+                                  label:    'Write Prescription',
+                                  icon:     Icons.medication_rounded,
+                                  color:    c.accent,
+                                  onTap:    widget.onWritePrescription!,
+                                )
+                              else
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: c.surface,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: c.border),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.lock_clock_rounded,
+                                          size: 18, color: c.textMuted),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          'You can write the prescription on the '
+                                          'appointment date '
+                                          '(${_fmtDate(_appt.appointmentDate)}).',
+                                          style: GoogleFonts.poppins(
+                                              fontSize: 12,
+                                              color: c.textSec,
+                                              height: 1.4),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                             ],
                             if (_appt.status ==
                                 AppointmentStatus.scheduled) ...[

@@ -100,6 +100,9 @@ end;
 $function$;
 
 -- BEFORE UPDATE: when the date changes, re-check the new day and re-number.
+-- Exception: when a patient ACCEPTS a doctor-proposed reschedule (proposed_date
+-- cleared), the doctor already chose the date, so skip the visiting-day and
+-- capacity checks. A ticket is always (re)assigned for the new day.
 create or replace function public.reschedule_check_and_renumber()
  returns trigger language plpgsql security definer set search_path to 'public','auth' as $function$
 declare
@@ -107,31 +110,36 @@ declare
   v_limit int;
   v_count int;
   v_max   int;
+  v_is_accept bool;
 begin
   if new.appointment_date is distinct from old.appointment_date
      and new.status = 'scheduled'
      and new.doctor_user_id is not null then
 
+    v_is_accept := old.proposed_date is not null and new.proposed_date is null;
+
     perform pg_advisory_xact_lock(
       hashtextextended(new.doctor_user_id::text || '|' || new.appointment_date::text, 0));
 
-    select visiting_days, daily_patient_limit into v_days, v_limit
-    from public.doctor_verifications where id = new.doctor_user_id;
+    if not v_is_accept then
+      select visiting_days, daily_patient_limit into v_days, v_limit
+      from public.doctor_verifications where id = new.doctor_user_id;
 
-    if v_days is not null and array_length(v_days, 1) is not null
-       and not (extract(isodow from new.appointment_date)::int = any(v_days)) then
-      raise exception 'INVALID_VISITING_DAY' using errcode = 'P0001';
-    end if;
+      if v_days is not null and array_length(v_days, 1) is not null
+         and not (extract(isodow from new.appointment_date)::int = any(v_days)) then
+        raise exception 'INVALID_VISITING_DAY' using errcode = 'P0001';
+      end if;
 
-    select count(*) into v_count
-    from public.appointments
-    where doctor_user_id = new.doctor_user_id
-      and appointment_date = new.appointment_date
-      and status = 'scheduled'
-      and id <> new.id;
+      select count(*) into v_count
+      from public.appointments
+      where doctor_user_id = new.doctor_user_id
+        and appointment_date = new.appointment_date
+        and status = 'scheduled'
+        and id <> new.id;
 
-    if v_limit is not null and v_limit > 0 and v_count >= v_limit then
-      raise exception 'NO_SLOT_AVAILABLE' using errcode = 'P0001';
+      if v_limit is not null and v_limit > 0 and v_count >= v_limit then
+        raise exception 'NO_SLOT_AVAILABLE' using errcode = 'P0001';
+      end if;
     end if;
 
     select coalesce(max(ticket_no), 0) into v_max
@@ -382,6 +390,55 @@ begin
 end;
 $function$;
 
+-- When a scheduled appointment leaves a doctor+day queue (cancelled, no-show,
+-- or rescheduled to another date), notify every still-scheduled patient behind
+-- it that their serial moved up. Today/future queues only (skip past-date noise).
+create or replace function public.notify_queue_shift()
+ returns trigger language plpgsql security definer set search_path to 'public' as $function$
+declare
+  doc_name text;
+  v_left   boolean;
+begin
+  v_left := old.status = 'scheduled'
+        and old.doctor_user_id is not null
+        and old.ticket_no is not null
+        and old.appointment_date >= current_date
+        and ( new.status is distinct from 'scheduled'
+              or new.appointment_date is distinct from old.appointment_date );
+
+  if not v_left then
+    return new;
+  end if;
+
+  select coalesce(nullif(trim(full_name), ''), 'your doctor')
+    into doc_name from public.profiles where id = old.doctor_user_id;
+
+  insert into public.notifications (user_id, type, title, body, data)
+  select
+    a.user_id,
+    'queue_moved_up',
+    'Queue updated',
+    'Good news — your serial moved up for Dr. ' || doc_name || ' on '
+      || to_char(old.appointment_date, 'DD Mon YYYY') || '. You are now #'
+      || ( select count(*) + 1
+             from public.appointments b
+            where b.doctor_user_id   = old.doctor_user_id
+              and b.appointment_date = old.appointment_date
+              and b.status           = 'scheduled'
+              and b.ticket_no        < a.ticket_no )
+      || '.',
+    jsonb_build_object('appointment_id', a.id)
+  from public.appointments a
+  where a.doctor_user_id   = old.doctor_user_id
+    and a.appointment_date = old.appointment_date
+    and a.status           = 'scheduled'
+    and a.ticket_no is not null
+    and a.ticket_no > old.ticket_no;
+
+  return new;
+end;
+$function$;
+
 -- ── Triggers ─────────────────────────────────────────────────────────────────
 drop trigger if exists set_appointments_updated_at on public.appointments;
 create trigger set_appointments_updated_at before update on public.appointments
@@ -406,3 +463,7 @@ create trigger trg_notify_new_appointment after insert on public.appointments
 drop trigger if exists trg_notify_appointment_change on public.appointments;
 create trigger trg_notify_appointment_change after update on public.appointments
   for each row execute function public.notify_appointment_change();
+
+drop trigger if exists trg_notify_queue_shift on public.appointments;
+create trigger trg_notify_queue_shift after update on public.appointments
+  for each row execute function public.notify_queue_shift();
