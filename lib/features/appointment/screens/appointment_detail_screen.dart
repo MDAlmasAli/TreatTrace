@@ -452,15 +452,17 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                 label: s.appointmentDate,
                                 value: _fmtDate(_appt.appointmentDate),
                               ),
-                              if (_appt.ticketNo != null &&
+                              // Live queue position only (loaded async); never
+                              // the raw ticket_no, so it matches every card.
+                              if (_position != null &&
                                   _appt.status == AppointmentStatus.scheduled)
                                 _InfoRow(
                                   icon:      Icons.confirmation_number_rounded,
                                   iconColor: c.green,
                                   label:     'Serial',
                                   value:     _estTime != null
-                                      ? '#${_position ?? _appt.ticketNo}  ·  ~$_estTime'
-                                      : '#${_position ?? _appt.ticketNo}',
+                                      ? '#$_position  ·  ~$_estTime'
+                                      : '#$_position',
                                   valueColor: c.green,
                                 ),
                               if (_appt.appointmentTime?.isNotEmpty == true)

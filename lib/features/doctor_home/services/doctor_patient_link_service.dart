@@ -69,7 +69,9 @@ class DoctorPatientLinkService {
     final ids = profiles.map((p) => p['id'] as String).toList();
     final verifs = await _client
         .from('doctor_verifications')
-        .select('id, specialty, hospital, visiting_fee, degree, rating_avg, rating_count')
+        .select('id, specialty, hospital, chamber, visiting_fee, degree, '
+            'visiting_days, visiting_start_time, visiting_end_time, '
+            'rating_avg, rating_count')
         .eq('status', 'approved')
         .inFilter('id', ids) as List;
 
@@ -77,17 +79,24 @@ class DoctorPatientLinkService {
 
     return profiles
         .where((p) => approvedMap.containsKey(p['id'] as String))
-        .map((p) => {
-              'id':           p['id'],
-              'full_name':    p['full_name'],
-              'avatar_url':   p['avatar_url'],
-              'specialty':    approvedMap[p['id'] as String]?['specialty'],
-              'hospital':     approvedMap[p['id'] as String]?['hospital'],
-              'visiting_fee': approvedMap[p['id'] as String]?['visiting_fee'],
-              'degree':       approvedMap[p['id'] as String]?['degree'],
-              'rating_avg':   approvedMap[p['id'] as String]?['rating_avg'],
-              'rating_count': approvedMap[p['id'] as String]?['rating_count'],
-            })
+        .map((p) {
+          final v = approvedMap[p['id'] as String];
+          return {
+            'id':                  p['id'],
+            'full_name':           p['full_name'],
+            'avatar_url':          p['avatar_url'],
+            'specialty':           v?['specialty'],
+            'hospital':            v?['hospital'],
+            'chamber':             v?['chamber'],
+            'visiting_fee':        v?['visiting_fee'],
+            'degree':              v?['degree'],
+            'visiting_days':       v?['visiting_days'],
+            'visiting_start_time': v?['visiting_start_time'],
+            'visiting_end_time':   v?['visiting_end_time'],
+            'rating_avg':          v?['rating_avg'],
+            'rating_count':        v?['rating_count'],
+          };
+        })
         .toList();
   }
 

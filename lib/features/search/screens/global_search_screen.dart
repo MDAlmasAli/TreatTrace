@@ -16,6 +16,7 @@ import '../../test_report/models/test_report.dart';
 import '../../test_report/services/test_report_service.dart';
 import '../../test_report/screens/test_report_detail_screen.dart';
 import '../../review/widgets/review_widgets.dart';
+import '../widgets/doctor_filter_sheet.dart';
 
 class GlobalSearchScreen extends StatefulWidget {
   const GlobalSearchScreen({super.key});
@@ -34,6 +35,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
   bool _loading = true;
   String _query = '';
+  DoctorFilter _filter = const DoctorFilter();
 
   List<Map<String, dynamic>> _allDoctors = [];
   Set<String> _linkedIds = {};
@@ -77,19 +79,57 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
   // â”€â”€ Filtered results â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+  // Doctors are shown by default (empty query = all), narrowed by the text
+  // query and the active filter, then sorted. The filter/sort always applies.
   List<Map<String, dynamic>> get _filteredDoctors {
-    if (_query.isEmpty) return [];
     final q = _query.toLowerCase();
-    return _allDoctors
-        .where(
-          (d) =>
-              ((d['full_name'] as String?)?.toLowerCase().contains(q) ??
-                  false) ||
-              ((d['specialty'] as String?)?.toLowerCase().contains(q) ??
-                  false) ||
-              ((d['hospital'] as String?)?.toLowerCase().contains(q) ?? false),
-        )
+    final base = _query.isEmpty
+        ? _allDoctors
+        : _allDoctors.where((d) =>
+            ((d['full_name'] as String?)?.toLowerCase().contains(q) ?? false) ||
+            ((d['specialty'] as String?)?.toLowerCase().contains(q) ?? false) ||
+            ((d['hospital'] as String?)?.toLowerCase().contains(q) ?? false)).toList();
+    return applyDoctorFilter(base, _filter);
+  }
+
+  // ── Filter option lists (derived from the loaded doctors) ─────────────────
+
+  List<String> get _specialtyOptions => (_allDoctors
+          .map((d) => d['specialty'] as String?)
+          .whereType<String>()
+          .where((s) => s.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort());
+
+  List<String> get _hospitalOptions => (_allDoctors
+          .map((d) => d['hospital'] as String?)
+          .whereType<String>()
+          .where((s) => s.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort());
+
+  RangeValues? get _feeBounds {
+    final fees = _allDoctors
+        .map((d) => (d['visiting_fee'] as num?)?.toDouble())
+        .whereType<double>()
         .toList();
+    if (fees.isEmpty) return null;
+    final lo = fees.reduce((a, b) => a < b ? a : b);
+    final hi = fees.reduce((a, b) => a > b ? a : b);
+    return hi > lo ? RangeValues(lo, hi) : null;
+  }
+
+  Future<void> _openFilter() async {
+    final res = await showDoctorFilterSheet(
+      context,
+      current:     _filter,
+      specialties: _specialtyOptions,
+      hospitals:   _hospitalOptions,
+      feeBounds:   _feeBounds,
+    );
+    if (res != null) setState(() => _filter = res);
   }
 
   List<Prescription> get _filteredPrescriptions {
@@ -252,6 +292,53 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               ),
             ),
           ),
+          const SizedBox(width: 12),
+          _buildFilterButton(c),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterButton(ThemeColors c) {
+    final count = _filter.activeCount;
+    final active = count > 0;
+    return GestureDetector(
+      onTap: _openFilter,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: active ? c.accent.withAlpha(22) : c.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: active ? c.accent : c.border),
+            ),
+            child: Icon(Icons.tune_rounded,
+                color: active ? c.accent : c.textSec, size: 20),
+          ),
+          if (active)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                decoration: BoxDecoration(
+                  color: c.accent,
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: c.card, width: 1.5),
+                ),
+                child: Text('$count',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        height: 1)),
+              ),
+            ),
         ],
       ),
     );
@@ -261,37 +348,20 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     if (_loading) {
       return Center(child: CircularProgressIndicator(color: c.accent));
     }
-    if (_query.isEmpty) return _buildEmptyPrompt(c);
-    if (!_hasAnyResults) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: c.accent.withAlpha(15),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(Icons.search_off_rounded, color: c.accent, size: 36),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No results for "$_query"',
-              style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
-            ),
-          ],
-        ),
-      );
-    }
+    if (!_hasAnyResults) return _emptyState(c);
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
       children: [
         if (_filteredDoctors.isNotEmpty) ...[
-          _SectionHeader(title: 'Doctors', icon: Icons.person_rounded, c: c),
+          _SectionHeader(
+            title: _query.isEmpty
+                ? 'All Doctors (${_filteredDoctors.length})'
+                : 'Doctors (${_filteredDoctors.length})',
+            icon: Icons.person_rounded,
+            c: c,
+          ),
           const SizedBox(height: 8),
-          ..._filteredDoctors.take(4).map((d) {
+          ..._filteredDoctors.map((d) {
             final isLinked = _linkedIds.contains(d['id'] as String?);
             return _DoctorResultTile(
               name: 'Dr. ${d['full_name'] ?? "Unknown"}',
@@ -360,55 +430,42 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     );
   }
 
-  Widget _buildEmptyPrompt(ThemeColors c) {
-    final shortcuts = [
-      _Shortcut(
-        icon: Icons.person_rounded,
-        label: 'My Doctors',
-        onTap: () => Navigator.of(context).pop(),
-      ),
-      _Shortcut(
-        icon: Icons.receipt_long_rounded,
-        label: 'Prescriptions',
-        onTap: () => Navigator.of(context).pop(),
-      ),
-      _Shortcut(
-        icon: Icons.science_rounded,
-        label: 'Test Reports',
-        onTap: () => Navigator.of(context).pop(),
-      ),
-    ];
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+  Widget _emptyState(ThemeColors c) {
+    final filterActive = _query.isEmpty && _filter.activeCount > 0;
+    final String msg;
+    if (_query.isNotEmpty) {
+      msg = 'No results for "$_query"';
+    } else if (filterActive) {
+      msg = 'No doctors match your filters';
+    } else {
+      msg = 'No registered doctors yet';
+    }
+    return Center(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            'Search across',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: c.textSec,
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: c.accent.withAlpha(15),
+              borderRadius: BorderRadius.circular(20),
             ),
+            child: Icon(Icons.search_off_rounded, color: c.accent, size: 36),
           ),
-          const SizedBox(height: 12),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 2.4,
-            children: shortcuts
-                .map((s) => _ShortcutChip(shortcut: s, c: c))
-                .toList(),
-          ),
-          const SizedBox(height: 28),
-          Text(
-            'Type anything to searchâ€¦',
-            style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
-          ),
+          const SizedBox(height: 16),
+          Text(msg, style: GoogleFonts.poppins(fontSize: 13, color: c.textSec)),
+          if (filterActive) ...[
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => setState(() => _filter = const DoctorFilter()),
+              child: Text('Clear filters',
+                  style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: c.accent)),
+            ),
+          ],
         ],
       ),
     ).animate().fadeIn(duration: 250.ms);
@@ -706,59 +763,4 @@ class _ResultTile extends StatelessWidget {
   }
 }
 
-// â”€â”€ Shortcut chip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-class _Shortcut {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  const _Shortcut({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-}
-
-class _ShortcutChip extends StatelessWidget {
-  final _Shortcut shortcut;
-  final ThemeColors c;
-  const _ShortcutChip({required this.shortcut, required this.c});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: shortcut.onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: c.card,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: c.border),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: c.accent.withAlpha(18),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(shortcut.icon, color: c.accent, size: 16),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              shortcut.label,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: c.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 

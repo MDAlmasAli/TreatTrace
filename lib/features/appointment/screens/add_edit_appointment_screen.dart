@@ -234,11 +234,14 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
         }
       }
 
+      // Use the live queue position (still-scheduled patients ahead + 1) so the
+      // confirmation matches what every card/detail shows — never the raw
+      // ticket_no, which counts cancelled/no-show/completed slots too.
+      final pos = await _apptSvc.queuePosition(created.id);
       if (mounted) {
-        final t = created.ticketNo;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
-            t != null ? 'Appointment booked — Ticket #$t' : 'Appointment saved.',
+            pos != null ? 'Appointment booked — Serial #$pos' : 'Appointment booked.',
             style: GoogleFonts.poppins(),
           ),
         ));

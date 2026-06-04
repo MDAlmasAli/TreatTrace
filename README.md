@@ -19,7 +19,7 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.90 — Active Development |
+| **Version** | v0.91 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-04 |
 
@@ -167,6 +167,8 @@ flutter run
 ---
 
 ## 8. Changelog (highlights)
+
+**v0.91** — Patient doctor search overhaul: all registered doctors now show by default (sorted by rating), and a filter/sort button beside the search bar opens a sheet with sort (rating / fee / name / most reviewed) and filters for specialty, hospital, visiting-fee range, visiting day, time of day, and minimum rating. Tapping a doctor opens their public profile. Also fixed the booking confirmation SnackBar (and the detail "Serial" row) to show the live queue position instead of the raw ticket number.
 
 **v0.90** — Dropped the redundant combined `treattrace_schema.sql`; `database/schema/` (run `00_`…`13_` in order) is now the single source of truth. READMEs updated accordingly.
 
