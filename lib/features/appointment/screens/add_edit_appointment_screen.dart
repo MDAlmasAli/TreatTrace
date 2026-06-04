@@ -1121,7 +1121,7 @@ class _DoctorSearchSheetState extends State<_DoctorSearchSheet> {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.block_rounded, size: 20, color: c.textMuted),
-                    title: Text(s.noLinkedDoctor,
+                    title: Text('Clear selection',
                         style: GoogleFonts.poppins(
                             fontSize: 13, color: c.textMuted)),
                     trailing: widget.selected == null

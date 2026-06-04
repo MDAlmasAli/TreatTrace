@@ -19,13 +19,16 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.83 — Active Development |
+| **Version** | v0.84 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.84 — Clearer label in doctor picker**
+- Renamed the doctor picker's "No Doctor Linked" option to "Clear selection" so it reads as an action, not a status
 
 **v0.83 — Searchable doctor picker in Add Appointment**
 - Replaced the plain dropdown with a tap-to-open bottom sheet that has a search box (filters My Doctors by name, specialty, or hospital) — no more long scrolling when you have many doctors
