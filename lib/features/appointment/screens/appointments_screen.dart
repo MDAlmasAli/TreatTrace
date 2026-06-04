@@ -291,7 +291,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
 
 // ── Appointment card ──────────────────────────────────────────────────────────
 
-class _AppointmentCard extends StatelessWidget {
+class _AppointmentCard extends StatefulWidget {
   final Appointment  appt;
   final VoidCallback onTap;
   final int          delay;
@@ -303,19 +303,63 @@ class _AppointmentCard extends StatelessWidget {
   });
 
   @override
+  State<_AppointmentCard> createState() => _AppointmentCardState();
+}
+
+class _AppointmentCardState extends State<_AppointmentCard> {
+  final _svc = AppointmentService();
+  String? _serialTime; // e.g. "#2  ·  ~5:10 PM"
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSerial();
+  }
+
+  Future<void> _loadSerial() async {
+    final a = widget.appt;
+    if (a.status != AppointmentStatus.scheduled ||
+        a.doctorUserId == null ||
+        a.ticketNo == null) {
+      return;
+    }
+    final pos = await _svc.queuePosition(a.id);
+    final sched = await _svc.fetchScheduleTimes(a.doctorUserId!);
+    if (!mounted || pos == null) return;
+    final time = (sched.startTime != null && sched.minutesPerPatient != null)
+        ? _estimate(sched.startTime!, sched.minutesPerPatient!, pos)
+        : null;
+    setState(() =>
+        _serialTime = time != null ? '#$pos  ·  ~$time' : '#$pos');
+  }
+
+  String _estimate(String startHms, int mins, int position) {
+    final p = startHms.split(':');
+    final base = (int.tryParse(p[0]) ?? 0) * 60 +
+        (p.length > 1 ? (int.tryParse(p[1]) ?? 0) : 0);
+    final total = base + (position - 1) * mins;
+    var h = (total ~/ 60) % 24;
+    final m = total % 60;
+    final ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    if (h == 0) h = 12;
+    return '$h:${m.toString().padLeft(2, '0')} $ap';
+  }
+
+  @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final a = appt;
-    final barColor = appt.status == AppointmentStatus.scheduled ? c.accent
-        : appt.status == AppointmentStatus.completed ? c.green
-        : appt.status == AppointmentStatus.noShow ? c.amber
+    final a = widget.appt;
+    final barColor = a.status == AppointmentStatus.scheduled ? c.accent
+        : a.status == AppointmentStatus.completed ? c.green
+        : a.status == AppointmentStatus.noShow ? c.amber
         : c.red;
 
     return Material(
       color:        c.card,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        onTap:        onTap,
+        onTap:        widget.onTap,
         borderRadius: BorderRadius.circular(20),
         splashColor:  barColor.withAlpha(12),
         child: Container(
@@ -405,6 +449,34 @@ class _AppointmentCard extends StatelessWidget {
                               ],
                             ],
                           ),
+                          if (_serialTime != null) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 9, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: c.green.withAlpha(20),
+                                borderRadius: BorderRadius.circular(16),
+                                border:
+                                    Border.all(color: c.green.withAlpha(70)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.confirmation_number_rounded,
+                                      size: 12, color: c.green),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _serialTime!,
+                                    style: GoogleFonts.poppins(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: c.green),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -421,7 +493,7 @@ class _AppointmentCard extends StatelessWidget {
         ),
       ),
     ).animate()
-        .fadeIn(delay: Duration(milliseconds: delay))
+        .fadeIn(delay: Duration(milliseconds: widget.delay))
         .slideY(begin: 0.06);
   }
 

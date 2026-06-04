@@ -19,13 +19,16 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.85 — Active Development |
+| **Version** | v0.86 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.86 — Show serial + estimated time on patient appointment cards**
+- Each upcoming appointment card now shows the patient's live queue serial and estimated visit time (e.g. "#2 · ~5:10 PM"), loaded per card via the queue-position RPC + the doctor's schedule
 
 **v0.85 — Post-appointment review prompt**
 - After a completed appointment, the patient is prompted once on the home screen to rate that doctor (Submit or Skip)
