@@ -2,9 +2,9 @@
 
 # TreatTrace
 
-### A modern healthcare companion app built with Flutter & Supabase
+### A modern healthcare companion built with Flutter & Supabase
 
-*Track prescriptions · Log test reports · Manage your doctors · Book appointments — all in one place.*
+*One app for patients **and** doctors — track prescriptions, log test reports, manage your doctors, book appointments, and run a clinic queue.*
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase)](https://supabase.com)
@@ -19,217 +19,138 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.87 — Active Development |
+| **Version** | v0.88 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-06-03 |
+| **Last Updated** | 2026-06-04 |
 
 ---
 
-## Recent Updates
+## 1. What is TreatTrace?
 
-**v0.87 — Race-safe ticket booking (concurrent bookings)**
-- Two patients booking the same doctor+day at the exact same moment could previously get the same serial or slightly overbook (the ticket trigger read count/max without locking)
-- The insert and reschedule triggers now take a per-doctor-per-day transaction advisory lock, so concurrent bookings serialise → correct serials and capacity
-- Added a partial unique index `(doctor_user_id, appointment_date, ticket_no)` on scheduled rows as a hard guard against duplicate serials (DB-only; no app rebuild needed)
+TreatTrace is a two-sided healthcare app. A single account can act as a **patient** or a **doctor** (verified), and the UI adapts to the role:
 
-**v0.86 — Show serial + estimated time on patient appointment cards**
-- Each upcoming appointment card now shows the patient's live queue serial and estimated visit time (e.g. "#2 · ~5:10 PM"), loaded per card via the queue-position RPC + the doctor's schedule
+- **Patients** keep their full medical record in one place — prescriptions, test reports, a personal doctor book, a health profile (vitals/allergies/emergency contact), and appointment booking with a live clinic queue.
+- **Doctors** get a portal to manage their patients, write prescriptions and order tests straight from an appointment, control their visiting days/time/capacity, run a daily ticket-based queue (with bulk reschedule/cancel), and see their anonymous patient reviews.
 
-**v0.85 — Post-appointment review prompt**
-- After a completed appointment, the patient is prompted once on the home screen to rate that doctor (Submit or Skip)
-- Submitting updates the patient's single review for that doctor (pre-filled with any existing rating); skipping dismisses it
-- Tracked per appointment via a new `appointments.review_prompted` flag, so it never nags twice; only shows for registered doctors
-
-**v0.84 — Clearer label in doctor picker**
-- Renamed the doctor picker's "No Doctor Linked" option to "Clear selection" so it reads as an action, not a status
-
-**v0.83 — Searchable doctor picker in Add Appointment**
-- Replaced the plain dropdown with a tap-to-open bottom sheet that has a search box (filters My Doctors by name, specialty, or hospital) — no more long scrolling when you have many doctors
-- Shows the current selection, a "No Doctor Linked" clear option, and a checkmark on the selected doctor
-
-**v0.82 — Remove unused manual doctor-patient request code**
-- The manual "send request / accept" link flow was never wired into the UI; linking happens automatically when a doctor writes a prescription (auto-link)
-- Removed the hardcoded "Linked" badge from the doctor's Patient Details header (it was purely decorative)
-- Deleted the never-opened `LinkedDoctorsScreen` and the unused service methods (`sendRequest`, `getLinkStatus`, `fetchOutgoingRequests`, `fetchPatientRequests`, `countPendingIncoming`, `acceptRequest`, `rejectRequest`, `revokeLink`, `removeLink`)
-- Dropped the always-zero "Pending Tasks" stat; the doctor home now shows two stats (Today's Appointments, Total Patients)
-- Kept everything still in use: auto-link, My Patients, Total Patients count, the patient's linked-doctor picker in prescription/test-report forms, and the search "My Doctor" badge
-
-**v0.81 — Compact doctor home header & stats**
-- Slimmer greeting/header padding and smaller doctor name
-- Verified badge is now a single slim row (smaller icon, one-line label)
-- Stat cards switched to a compact icon-beside-value layout — the top section takes far less vertical space
-
-**v0.80 — Hide "Write Prescription" on non-scheduled appointments**
-- A doctor could open a cancelled (or no-show/completed) appointment and still write a prescription; the button now only shows while the appointment is `scheduled`
-
-**v0.79 — Fix no-show DB error + Pick Date overflow**
-- Marking an appointment **No-show** failed with `appointments_status_check` violation — the table's status CHECK constraint didn't include `no_show`; added it
-- The schedule filter row's **Pick Date** button ran off-screen on large fonts; the filter chips now scroll horizontally while Pick Date stays pinned
-
-**v0.78 — Fix clipped "View Appointment" button in Today's Schedule**
-- The button was locked to a 40px height, which clipped its label on larger system font scales
-- Removed the fixed height; it now uses a 44px minimum and natural padding so the text is never cut
-
-**v0.77 — Fix: no network in release APK (missing INTERNET permission)**
-- Release builds failed every request with "Failed host lookup … errno = 7" because `android.permission.INTERNET` was only auto-added to debug/profile manifests, not the release manifest
-- Added `<uses-permission android:name="android.permission.INTERNET"/>` to the main `AndroidManifest.xml`
-
-**v0.76 — Remove standalone "Write Prescription" from doctor home**
-- Doctors write prescriptions only from an appointment, so the redundant "Write Prescription" shortcut is removed from the doctor portal grid
-- "My Reviews" now sits beside "Visiting Info" in its place
-
-**v0.75 — Doctor review system (anonymous, verified)**
-- Patients can rate (1–5) + review a doctor **only after a completed appointment** (enforced by a DB trigger)
-- Reviews are **anonymous**: the public list comes from a `get_doctor_reviews` RPC that never returns patient identity; base-table RLS lets a patient see/edit only their own review
-- One review per patient per doctor (editable/deletable); aggregate `rating_avg` + `rating_count` kept on `doctor_verifications` via trigger
-- Rating shown on the **doctor public profile** (stars + "Ratings & Reviews" section with write/edit), **search result cards** (⭐ badge), and the **doctor's own portal** ("My Reviews", read-only)
-- No notification on new review (by design)
-
-**v0.74 — Live queue serial, no-show status & reschedule renumber**
-- Serial number shown to a patient is now a **live queue position** (still-scheduled patients ahead + 1) — when someone ahead cancels, no-shows, or reschedules away, everyone behind moves up automatically; no gaps, earlier estimated times
-- New **No-show** status: doctor can mark "didn't come" from the appointment detail (distinct from Cancel); the patient is notified
-- Auto-expire (day passed) now marks unresolved scheduled appointments as **no_show** (presumed missed) instead of cancelled, and notifies the patient
-- Reschedule accept now re-checks the new day's visiting-day + capacity via a `BEFORE UPDATE` trigger and re-assigns the serial for that day (no stale/colliding tickets)
-- New `get_queue_position` RPC (RLS-safe); status colours/labels for no-show across patient & doctor screens; no-show lands in the patient's "Past" tab
-
-**v0.73 — Bulk reschedule / cancel from doctor schedule**
-- Long-press an appointment in Today or Upcoming to enter multi-select; tap to add/remove, "Select all" / "Clear all" in the toolbar
-- Bottom action bar to **Reschedule** (proposes the same new date to every selected appointment — patients still confirm) or **Cancel** all selected at once
-- Selection clears on filter change; hardware back exits selection instead of leaving the screen
-- Service gains `cancelMany` / `proposeRescheduleMany`
-
-**v0.72 — No past-date booking + auto-expire past appointments**
-- Booking date picker now starts at today; past dates are disabled — you can't book an appointment in the past
-- A scheduled appointment whose date has passed is auto-cancelled: a daily DB cron (`pg_cron`) runs `expire_past_appointments()`, and the app also expires lazily on list load / before booking for immediate effect
-- Auto-expiry is silent (the cancel notification trigger skips past-date scheduled→cancelled transitions, so no misleading "cancelled" alert)
-- Frees the "one active appointment per doctor" guard once an old appointment's date passes
-
-**v0.71 — Ticket system + capacity + time control**
-- Doctor sets daily patient limit + minutes/patient (Visiting Info); visiting days/time already structured
-- Each booking gets a per-doctor/per-day **ticket number** (DB trigger, race-safe) + an estimated visit time (start + ticket × minutes)
-- Booking blocks non-visiting days and full days; patient is warned **"No slot available"** and offered the **next available day** or **Cancel**
-- Ticket # + estimated time shown in appointment detail and the doctor's Today Schedule
-- Enforced server-side via trigger + a `check_appointment_availability` RPC
-
-**v0.70 — Structured visiting days & time (doctor Visiting Info)**
-- Visiting Info sheet now has structured Visiting Days (weekday chips) + Start/End time pickers instead of a free-text "hours" field
-- `doctor_verifications` gains `visiting_days`, `visiting_start_time`, `visiting_end_time`; the human-readable `visiting_hours` is now auto-derived (so public profile keeps working)
-- Foundation for the upcoming ticket/slot/capacity scheduling feature
-
-**v0.69 — One active appointment per doctor**
-- A patient can't book a new appointment with a doctor while they still have a scheduled one with that same doctor (must complete/cancel/delete it first)
-- Enforced both in `AppointmentService.create` (friendly message) and via a DB BEFORE INSERT trigger (hard guard)
-
-**v0.68 — Reschedule now needs patient confirmation**
-- Doctor reschedule is now a *proposal* (stored in `proposed_date`) instead of a direct change
-- Patient gets a notification, sees a "Reschedule requested" banner in the appointment, and can **Accept new date** or **Decline & cancel**
-- Accepting applies the new date and notifies the doctor; patient cancel also notifies the doctor
-- Notification taps open the appointment only for the owning patient (doctor-facing alerts stay informational)
-
-**v0.67 — More notification events**
-- New appointment booked → notifies the doctor
-- Doctor writes a prescription / orders a test → notifies the patient
-- Doctor-patient connection: request notifies the patient, accept notifies the doctor
-- NotificationsScreen: icons per type; only patient appointment notifications open the appointment detail
-
-**v0.66 — Notifications + doctor reschedule/cancel (Phase 1)**
-- New in-app notification system: `notifications` table + RLS + realtime; bell icon now has a live unread badge and opens a NotificationsScreen inbox
-- Doctor can reschedule (new date) or cancel a scheduled appointment from the doctor appointment detail (reached via Today Schedule / patient profile)
-- A DB trigger auto-notifies the patient when their doctor reschedules or cancels; local notification pops while the app is open (push when closed = Phase 2, needs Firebase/FCM)
-
-**v0.65 — Fix appointment detail freeze (double-pop in PopScope)**
-- `canPop:true` + a manual `Navigator.pop` in `onPopInvokedWithResult` tore down two routes mid gesture-dispatch → ConcurrentModificationError froze the app
-- Switched to the correct `canPop:false` + single manual pop idiom
-
-**v0.64 — Search + richer labels in appointment link picker**
-- Prescription/test report link picker now has a search box (matches doctor, diagnosis/test name, date)
-- Picker items now show the diagnosis (prescription) / test name + doctor, not just doctor + date
-
-**v0.63 — Fix missing doctor name on doctor-ordered test reports**
-- `DoctorTestReportScreen` now falls back to `profiles.full_name` when userMetadata is empty, so the ordering doctor's name is always snapshotted
-- Existing test reports with a null doctor name were backfilled from `ordered_by_doctor_id`
-
-**v0.62 — Show doctor name on prescription & test report tiles (doctor patient detail)**
-- Prescription and test report tiles now show "Dr. Name · date" so it's clear which doctor wrote/ordered each
-
-**v0.61 — Show date + linked doctor on test report rows in appointment detail**
-- Each linked test report now shows the test name, then the linked doctor (if any) and the test date
-
-**v0.60 — Show diagnosis on linked prescription rows in appointment detail**
-- Each linked prescription now leads with its diagnosis, then doctor name + date, so the doctor knows what condition the Rx is for
-
-**v0.59 — Fix appointment edit crash ("invalid input syntax for type uuid")**
-- Editing an appointment no longer sends an empty `user_id` to the uuid column
-- `AppointmentService.update` strips the immutable `user_id` from the payload
-
-**v0.58 — Remove bottom "Write Prescription" bar from patient profile**
-- Doctors now write prescriptions from the appointment detail page (v0.57); the redundant bottom bar on the patient profile is removed
-
-**v0.57 — Write prescription from appointment detail**
-- Doctor appointment detail now has a "Write Prescription" button — no need to open the patient profile first
-- Writing from a scheduled appointment marks it completed; detail closes and list refreshes
-
-**v0.56 — Doctor-side appointment detail (read-only)**
-- Doctor view of an appointment: status / edit / delete controls hidden
-- Linked prescriptions open doctor view — editable only if written by the viewing doctor
-- Linked test reports open view-only (doctors can never edit or delete a test report)
-- "Open Patient Profile" button + Today Schedule appointment tap now opens this detail page
-
-**v0.55 — Fix appointment tile in doctor patient detail: navigate to full appointment detail**
-- Doctor patient detail: tapping an appointment tile now opens AppointmentDetailScreen
-- All linked prescriptions and test reports visible and tappable from appointment detail
-- Removed stale single-prescription direct-navigation from appointment tile
-
-**v0.54 — Fix appointment detail: show all linked prescriptions and test reports**
-- Appointment detail: all linked prescriptions shown with doctor name + date, each tappable
-- Appointment detail: all linked test reports shown with test name, each tappable
-- Appointment list card: updated to use `prescriptionIds` array; test report icon added
-
-**v0.53 — Multiple link support for prescriptions and test reports**
-- Appointment add/edit: link multiple prescriptions + multiple test reports (chip picker + bottom sheet)
-- Test report add/edit: link multiple prescriptions
-- DB: `prescription_ids text[]` + `test_report_ids text[]` added; existing data migrated from single-id columns
-
-**v0.52 — Appointment tile shows doctor name and date**
-- Appointment badge now shows "Dr. Name — DD Mon YYYY" instead of static "Linked Prescription"
-
-**v0.51 — Appointment sort in doctor patient detail**
-- Upcoming appointments first (ascending); completed below (descending)
-
-**v0.50 — Fix linked prescription UUID in test report detail**
-- Shows "Dr. Name — DD/MM/YYYY" instead of raw UUID
-- Doctor patient detail: linked appointment tiles now tappable, open prescription
+Everything is backed by **Supabase** (PostgreSQL + Auth + Storage + Realtime), with security enforced at the database layer through **Row Level Security (RLS)** policies, **SECURITY DEFINER** RPCs, and **triggers** — so the rules hold no matter what the client does.
 
 ---
 
-## Features
+## 2. Core Functionality
 
-- **Prescriptions** — doctor info, medicines, doses, reminders, allergy check, PDF export
-- **Test Reports** — category picker, image/file upload, doctor link, prescription link
-- **My Doctors** — personal doctor book with favorites, contact info, appointments
-- **Appointments** — booking, status management (Scheduled / Completed / Cancelled)
-- **Doctor Portal** — patient list, full patient detail, write prescriptions, view test reports
-- **Health Profile** — vitals, BMI, allergies, emergency contact
-- **Username System** — unique `@username` per account, searchable
-- **Animated Splash** — Clarity Reveal sequence with 2500 ms minimum display
-- **Localisation** — English + Bangla (`S.of(context)`)
+### Patient side
+- **Prescriptions** — doctor info, medicines/doses, reminders, allergy check, PDF export & share.
+- **Test Reports** — category picker, image/file upload to Storage, link to a doctor and to prescriptions.
+- **My Doctors** — a personal doctor book (favourites, contact info, per-doctor appointment history).
+- **Appointments** — book with a registered doctor, see a **live queue serial + estimated visit time**, accept/decline doctor-proposed reschedules, view linked prescriptions & test reports.
+- **Doctor Reviews** — rate (1–5) + review a doctor **only after a completed appointment**; anonymous; one editable review per doctor; prompted once after each completed visit.
+- **Health Profile** — vitals, BMI, allergies, emergency contact.
+- **Search** — global search for doctors by `@username`, name, specialty, or hospital, with rating badges.
+
+### Doctor side
+- **Doctor Portal Home** — verified badge, today's appointment count, total patients, quick actions.
+- **Patient list & detail** — every patient who's been auto-linked (linking happens automatically when a doctor writes that patient a prescription); full history of their prescriptions, test reports, and appointments.
+- **Write from appointment** — write a prescription or order a test directly from the appointment detail; writing a prescription marks the appointment completed.
+- **Visiting Info** — structured visiting days (weekday chips) + start/end time, daily patient limit, and minutes/patient — these drive slot capacity and time estimates.
+- **Today / Upcoming schedule** — ticketed queue with a live serial; **long-press for multi-select** to bulk **reschedule** (proposal — patient still confirms) or **cancel**.
+- **No-show** — mark "didn't come" from the appointment detail (distinct from cancel); the patient is notified and the queue behind them moves up.
+- **My Reviews** — read-only list of the anonymous ratings/reviews received.
+
+### Cross-cutting
+- **Notifications** — in-app `notifications` table + RLS + Realtime; live unread badge and inbox. Events: new booking, prescription/test written, reschedule proposed/accepted, cancel, no-show. Local notification pops while the app is open (push-when-closed = future FCM phase).
+- **Localisation** — English + Bangla via `S.of(context)`.
+- **Theming** — light-default theme, single brand blue `#136AFB`; bundled Plus Jakarta Sans; animated "Clarity Reveal" splash with a 2500 ms minimum.
 
 ---
 
-## Tech Stack
+## 3. The Queue & Booking Engine (how it works)
+
+This is the heart of the app and is enforced server-side:
+
+1. **Visiting rules** — a doctor's `doctor_verifications` row holds `visiting_days`, `visiting_start_time`, `visiting_end_time`, daily patient `limit`, and `minutes/patient`.
+2. **Booking guards** — you can't book a past date, can't book a non-visiting day, can't exceed the daily limit (offered the **next available day** instead), and can't hold more than **one active appointment per doctor** at a time.
+3. **Tickets** — a `BEFORE INSERT` trigger assigns a per-doctor/per-day ticket number and the booking gets an estimated visit time (`start + ticket × minutes`).
+4. **Live serial (no gaps)** — what a patient sees isn't the raw ticket but a **live queue position** (still-scheduled patients ahead + 1), computed via the `get_queue_position` RPC. When someone ahead cancels, no-shows, or reschedules away, everyone behind moves up automatically → no gaps, earlier estimates.
+5. **Reschedule** — a doctor reschedule is a **proposal** (`proposed_date`); the patient accepts/declines. Accepting re-checks the new day's visiting-day + capacity via a `BEFORE UPDATE` trigger and re-assigns the serial.
+6. **Auto-expire** — a passed scheduled appointment is auto-marked `no_show` (silently, no misleading alert) by a daily `pg_cron` job plus a lazy check on list-load.
+7. **Race safety** — both the insert and reschedule triggers take a **per-doctor-per-day advisory lock** so concurrent bookings serialise, and a **partial unique index** on `(doctor_user_id, appointment_date, ticket_no)` for scheduled rows hard-blocks duplicate serials.
+
+---
+
+## 4. Tech Stack
 
 | Layer | Technology |
 |---|---|
-| **Framework** | Flutter 3.x (Dart) |
-| **Backend** | Supabase (PostgreSQL + Auth + Storage + RLS) |
+| **Framework** | Flutter 3.x (Dart 3.11+) |
+| **Backend** | Supabase — PostgreSQL, Auth, Storage, Realtime, RLS |
+| **State / structure** | Feature-first folders, service classes per feature |
 | **Animations** | `flutter_animate` |
-| **Fonts** | Plus Jakarta Sans (bundled TTF) |
-| **Notifications** | `flutter_local_notifications` |
+| **Fonts** | Plus Jakarta Sans (bundled) + `google_fonts` |
+| **Notifications** | `flutter_local_notifications` + `timezone` |
 | **PDF** | `pdf` + `printing` |
+| **Files / media** | `file_picker`, `image_picker`, `url_launcher` |
+| **Local prefs** | `shared_preferences` (theme, locale, keep-logged-in) |
 
 ---
 
-## Quick Setup
+## 5. Project Structure
+
+The app is **feature-first**: each feature owns its `models/`, `screens/`, `services/`, and (where needed) `widgets/`.
+
+```
+lib/
+├── core/                       # App-wide foundation (no feature logic)
+│   ├── config/                 # Supabase credentials/config
+│   ├── constants/              # App-wide constants
+│   ├── l10n/                   # Localisation strings (EN + BN)
+│   ├── preferences/            # SharedPreferences wrappers
+│   ├── services/               # auth, account, profile, doctor verification, reminders
+│   ├── theme/                  # Colours (brand #136AFB), typography, ThemeData
+│   ├── utils/                  # Helpers & extensions
+│   └── widgets/                # Shared UI components
+├── features/
+│   ├── admin/                  # Admin panel (doctor verification, etc.)
+│   ├── appointment/            # Booking, status, queue serial, detail
+│   ├── auth/                   # Login, register, AuthGate + splash
+│   ├── doctor/                 # My Doctors (patient-side doctor book)
+│   ├── doctor_home/            # Doctor portal: patient list, detail, schedule
+│   ├── home/                   # Patient home screen
+│   ├── notification/           # Notifications inbox + service + realtime badge
+│   ├── prescription/           # Prescriptions CRUD + PDF
+│   ├── profile/                # Health profile, vitals
+│   ├── review/                 # Anonymous doctor review system
+│   ├── search/                 # Global search + public doctor profile
+│   └── test_report/            # Test reports CRUD + uploads
+├── shared/
+│   └── widgets/                # Cross-feature widgets
+└── main.dart                   # Entry point, splash, AuthGate, role routing
+
+database/
+├── treattrace_schema.sql       # Full schema (run this in a fresh project)
+├── features/                   # Per-feature SQL (tables, RLS, RPCs, triggers)
+└── migrations/                 # Incremental migrations
+```
+
+---
+
+## 6. Data Model (key tables)
+
+| Table | Purpose |
+|---|---|
+| `profiles` | User profile, `@username`, full name, role flags |
+| `doctor_verifications` | Doctor verification + visiting days/time, capacity, `rating_avg`/`rating_count` |
+| `appointments` | Bookings: status, ticket_no, proposed_date, linked Rx/test arrays, `review_prompted` |
+| `prescriptions` | Doctor info, medicines, diagnosis, reminders |
+| `test_reports` | Category, file URL, linked doctor & prescriptions |
+| `doctor_patient_links` | Auto-link between a doctor and a patient |
+| `doctor_reviews` | Anonymous 1–5 reviews (RLS: author sees only own) |
+| `notifications` | In-app notifications (RLS + Realtime, unread badge) |
+
+Security is layered: **RLS** restricts base-table rows to their owner; **SECURITY DEFINER RPCs** (e.g. `get_doctor_reviews`, `get_queue_position`, `can_review_doctor`) expose only safe, aggregated/anonymous data; **triggers** enforce booking rules, ticketing, queue renumbering, review eligibility, and notifications.
+
+---
+
+## 7. Quick Setup
 
 ```bash
 git clone https://github.com/MDAlmasAli/TreatTrace.git
@@ -237,7 +158,9 @@ cd TreatTraceV1
 flutter pub get
 ```
 
-Set your Supabase credentials in `lib/core/config/supabase_config.dart`, run `database/treattrace_schema.sql` in the Supabase SQL editor, then:
+1. Set your Supabase URL + anon key in `lib/core/config/supabase_config.dart`.
+2. Run `database/treattrace_schema.sql` in the Supabase SQL editor (then apply anything newer in `database/migrations/`).
+3. Launch:
 
 ```bash
 flutter run
@@ -245,38 +168,57 @@ flutter run
 
 ---
 
-## Project Structure
+## 8. Changelog (highlights)
 
-```
-lib/
-├── core/
-│   ├── config/          # Supabase config
-│   ├── constants/       # App-wide constants
-│   ├── l10n/            # Localisation (EN + BN)
-│   ├── preferences/     # Local prefs (SharedPreferences)
-│   ├── services/        # Auth, storage, notifications
-│   ├── theme/           # Colours, typography, ThemeData
-│   ├── utils/           # Helpers, extensions
-│   └── widgets/         # Shared UI components
-├── features/
-│   ├── admin/           # Admin panel
-│   ├── appointment/     # Booking, status management
-│   ├── auth/            # Login, register, auth gate
-│   ├── doctor/          # My Doctors (patient side)
-│   ├── doctor_home/     # Doctor portal (patient list, detail)
-│   ├── home/            # Patient home screen
-│   ├── prescription/    # Prescriptions CRUD
-│   ├── profile/         # Health profile, vitals
-│   ├── search/          # Global search
-│   └── test_report/     # Test reports CRUD
-├── shared/
-│   └── widgets/         # Cross-feature widgets
-└── main.dart
-```
+**v0.88** — Highlight the doctor's name in the post-appointment "Rate your visit" prompt (brand-blue bold, easier to read).
+
+**v0.87** — Race-safe ticket booking: per-doctor-per-day advisory lock on the insert/reschedule triggers + partial unique index on scheduled tickets (no duplicate serials / overbooking under concurrency).
+
+**v0.86** — Patient appointment cards show the live queue serial + estimated visit time (e.g. "#2 · ~5:10 PM").
+
+**v0.85** — Post-appointment review prompt: after a completed visit the patient is prompted once (Submit/Skip), tracked via `appointments.review_prompted`.
+
+**v0.84** — Doctor picker "No Doctor Linked" renamed to "Clear selection".
+
+**v0.83** — Searchable doctor picker (bottom sheet) in Add Appointment — filter My Doctors by name/specialty/hospital.
+
+**v0.82** — Removed unused manual doctor-patient request code (linking is automatic via prescriptions); dropped the always-zero "Pending Tasks" stat.
+
+**v0.81** — Compact doctor home header & stats.
+
+**v0.80** — "Write Prescription" only shows while an appointment is `scheduled`.
+
+**v0.79** — Fixed `no_show` status CHECK violation + Pick Date button overflow (chips now scroll horizontally).
+
+**v0.78** — Fixed clipped "View Appointment" button on large font scales.
+
+**v0.77** — Added `INTERNET` permission so release APKs can reach Supabase (was failing with errno=7).
+
+**v0.76** — Removed standalone "Write Prescription" card from doctor home; "My Reviews" placed beside "Visiting Info".
+
+**v0.75** — Anonymous, verified doctor review system (rate only after a completed appointment; RPC-anonymous public list; aggregate rating on profile/search/portal).
+
+**v0.74** — Live queue serial (no gaps), `no_show` status, reschedule renumber + notifications.
+
+**v0.73** — Bulk reschedule/cancel from the doctor schedule (long-press multi-select).
+
+**v0.72** — No past-date booking + auto-expire (silent) of passed appointments via `pg_cron`.
+
+**v0.71** — Ticket system + daily capacity + minutes/patient time estimates.
+
+**v0.70** — Structured visiting days & start/end time (doctor Visiting Info).
+
+**v0.69** — One active appointment per doctor (DB-enforced).
+
+**v0.68** — Reschedule requires patient confirmation (proposal + accept/decline).
+
+**v0.66–v0.67** — In-app notification system (table + RLS + Realtime + inbox) and the first reschedule/cancel + notification events.
+
+**v0.50–v0.65** — Prescription/test-report linking (multi-link), doctor-side appointment detail & write-from-appointment, richer tiles (doctor name + date + diagnosis), and assorted crash/UX fixes.
 
 ---
 
-## Authors
+## 9. Authors
 
 - **MD Almas Ali**
 - **Tasmina Rahman Chowdhury**

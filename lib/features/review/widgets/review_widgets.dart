@@ -437,9 +437,24 @@ class _AppointmentReviewSheetState extends State<_AppointmentReviewSheet> {
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: c.textPrimary)),
-                      Text('How was your appointment with Dr. ${widget.doctorName}?',
+                      Text.rich(
+                        TextSpan(
                           style: GoogleFonts.poppins(
-                              fontSize: 12, color: c.textSec)),
+                              fontSize: 12, color: c.textSec),
+                          children: [
+                            const TextSpan(
+                                text: 'How was your appointment with '),
+                            TextSpan(
+                              text: 'Dr. ${widget.doctorName}',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: c.accent),
+                            ),
+                            const TextSpan(text: '?'),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
