@@ -16,37 +16,6 @@ class DoctorPatientLinkService {
     return rows.first as Map<String, dynamic>;
   }
 
-  // ── Send link request (doctor → patient) ──────────────────────────────────
-
-  Future<void> sendRequest(String patientId) async {
-    final uid = _uid;
-    if (uid == null) return;
-    await _client.from('doctor_patient_links').upsert(
-      {
-        'doctor_id':    uid,
-        'patient_id':   patientId,
-        'status':       'pending',
-        'requested_at': DateTime.now().toIso8601String(),
-        'accepted_at':  null,
-      },
-      onConflict: 'doctor_id,patient_id',
-    );
-  }
-
-  // ── Get existing link status between current doctor and a patient ─────────
-
-  Future<DoctorPatientLink?> getLinkStatus(String patientId) async {
-    final uid = _uid;
-    if (uid == null) return null;
-    final row = await _client
-        .from('doctor_patient_links')
-        .select()
-        .eq('doctor_id', uid)
-        .eq('patient_id', patientId)
-        .maybeSingle();
-    return row == null ? null : DoctorPatientLink.fromMap(row);
-  }
-
   // ── Doctor: fetch all accepted patients ───────────────────────────────────
 
   Future<List<DoctorPatientLink>> fetchLinkedPatients() async {
@@ -59,26 +28,6 @@ class DoctorPatientLinkService {
         .eq('doctor_id', uid)
         .eq('status', 'accepted')
         .order('accepted_at', ascending: false) as List;
-
-    final links = rows
-        .map((r) => DoctorPatientLink.fromMap(r as Map<String, dynamic>))
-        .toList();
-
-    return _attachPatientProfiles(links);
-  }
-
-  // ── Doctor: fetch all pending/sent requests ───────────────────────────────
-
-  Future<List<DoctorPatientLink>> fetchOutgoingRequests() async {
-    final uid = _uid;
-    if (uid == null) return [];
-
-    final rows = await _client
-        .from('doctor_patient_links')
-        .select()
-        .eq('doctor_id', uid)
-        .inFilter('status', ['pending', 'rejected'])
-        .order('requested_at', ascending: false) as List;
 
     final links = rows
         .map((r) => DoctorPatientLink.fromMap(r as Map<String, dynamic>))
@@ -105,50 +54,6 @@ class DoctorPatientLinkService {
         .toList();
 
     return _attachDoctorProfiles(links);
-  }
-
-  // ── Patient: count pending incoming requests (for badge) ──────────────────
-
-  Future<int> countPendingIncoming() async {
-    final uid = _uid;
-    if (uid == null) return 0;
-    final rows = await _client
-        .from('doctor_patient_links')
-        .select('id')
-        .eq('patient_id', uid)
-        .eq('status', 'pending') as List;
-    return rows.length;
-  }
-
-  // ── Patient: accept / reject ──────────────────────────────────────────────
-
-  Future<void> acceptRequest(String linkId) async {
-    await _client.from('doctor_patient_links').update({
-      'status':      'accepted',
-      'accepted_at': DateTime.now().toIso8601String(),
-    }).eq('id', linkId);
-  }
-
-  Future<void> rejectRequest(String linkId) async {
-    await _client
-        .from('doctor_patient_links')
-        .update({'status': 'rejected'})
-        .eq('id', linkId);
-  }
-
-  // ── Doctor: revoke link ───────────────────────────────────────────────────
-
-  Future<void> revokeLink(String linkId) async {
-    await _client
-        .from('doctor_patient_links')
-        .update({'status': 'revoked'})
-        .eq('id', linkId);
-  }
-
-  // ── Patient: remove link entirely ────────────────────────────────────────
-
-  Future<void> removeLink(String linkId) async {
-    await _client.from('doctor_patient_links').delete().eq('id', linkId);
   }
 
   // ── Patient: fetch all approved doctors in the system ────────────────────

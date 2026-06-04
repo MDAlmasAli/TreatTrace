@@ -19,13 +19,20 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.81 — Active Development |
+| **Version** | v0.82 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.82 — Remove unused manual doctor-patient request code**
+- The manual "send request / accept" link flow was never wired into the UI; linking happens automatically when a doctor writes a prescription (auto-link)
+- Removed the hardcoded "Linked" badge from the doctor's Patient Details header (it was purely decorative)
+- Deleted the never-opened `LinkedDoctorsScreen` and the unused service methods (`sendRequest`, `getLinkStatus`, `fetchOutgoingRequests`, `fetchPatientRequests`, `countPendingIncoming`, `acceptRequest`, `rejectRequest`, `revokeLink`, `removeLink`)
+- Dropped the always-zero "Pending Tasks" stat; the doctor home now shows two stats (Today's Appointments, Total Patients)
+- Kept everything still in use: auto-link, My Patients, Total Patients count, the patient's linked-doctor picker in prescription/test-report forms, and the search "My Doctor" badge
 
 **v0.81 — Compact doctor home header & stats**
 - Slimmer greeting/header padding and smaller doctor name

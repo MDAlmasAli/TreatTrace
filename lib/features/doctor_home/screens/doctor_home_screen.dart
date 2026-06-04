@@ -46,7 +46,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   String? _avatarUrl;
   int _todayAppointments = 0;
   int _totalPatients = 0;
-  int _pendingTasks = 0;
 
   int?    _visitingFee;
   String? _chamber;
@@ -463,26 +462,19 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       final results = await Future.wait([
         _apptSvc.countTodayForCurrentDoctor(),
         _linkSvc.fetchLinkedPatients(),
-        _linkSvc.fetchOutgoingRequests(),
       ]);
       final today = results[0] as int;
       final linked = results[1] as List;
-      final outgoing = results[2] as List;
-      final pending = outgoing
-          .where((row) => (row as dynamic).status == 'pending')
-          .length;
       if (!mounted) return;
       setState(() {
         _todayAppointments = today;
         _totalPatients = linked.length;
-        _pendingTasks = pending;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _todayAppointments = 0;
         _totalPatients = 0;
-        _pendingTasks = 0;
       });
     }
   }
@@ -579,7 +571,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                         _StatsRow(
                           todayAppointments: _todayAppointments,
                           totalPatients: _totalPatients,
-                          pendingTasks: _pendingTasks,
                         ).animate().fadeIn(delay: 100.ms),
 
                         const SizedBox(height: 18),
@@ -906,12 +897,10 @@ class _HeaderIcon extends StatelessWidget {
 class _StatsRow extends StatelessWidget {
   final int todayAppointments;
   final int totalPatients;
-  final int pendingTasks;
 
   const _StatsRow({
     required this.todayAppointments,
     required this.totalPatients,
-    required this.pendingTasks,
   });
 
   @override
@@ -933,15 +922,6 @@ class _StatsRow extends StatelessWidget {
             label: 'Total\nPatients',
             value: '$totalPatients',
             color: context.colors.green,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _StatPill(
-            icon: Icons.pending_actions_rounded,
-            label: 'Pending\nTasks',
-            value: '$pendingTasks',
-            color: context.colors.amber,
           ),
         ),
       ],

@@ -374,18 +374,6 @@ class _PatientCard extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(color: c.green.withAlpha(20), borderRadius: BorderRadius.circular(20)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.link_rounded, size: 12, color: c.green),
-                const SizedBox(width: 4),
-                Text('Linked', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: c.green)),
-              ],
-            ),
-          ),
         ],
       ),
     );
