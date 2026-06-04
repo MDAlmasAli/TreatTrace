@@ -19,7 +19,7 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.88 — Active Development |
+| **Version** | v0.89 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-04 |
 
@@ -169,6 +169,8 @@ flutter run
 ---
 
 ## 8. Changelog (highlights)
+
+**v0.89** — Database SQL brought in line with the live schema and reorganized: the stale `database/features/` + `database/migrations/` fragments are replaced by a per-feature `database/schema/` breakdown (one file per table, with RLS grouped in `12_security.sql`), plus a regenerated combined `treattrace_schema.sql`. Also fixed `delete_own_account()` which still referenced the renamed `lab_reports` table.
 
 **v0.88** — Highlight the doctor's name in the post-appointment "Rate your visit" prompt (brand-blue bold, easier to read).
 

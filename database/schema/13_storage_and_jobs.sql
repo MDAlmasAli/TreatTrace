@@ -1,0 +1,26 @@
+-- ============================================================================
+--  13_storage_and_jobs.sql — Storage buckets & scheduled jobs (documentation)
+-- ============================================================================
+--  These are managed in the Supabase dashboard, not created by SQL here. This
+--  file documents them so the full backend is understandable from /schema.
+-- ============================================================================
+
+-- ── Storage buckets ──────────────────────────────────────────────────────────
+--   avatars        — public   : profile photos
+--   prescriptions  — private  : prescription images / PDFs
+--   test_reports   — private  : test-report images / PDFs (current)
+--   lab_reports    — private  : legacy bucket; still holds files uploaded before
+--                               the test_reports rename — DO NOT DELETE.
+--   Object-level access is governed by storage RLS policies in the dashboard.
+
+-- ── Scheduled jobs (pg_cron) ─────────────────────────────────────────────────
+--   A daily job runs expire_past_appointments() (see 08_appointments.sql) to
+--   mark passed scheduled appointments as no_show. The app also calls it on
+--   list load for immediacy. Example (run once to install the schedule):
+--
+--     select cron.schedule(
+--       'expire-past-appointments',
+--       '5 0 * * *',                         -- 00:05 every day
+--       $$ select public.expire_past_appointments(); $$
+--     );
+-- ============================================================================
