@@ -19,7 +19,7 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.89 — Active Development |
+| **Version** | v0.90 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-04 |
 
@@ -126,9 +126,7 @@ lib/
 └── main.dart                   # Entry point, splash, AuthGate, role routing
 
 database/
-├── treattrace_schema.sql       # Full schema (run this in a fresh project)
-├── features/                   # Per-feature SQL (tables, RLS, RPCs, triggers)
-└── migrations/                 # Incremental migrations
+└── schema/                     # The full schema — one file per feature, run 00_→13_ in order
 ```
 
 ---
@@ -159,7 +157,7 @@ flutter pub get
 ```
 
 1. Set your Supabase URL + anon key in `lib/core/config/supabase_config.dart`.
-2. Run `database/treattrace_schema.sql` in the Supabase SQL editor (then apply anything newer in `database/migrations/`).
+2. Run the SQL in `database/schema/` in numeric order (`00_`…`13_`) — or `cat database/schema/*.sql | psql "$DATABASE_URL"`. See `database/README.md`.
 3. Launch:
 
 ```bash
@@ -170,7 +168,9 @@ flutter run
 
 ## 8. Changelog (highlights)
 
-**v0.89** — Database SQL brought in line with the live schema and reorganized: the stale `database/features/` + `database/migrations/` fragments are replaced by a per-feature `database/schema/` breakdown (one file per table, with RLS grouped in `12_security.sql`), plus a regenerated combined `treattrace_schema.sql`. Also fixed `delete_own_account()` which still referenced the renamed `lab_reports` table.
+**v0.90** — Dropped the redundant combined `treattrace_schema.sql`; `database/schema/` (run `00_`…`13_` in order) is now the single source of truth. READMEs updated accordingly.
+
+**v0.89** — Database SQL brought in line with the live schema and reorganized: the stale `database/features/` + `database/migrations/` fragments are replaced by a per-feature `database/schema/` breakdown (one file per table, with RLS grouped in `12_security.sql`). Also fixed `delete_own_account()` which still referenced the renamed `lab_reports` table.
 
 **v0.88** — Highlight the doctor's name in the post-appointment "Rate your visit" prompt (brand-blue bold, easier to read).
 
