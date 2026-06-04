@@ -538,7 +538,11 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                           // doctor can write Rx, reschedule/cancel (if still
                           // scheduled), and open the patient profile.
                           if (widget.isDoctorView) ...[
-                            if (widget.onWritePrescription != null) ...[
+                            // Prescriptions can only be written for an active
+                            // (scheduled) appointment — not cancelled/no-show.
+                            if (widget.onWritePrescription != null &&
+                                _appt.status ==
+                                    AppointmentStatus.scheduled) ...[
                               const SizedBox(height: 28),
                               _ActionBtn(
                                 label:    'Write Prescription',

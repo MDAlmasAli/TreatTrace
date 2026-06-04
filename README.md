@@ -19,13 +19,16 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.79 — Active Development |
+| **Version** | v0.80 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.80 — Hide "Write Prescription" on non-scheduled appointments**
+- A doctor could open a cancelled (or no-show/completed) appointment and still write a prescription; the button now only shows while the appointment is `scheduled`
 
 **v0.79 — Fix no-show DB error + Pick Date overflow**
 - Marking an appointment **No-show** failed with `appointments_status_check` violation — the table's status CHECK constraint didn't include `no_show`; added it
