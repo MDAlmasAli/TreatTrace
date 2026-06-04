@@ -5,6 +5,7 @@ class PrescriptionMedicine {
   final String   prescriptionId;
   final String   medicineName;
   final String?  dose;
+  final String?  quantity;
   final bool     morning;
   final bool     afternoon;
   final bool     evening;
@@ -20,6 +21,7 @@ class PrescriptionMedicine {
     required this.prescriptionId,
     required this.medicineName,
     this.dose,
+    this.quantity,
     this.morning    = false,
     this.afternoon  = false,
     this.evening    = false,
@@ -81,6 +83,7 @@ class PrescriptionMedicine {
         prescriptionId: m['prescription_id'] as String,
         medicineName:   m['medicine_name']   as String,
         dose:           m['dose']            as String?,
+        quantity:       m['quantity']        as String?,
         morning:        (m['morning']        as bool?) ?? false,
         afternoon:      (m['afternoon']      as bool?) ?? false,
         evening:        (m['evening']        as bool?) ?? false,
@@ -98,6 +101,7 @@ class PrescriptionMedicine {
         'prescription_id': prescriptionId,
         'medicine_name':   medicineName,
         'dose':            dose,
+        'quantity':        quantity,
         'morning':         morning,
         'afternoon':       afternoon,
         'evening':         evening,
@@ -114,6 +118,7 @@ class PrescriptionMedicine {
     String?   prescriptionId,
     String?   medicineName,
     String?   dose,
+    String?   quantity,
     bool?     morning,
     bool?     afternoon,
     bool?     evening,
@@ -129,6 +134,7 @@ class PrescriptionMedicine {
         prescriptionId: prescriptionId ?? this.prescriptionId,
         medicineName:   medicineName   ?? this.medicineName,
         dose:           dose           ?? this.dose,
+        quantity:       quantity       ?? this.quantity,
         morning:        morning        ?? this.morning,
         afternoon:      afternoon      ?? this.afternoon,
         evening:        evening        ?? this.evening,

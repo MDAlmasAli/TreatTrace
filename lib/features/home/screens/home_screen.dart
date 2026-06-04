@@ -12,6 +12,8 @@ import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/auth_service.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../prescription/screens/prescriptions_screen.dart';
+import '../../prescription/screens/prescription_detail_screen.dart';
+import '../../prescription/services/prescription_service.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../test_report/screens/test_reports_screen.dart';
 import '../../appointment/screens/appointments_screen.dart';
@@ -43,9 +45,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _authService  = AuthService();
-  final _searchCtrl   = TextEditingController();
-  final _reviewSvc    = ReviewService();
+  final _authService    = AuthService();
+  final _searchCtrl     = TextEditingController();
+  final _reviewSvc      = ReviewService();
+  final _prescriptionSvc = PrescriptionService();
   String? _avatarUrl;
 
   @override
@@ -104,6 +107,26 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _goToPrescriptions() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const PrescriptionsScreen()),
+    );
+  }
+
+  // Opens the patient's most recent prescription directly (falls back to the
+  // full list / a notice if there are none).
+  Future<void> _goToLastPrescription() async {
+    final list = await _prescriptionSvc.fetchAll();
+    if (!mounted) return;
+    if (list.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('No prescriptions yet.', style: GoogleFonts.poppins()),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PrescriptionDetailScreen(prescription: list.first),
+      ),
     );
   }
 
@@ -286,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
         searchCtrl:          _searchCtrl,
         onSearchTap:         _goToSearch,
         onProfileTap:        _goToProfile,
-        onLastPrescribedTap: _goToPrescriptions,
+        onLastPrescribedTap: _goToLastPrescription,
         avatarUrl:           _avatarUrl,
       ),
     );

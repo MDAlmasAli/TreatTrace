@@ -220,7 +220,7 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
             ],
           ),
 
-          if (wasRejected) ...[
+          if (wasRejected || hasPending) ...[
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -228,7 +228,8 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
               child: ElevatedButton.icon(
                 onPressed: _startEdit,
                 icon: const Icon(Icons.edit_rounded, size: 18),
-                label: Text('Update & Resubmit',
+                label: Text(
+                    wasRejected ? 'Update & Resubmit' : 'Edit Submission',
                     style: GoogleFonts.poppins(
                         fontSize: 14, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
@@ -240,6 +241,14 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
                 ),
               ),
             ),
+            if (hasPending) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Your changes are still awaiting approval — editing now replaces '
+                'the pending submission.',
+                style: GoogleFonts.poppins(fontSize: 11, color: c.textMuted),
+              ),
+            ],
           ],
         ],
       ),

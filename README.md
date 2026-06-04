@@ -19,7 +19,7 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.92 — Active Development |
+| **Version** | v0.93 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-04 |
 
@@ -167,6 +167,8 @@ flutter run
 ---
 
 ## 8. Changelog (highlights)
+
+**v0.93** — Write Prescription: the prescription date is now set automatically (today) and shown read-only — no date picker. Medicines gain a free-text **Quantity** field (e.g. "10 tablets", "1 strip"), shown on the prescription detail and PDF. Patient home's "Last Prescribed" button now opens the most recent prescription directly. Doctors can also revise a still-pending credential edit (a prominent "Edit Submission" button; re-submitting overwrites the pending one).
 
 **v0.92** — Doctor "on hold" while a credential edit awaits admin approval (`edit_status = 'pending'`): the doctor is hidden from patient search, new bookings are blocked server-side (`DOCTOR_ON_HOLD` / availability `on_hold`) with a clear message on the patient and doctor booking screens, the public profile shows a "temporarily unavailable" note with the booking button disabled, and the doctor portal shows an "under review" banner (existing appointments keep working). Patients with a scheduled appointment are notified when the doctor goes under review and again when it lifts; the doctor is notified if the edit is rejected. A pending edit can now be revised before approval (re-submitting overwrites it). Admin approve/reject lifts the hold automatically.
 

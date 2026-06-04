@@ -277,6 +277,9 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
                     if (m.dose?.isNotEmpty == true)
                       pw.Text('Dose: ${m.dose}',
                           style: const pw.TextStyle(fontSize: 10)),
+                    if (m.quantity?.isNotEmpty == true)
+                      pw.Text('Quantity: ${m.quantity}',
+                          style: const pw.TextStyle(fontSize: 10)),
                     pw.Text('Frequency: ${m.frequencyDisplay}',
                         style: const pw.TextStyle(fontSize: 10)),
                     if (m.durationDays != null)
@@ -794,6 +797,12 @@ class _MedicineTile extends StatelessWidget {
                               label: m.dose!,
                               icon:  Icons.scale_rounded,
                               color: c.cyan,
+                            ),
+                          if (m.quantity?.isNotEmpty == true)
+                            _Chip(
+                              label: m.quantity!,
+                              icon:  Icons.numbers_rounded,
+                              color: c.amber,
                             ),
                           _Chip(
                             label: m.frequencyDisplay,

@@ -32,6 +32,7 @@ create table if not exists public.prescription_medicines (
   prescription_id uuid not null references public.prescriptions(id) on delete cascade,
   medicine_name   text not null,
   dose            text,
+  quantity        text,          -- free-text, e.g. "10 tablets", "1 strip"
   morning         boolean not null default false,
   afternoon       boolean not null default false,
   evening         boolean not null default false,

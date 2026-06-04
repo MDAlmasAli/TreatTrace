@@ -225,22 +225,6 @@ class _DoctorWritePrescriptionScreenState
     );
   }
 
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context:     context,
-      initialDate: _date,
-      firstDate:   DateTime(2020),
-      lastDate:    DateTime.now(),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.light(primary: context.colors.accent),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked != null) setState(() => _date = picked);
-  }
-
   Future<void> _save() async {
     final validMeds = _meds
         .where((m) => m.nameCtrl.text.trim().isNotEmpty)
@@ -359,29 +343,25 @@ class _DoctorWritePrescriptionScreenState
                 _field(_diagnosisCtrl, c, 'Diagnosis / Chief Complaint', Icons.sick_rounded),
                 const SizedBox(height: 10),
 
-                // Date picker row
-                GestureDetector(
-                  onTap: _pickDate,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color:        c.card,
-                      borderRadius: BorderRadius.circular(14),
-                      border:       Border.all(color: c.border),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.calendar_today_rounded, color: c.accent, size: 18),
-                        const SizedBox(width: 10),
-                        Text('Prescription Date',
-                            style: GoogleFonts.poppins(fontSize: 13, color: c.textSec)),
-                        const Spacer(),
-                        Text(dateStr,
-                            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary)),
-                        const SizedBox(width: 4),
-                        Icon(Icons.edit_rounded, size: 14, color: c.textMuted),
-                      ],
-                    ),
+                // Prescription date — set automatically (today); not editable.
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color:        c.card,
+                    borderRadius: BorderRadius.circular(14),
+                    border:       Border.all(color: c.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today_rounded, color: c.accent, size: 18),
+                      const SizedBox(width: 10),
+                      Text('Prescription Date',
+                          style: GoogleFonts.poppins(fontSize: 13, color: c.textSec)),
+                      const Spacer(),
+                      Text(dateStr,
+                          style: GoogleFonts.poppins(
+                              fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary)),
+                    ],
                   ),
                 ),
 
@@ -762,6 +742,10 @@ class _MedicineCardState extends State<_MedicineCard> {
           ),
           const SizedBox(height: 10),
 
+          // Quantity
+          _inlineField(e.quantityCtrl, c, 'Quantity (e.g. 10 tablets, 1 strip)'),
+          const SizedBox(height: 10),
+
           // Timing (full words)
           Row(
             children: [
@@ -923,6 +907,7 @@ class _MealChip extends StatelessWidget {
 class _MedEntry {
   final nameCtrl         = TextEditingController();
   final doseCtrl         = TextEditingController();
+  final quantityCtrl     = TextEditingController();
   final durationCtrl     = TextEditingController();
   final instructionsCtrl = TextEditingController();
   bool morning    = false;
@@ -938,6 +923,7 @@ class _MedEntry {
     final e = _MedEntry();
     e.nameCtrl.text         = m.medicineName;
     e.doseCtrl.text         = m.dose ?? '';
+    e.quantityCtrl.text     = m.quantity ?? '';
     e.durationCtrl.text     = m.durationDays?.toString() ?? '';
     e.instructionsCtrl.text = m.instructions ?? '';
     e.morning    = m.morning;
@@ -952,6 +938,7 @@ class _MedEntry {
   void dispose() {
     nameCtrl.dispose();
     doseCtrl.dispose();
+    quantityCtrl.dispose();
     durationCtrl.dispose();
     instructionsCtrl.dispose();
   }
@@ -961,6 +948,7 @@ class _MedEntry {
     prescriptionId: '',
     medicineName:   nameCtrl.text.trim(),
     dose:           doseCtrl.text.trim().isEmpty         ? null : doseCtrl.text.trim(),
+    quantity:       quantityCtrl.text.trim().isEmpty     ? null : quantityCtrl.text.trim(),
     morning:        morning,
     afternoon:      afternoon,
     evening:        evening,
