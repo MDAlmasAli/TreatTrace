@@ -572,7 +572,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             child: widget.verificationStatus == 'pending'
                 ? _PendingBody()
                 : SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -582,7 +582,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                           pendingTasks: _pendingTasks,
                         ).animate().fadeIn(delay: 100.ms),
 
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 18),
 
                         Text(
                           'Quick Actions',
@@ -712,10 +712,10 @@ class _DoctorHeader extends StatelessWidget {
             ],
           ),
           padding: EdgeInsets.only(
-            top: topPad + 18,
-            left: 24,
-            right: 24,
-            bottom: 28,
+            top: topPad + 12,
+            left: 20,
+            right: 20,
+            bottom: 16,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -739,10 +739,10 @@ class _DoctorHeader extends StatelessWidget {
                         Text(
                           'Dr. $firstName',
                           style: GoogleFonts.poppins(
-                            fontSize: 26,
+                            fontSize: 22,
                             fontWeight: FontWeight.w700,
                             color: c.textPrimary,
-                            height: 1.2,
+                            height: 1.15,
                           ),
                         ),
                       ],
@@ -754,7 +754,7 @@ class _DoctorHeader extends StatelessWidget {
                   _HeaderIcon(icon: Icons.logout_rounded, onTap: onLogout),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               // Verification status badge
               _VerificationBadge(status: verificationStatus),
             ],
@@ -785,32 +785,26 @@ class _VerificationBadge extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: badgeColor.withAlpha(12),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: badgeColor.withAlpha(50)),
       ),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: badgeColor.withAlpha(20),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: badgeColor, size: 18),
-          ),
-          const SizedBox(width: 12),
+          Icon(icon, color: badgeColor, size: 16),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.poppins(fontSize: 13, color: c.textSec),
+              style: GoogleFonts.poppins(fontSize: 12, color: c.textSec),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: badgeColor.withAlpha(20),
               borderRadius: BorderRadius.circular(20),
@@ -818,7 +812,7 @@ class _VerificationBadge extends StatelessWidget {
             child: Text(
               badge,
               style: GoogleFonts.poppins(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: badgeColor,
               ),
@@ -972,48 +966,50 @@ class _StatPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: c.border, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(6),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
               color: color.withAlpha(20),
               borderRadius: BorderRadius.circular(9),
             ),
-            child: Icon(icon, size: 16, color: color),
+            child: Icon(icon, size: 15, color: color),
           ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: c.textPrimary,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              color: c.textSec,
-              height: 1.3,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: c.textPrimary,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label.replaceAll('\n', ' '),
+                  style: GoogleFonts.poppins(
+                    fontSize: 9,
+                    color: c.textSec,
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],

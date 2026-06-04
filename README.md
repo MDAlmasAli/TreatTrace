@@ -19,13 +19,18 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.80 — Active Development |
+| **Version** | v0.81 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.81 — Compact doctor home header & stats**
+- Slimmer greeting/header padding and smaller doctor name
+- Verified badge is now a single slim row (smaller icon, one-line label)
+- Stat cards switched to a compact icon-beside-value layout — the top section takes far less vertical space
 
 **v0.80 — Hide "Write Prescription" on non-scheduled appointments**
 - A doctor could open a cancelled (or no-show/completed) appointment and still write a prescription; the button now only shows while the appointment is `scheduled`
