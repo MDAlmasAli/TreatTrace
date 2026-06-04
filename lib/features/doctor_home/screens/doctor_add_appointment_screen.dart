@@ -103,6 +103,20 @@ class _DoctorAddAppointmentScreenState
         ));
         Navigator.of(context).pop();
       }
+    } on NoSlotAvailableException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            e.reason == 'on_hold'
+                ? 'Your profile is under review — you can\'t add new appointments until it\'s approved.'
+                : 'No slot available for this date.',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: context.colors.red,
+          behavior:        SnackBarBehavior.floating,
+          shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

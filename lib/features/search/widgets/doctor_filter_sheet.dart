@@ -216,6 +216,7 @@ class _DoctorFilterSheetState extends State<_DoctorFilterSheet> {
   late Set<int> _days;
   late Set<int> _bands;
   late double _minRating;
+  String _specialtyQuery = '';
   String _hospitalQuery = '';
 
   @override
@@ -314,18 +315,23 @@ class _DoctorFilterSheetState extends State<_DoctorFilterSheet> {
                   ...DoctorSort.values.map((s) => _radioRow(c, s)),
                   if (widget.specialties.isNotEmpty) ...[
                     _section(c, 'Specialty'),
-                    _chipWrap(c, widget.specialties, _specialties),
+                    if (widget.specialties.length > 6)
+                      _searchField(c, 'Search specialties…',
+                          (v) => setState(() => _specialtyQuery = v)),
+                    _chipBox(
+                      c,
+                      _visible(widget.specialties, _specialties, _specialtyQuery),
+                      _specialties,
+                    ),
                   ],
                   if (widget.hospitals.isNotEmpty) ...[
                     _section(c, 'Hospital'),
-                    if (widget.hospitals.length > 6) _hospitalSearch(c),
-                    _chipWrap(
+                    if (widget.hospitals.length > 6)
+                      _searchField(c, 'Search hospitals…',
+                          (v) => setState(() => _hospitalQuery = v)),
+                    _chipBox(
                       c,
-                      widget.hospitals
-                          .where((h) => h
-                              .toLowerCase()
-                              .contains(_hospitalQuery.toLowerCase()))
-                          .toList(),
+                      _visible(widget.hospitals, _hospitals, _hospitalQuery),
                       _hospitals,
                     ),
                   ],
@@ -397,15 +403,16 @@ class _DoctorFilterSheetState extends State<_DoctorFilterSheet> {
     );
   }
 
-  Widget _hospitalSearch(ThemeColors c) => Padding(
+  Widget _searchField(ThemeColors c, String hint, ValueChanged<String> onChanged) =>
+      Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: SizedBox(
           height: 40,
           child: TextField(
-            onChanged: (v) => setState(() => _hospitalQuery = v),
+            onChanged: onChanged,
             style: GoogleFonts.poppins(fontSize: 12, color: c.textPrimary),
             decoration: InputDecoration(
-              hintText: 'Search hospitals…',
+              hintText: hint,
               hintStyle: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
               prefixIcon: Icon(Icons.search_rounded, size: 18, color: c.textMuted),
               filled: true,
@@ -428,18 +435,47 @@ class _DoctorFilterSheetState extends State<_DoctorFilterSheet> {
         ),
       );
 
-  Widget _chipWrap(ThemeColors c, List<String> options, Set<String> selected) =>
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: options
-            .map((o) => _chip(c, o, selected.contains(o), () {
-                  setState(() {
-                    selected.contains(o) ? selected.remove(o) : selected.add(o);
-                  });
-                }))
-            .toList(),
+  // Selected options first, then alphabetical; narrowed by the search query.
+  List<String> _visible(List<String> all, Set<String> selected, String query) {
+    final q = query.trim().toLowerCase();
+    final list = (q.isEmpty
+        ? [...all]
+        : all.where((o) => o.toLowerCase().contains(q)).toList())
+      ..sort((a, b) {
+        final sa = selected.contains(a), sb = selected.contains(b);
+        if (sa != sb) return sa ? -1 : 1;
+        return a.toLowerCase().compareTo(b.toLowerCase());
+      });
+    return list;
+  }
+
+  // Chip wrap capped to a few rows; scrolls internally so one long list never
+  // dominates the sheet. Shows a friendly note when the search matches nothing.
+  Widget _chipBox(ThemeColors c, List<String> options, Set<String> selected) {
+    if (options.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text('No matches',
+            style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted)),
       );
+    }
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 168),
+      child: SingleChildScrollView(
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options
+              .map((o) => _chip(c, o, selected.contains(o), () {
+                    setState(() {
+                      selected.contains(o) ? selected.remove(o) : selected.add(o);
+                    });
+                  }))
+              .toList(),
+        ),
+      ),
+    );
+  }
 
   Widget _dayChips(ThemeColors c) => Wrap(
         spacing: 8,

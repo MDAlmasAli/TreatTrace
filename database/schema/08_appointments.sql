@@ -55,6 +55,7 @@ create or replace function public.assign_ticket_and_check_slot()
 declare
   v_days  smallint[];
   v_limit int;
+  v_edit  text;
   v_count int;
   v_max   int;
 begin
@@ -65,8 +66,14 @@ begin
   perform pg_advisory_xact_lock(
     hashtextextended(new.doctor_user_id::text || '|' || new.appointment_date::text, 0));
 
-  select visiting_days, daily_patient_limit into v_days, v_limit
+  select visiting_days, daily_patient_limit, edit_status
+    into v_days, v_limit, v_edit
   from public.doctor_verifications where id = new.doctor_user_id;
+
+  -- Doctor on hold (profile edit under review): no new bookings.
+  if v_edit = 'pending' then
+    raise exception 'DOCTOR_ON_HOLD' using errcode = 'P0001';
+  end if;
 
   if v_days is not null and array_length(v_days, 1) is not null
      and not (extract(isodow from new.appointment_date)::int = any(v_days)) then
@@ -194,7 +201,7 @@ $function$;
 create or replace function public.check_appointment_availability(p_doctor uuid, p_date date)
  returns jsonb language plpgsql security definer set search_path to 'public' as $function$
 declare
-  v_days smallint[]; v_limit int; v_count int;
+  v_days smallint[]; v_limit int; v_edit text; v_count int;
   v_requested_ok bool := true; v_reason text := 'ok';
   v_next date := null; v_probe date; v_i int := 0; v_isday bool;
 begin
@@ -202,8 +209,14 @@ begin
     return jsonb_build_object('requested_ok', true, 'reason', 'ok', 'next_available', p_date);
   end if;
 
-  select visiting_days, daily_patient_limit into v_days, v_limit
+  select visiting_days, daily_patient_limit, edit_status
+    into v_days, v_limit, v_edit
   from public.doctor_verifications where id = p_doctor;
+
+  -- Doctor on hold (profile edit under review): unavailable for new bookings.
+  if v_edit = 'pending' then
+    return jsonb_build_object('requested_ok', false, 'reason', 'on_hold', 'next_available', null);
+  end if;
 
   if v_days is not null and array_length(v_days, 1) is not null
      and not (extract(isodow from p_date)::int = any(v_days)) then

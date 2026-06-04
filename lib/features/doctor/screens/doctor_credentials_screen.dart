@@ -59,13 +59,18 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
 
   void _startEdit() {
     final d = _data!;
-    _bmdcCtrl.text       = d['bmdc_number']    ?? '';
-    _specialtyCtrl.text  = d['specialty']       ?? '';
-    _hospitalCtrl.text   = d['hospital']        ?? '';
-    _nidCtrl.text        = d['nid_passport']    ?? '';
-    _degreeCtrl.text     = d['degree']          ?? '';
-    _aboutCtrl.text      = d['about']           ?? '';
-    _additionalCtrl.text = d['additional_info'] ?? '';
+    // While an edit is still pending, continue from the submitted (pending_*)
+    // values; otherwise start from the current live credentials.
+    final pending = d['edit_status'] == 'pending';
+    String pick(String pendingKey, String liveKey) =>
+        (pending ? d[pendingKey] as String? : null) ?? (d[liveKey] as String?) ?? '';
+    _bmdcCtrl.text       = pick('pending_bmdc',         'bmdc_number');
+    _specialtyCtrl.text  = pick('pending_specialty',    'specialty');
+    _hospitalCtrl.text   = pick('pending_hospital',     'hospital');
+    _nidCtrl.text        = pick('pending_nid_passport', 'nid_passport');
+    _degreeCtrl.text     = pick('pending_degree',       'degree');
+    _aboutCtrl.text      = pick('pending_about',        'about');
+    _additionalCtrl.text = pick('pending_additional',   'additional_info');
     setState(() { _editing = true; _error = null; });
   }
 
@@ -105,7 +110,10 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
             style: GoogleFonts.poppins(
                 fontSize: 17, fontWeight: FontWeight.w700, color: c.textPrimary)),
         actions: [
-          if (!_loading && _data != null && !_editing && _data!['edit_status'] == null)
+          // Editable when not currently editing and not in the rejected state
+          // (rejected uses its own "Update & Resubmit" button). A pending edit
+          // can still be revised — re-submitting overwrites the pending one.
+          if (!_loading && _data != null && !_editing && _data!['edit_status'] != 'rejected')
             TextButton.icon(
               onPressed: _startEdit,
               icon: Icon(Icons.edit_rounded, size: 16, color: c.accent),

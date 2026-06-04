@@ -281,6 +281,34 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
     final c = context.colors;
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     String fmt(DateTime d) => '${d.day} ${months[d.month - 1]} ${d.year}';
+
+    // Doctor's profile is under review — not a date problem, so no "next day".
+    if (e.reason == 'on_hold') {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: c.card,
+          title: Text('Temporarily unavailable',
+              style: GoogleFonts.poppins(
+                  color: c.textPrimary, fontWeight: FontWeight.w700)),
+          content: Text(
+            'This doctor is updating their profile details and isn\'t accepting '
+            'new appointments right now. Please try again a little later.',
+            style: GoogleFonts.poppins(fontSize: 13, color: c.textSec, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('OK',
+                  style: GoogleFonts.poppins(
+                      color: c.accent, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      );
+      return null;
+    }
+
     final reasonMsg = e.reason == 'not_visiting_day'
         ? "The doctor doesn't sit on ${fmt(_date!)}."
         : 'This doctor is fully booked on ${fmt(_date!)}.';

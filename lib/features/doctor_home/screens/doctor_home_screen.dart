@@ -23,6 +23,7 @@ class DoctorHomeScreen extends StatefulWidget {
   final String currentTheme;
   final String currentLocale;
   final String verificationStatus;
+  final String? editStatus; // 'pending' = profile edit under review (on hold)
 
   const DoctorHomeScreen({
     super.key,
@@ -31,6 +32,7 @@ class DoctorHomeScreen extends StatefulWidget {
     required this.currentTheme,
     required this.currentLocale,
     this.verificationStatus = 'approved',
+    this.editStatus,
   });
 
   @override
@@ -568,6 +570,11 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (widget.editStatus == 'pending') ...[
+                          _OnHoldBanner(),
+                          const SizedBox(height: 16),
+                        ],
+
                         _StatsRow(
                           todayAppointments: _todayAppointments,
                           totalPatients: _totalPatients,
@@ -754,6 +761,50 @@ class _DoctorHeader extends StatelessWidget {
         .animate()
         .fadeIn(duration: 500.ms)
         .slideY(begin: -0.06, end: 0, duration: 500.ms);
+  }
+}
+
+// Shown on the doctor home while a profile edit awaits admin approval.
+class _OnHoldBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: c.amber.withAlpha(20),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: c.amber.withAlpha(70)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.hourglass_top_rounded, size: 20, color: c.amber),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Profile changes under review',
+                    style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: c.textPrimary)),
+                const SizedBox(height: 3),
+                Text(
+                  "You're hidden from search and can't receive new bookings "
+                  'until an admin approves your changes. Existing appointments '
+                  'are unaffected.',
+                  style: GoogleFonts.poppins(
+                      fontSize: 12, color: c.textSec, height: 1.4),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(delay: 60.ms);
   }
 }
 

@@ -84,3 +84,57 @@ begin
   where id = p_doctor_id and edit_status = 'pending';
 end;
 $function$;
+
+-- Notifications around a profile-edit review (a doctor is "on hold" while
+-- edit_status = 'pending' — see the booking guards in 08_appointments.sql):
+--   • edit goes → 'pending' : reassure patients with a scheduled appointment
+--   • edit leaves 'pending'  : tell those patients the doctor is back to normal
+--   • edit → 'rejected'      : notify the doctor (with the reason)
+create or replace function public.notify_doctor_edit_status_change()
+ returns trigger language plpgsql security definer set search_path to 'public' as $function$
+declare
+  doc_name text;
+begin
+  if new.edit_status is not distinct from old.edit_status then
+    return new;
+  end if;
+
+  select coalesce(nullif(trim(full_name), ''), 'your doctor')
+    into doc_name from public.profiles where id = new.id;
+
+  if new.edit_status = 'pending' and old.edit_status is distinct from 'pending' then
+    insert into public.notifications (user_id, type, title, body, data)
+    select distinct a.user_id, 'doctor_under_review', 'Doctor profile update',
+      'Dr. ' || doc_name || ' is currently updating their profile details. '
+        || 'Your scheduled appointment is not affected.',
+      jsonb_build_object('doctor_id', new.id)
+    from public.appointments a
+    where a.doctor_user_id = new.id and a.status = 'scheduled';
+  end if;
+
+  if old.edit_status = 'pending' and new.edit_status is distinct from 'pending' then
+    insert into public.notifications (user_id, type, title, body, data)
+    select distinct a.user_id, 'doctor_available', 'Doctor profile updated',
+      'Dr. ' || doc_name || ' is available as usual. '
+        || 'Your scheduled appointment is unaffected.',
+      jsonb_build_object('doctor_id', new.id)
+    from public.appointments a
+    where a.doctor_user_id = new.id and a.status = 'scheduled';
+  end if;
+
+  if new.edit_status = 'rejected' and old.edit_status is distinct from 'rejected' then
+    insert into public.notifications (user_id, type, title, body, data)
+    values (new.id, 'edit_rejected', 'Profile edit rejected',
+      'Your profile changes were rejected'
+        || coalesce(': ' || nullif(trim(new.edit_rejection_reason), ''), '') || '.',
+      jsonb_build_object('doctor_id', new.id));
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists trg_notify_doctor_edit_status_change on public.doctor_verifications;
+create trigger trg_notify_doctor_edit_status_change
+  after update on public.doctor_verifications
+  for each row execute function public.notify_doctor_edit_status_change();

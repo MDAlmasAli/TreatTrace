@@ -19,7 +19,7 @@ class DuplicateActiveAppointmentException implements Exception {
 /// Thrown when the requested date is full or not a visiting day. Carries the
 /// next available date (if any) so the UI can offer it.
 class NoSlotAvailableException implements Exception {
-  final String    reason;        // 'full' | 'not_visiting_day'
+  final String    reason;        // 'full' | 'not_visiting_day' | 'on_hold'
   final DateTime? nextAvailable;
   NoSlotAvailableException({required this.reason, this.nextAvailable});
   @override
@@ -117,6 +117,9 @@ class AppointmentService {
     } on PostgrestException catch (e) {
       // Race: the DB trigger rejected it after our pre-check. Re-probe so the
       // UI can offer the next available date.
+      if (e.message.contains('DOCTOR_ON_HOLD')) {
+        throw NoSlotAvailableException(reason: 'on_hold');
+      }
       if (e.message.contains('NO_SLOT_AVAILABLE') ||
           e.message.contains('INVALID_VISITING_DAY')) {
         DateTime? next;
@@ -283,7 +286,12 @@ class AppointmentService {
           .select()
           .single();
       return Appointment.fromMap(inserted);
-    } catch (_) {
+    } catch (e) {
+      // Doctor on hold (profile edit under review): don't fall back to an
+      // unlinked insert — surface it so the UI can explain.
+      if (e is PostgrestException && e.message.contains('DOCTOR_ON_HOLD')) {
+        throw NoSlotAvailableException(reason: 'on_hold');
+      }
       final inserted = await _client
           .from('appointments')
           .insert({...appt.toMap(), 'user_id': patientId})

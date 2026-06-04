@@ -224,6 +224,7 @@ class _DoctorPublicProfileScreenState
     final avatar        = d['avatar_url']    as String?;
     final ratingAvg     = (d['rating_avg']   as num?)?.toDouble() ?? 0;
     final ratingCount   = (d['rating_count'] as num?)?.toInt() ?? 0;
+    final onHold        = (d['edit_status']  as String?) == 'pending';
 
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
@@ -438,23 +439,70 @@ class _DoctorPublicProfileScreenState
                   ),
                 ),
                 const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _takeAppointment,
-                    icon: const Icon(Icons.event_available_rounded, size: 18),
-                    label: Text(
-                      'Take Appointment',
-                      style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+                if (onHold) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: c.amber.withAlpha(20),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: c.amber.withAlpha(70)),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: c.accent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      padding: const EdgeInsets.symmetric(vertical: 15),
+                    child: Row(
+                      children: [
+                        Icon(Icons.hourglass_top_rounded, size: 18, color: c.amber),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            "This doctor is updating their profile and isn't taking "
+                            'new appointments right now.',
+                            style: GoogleFonts.poppins(
+                                fontSize: 12, color: c.textSec, height: 1.4),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: null,
+                      icon: const Icon(Icons.event_busy_rounded, size: 18),
+                      label: Text(
+                        'Temporarily Unavailable',
+                        style: GoogleFonts.poppins(
+                            fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: c.accent,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: c.textMuted.withAlpha(60),
+                        disabledForegroundColor: Colors.white.withAlpha(180),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                      ),
+                    ),
+                  ),
+                ] else
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _takeAppointment,
+                      icon: const Icon(Icons.event_available_rounded, size: 18),
+                      label: Text(
+                        'Take Appointment',
+                        style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: c.accent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                      ),
+                    ),
+                  ),
                 if (_alreadyInMyDocs) ...[
                   const SizedBox(height: 10),
                   SizedBox(

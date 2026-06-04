@@ -71,14 +71,17 @@ class DoctorPatientLinkService {
         .from('doctor_verifications')
         .select('id, specialty, hospital, chamber, visiting_fee, degree, '
             'visiting_days, visiting_start_time, visiting_end_time, '
-            'rating_avg, rating_count')
+            'edit_status, rating_avg, rating_count')
         .eq('status', 'approved')
         .inFilter('id', ids) as List;
 
     final approvedMap = {for (final v in verifs) v['id'] as String: v};
 
     return profiles
-        .where((p) => approvedMap.containsKey(p['id'] as String))
+        // Hide doctors whose profile edit is awaiting approval (on hold).
+        .where((p) =>
+            approvedMap.containsKey(p['id'] as String) &&
+            approvedMap[p['id'] as String]?['edit_status'] != 'pending')
         .map((p) {
           final v = approvedMap[p['id'] as String];
           return {
@@ -184,7 +187,7 @@ class DoctorPatientLinkService {
           .maybeSingle(),
       _client
           .from('doctor_verifications')
-          .select('specialty, hospital, degree, visiting_fee, visiting_hours, chamber, about, rating_avg, rating_count')
+          .select('specialty, hospital, degree, visiting_fee, visiting_hours, chamber, about, edit_status, rating_avg, rating_count')
           .eq('id', doctorId)
           .eq('status', 'approved')
           .maybeSingle(),
@@ -207,6 +210,7 @@ class DoctorPatientLinkService {
       'visiting_hours': verif?['visiting_hours'],
       'chamber':        verif?['chamber'],
       'about':          verif?['about'],
+      'edit_status':    verif?['edit_status'],   // 'pending' = on hold
       'rating_avg':     verif?['rating_avg'],
       'rating_count':   verif?['rating_count'],
     };

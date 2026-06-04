@@ -282,6 +282,7 @@ class _RoleAwareRouterState extends State<_RoleAwareRouter> {
       }
       return DoctorHomeScreen(
         verificationStatus: status,
+        editStatus:         _verification?['edit_status'] as String?,
         onThemeChanged:     widget.onThemeChanged,
         onLocaleChanged:    widget.onLocaleChanged,
         currentTheme:       widget.currentTheme,
