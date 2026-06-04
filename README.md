@@ -19,13 +19,18 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.86 — Active Development |
+| **Version** | v0.87 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.87 — Race-safe ticket booking (concurrent bookings)**
+- Two patients booking the same doctor+day at the exact same moment could previously get the same serial or slightly overbook (the ticket trigger read count/max without locking)
+- The insert and reschedule triggers now take a per-doctor-per-day transaction advisory lock, so concurrent bookings serialise → correct serials and capacity
+- Added a partial unique index `(doctor_user_id, appointment_date, ticket_no)` on scheduled rows as a hard guard against duplicate serials (DB-only; no app rebuild needed)
 
 **v0.86 — Show serial + estimated time on patient appointment cards**
 - Each upcoming appointment card now shows the patient's live queue serial and estimated visit time (e.g. "#2 · ~5:10 PM"), loaded per card via the queue-position RPC + the doctor's schedule
