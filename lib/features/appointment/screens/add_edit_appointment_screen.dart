@@ -950,56 +950,227 @@ class _DoctorPicker extends StatelessWidget {
     required this.onChanged,
   });
 
+  Future<void> _openSheet(BuildContext context) async {
+    final result = await showModalBottomSheet<Object?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _DoctorSearchSheet(doctors: doctors, selected: selected),
+    );
+    if (result == 'none') {
+      onChanged(null);
+    } else if (result is Doctor) {
+      onChanged(result);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final s = S.of(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color:        c.card,
-        borderRadius: BorderRadius.circular(16),
-        border:       Border.all(color: c.border, width: 1),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: loading
-          ? Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              child: Center(
+    return GestureDetector(
+      onTap: loading ? null : () => _openSheet(context),
+      child: Container(
+        decoration: BoxDecoration(
+          color:        c.card,
+          borderRadius: BorderRadius.circular(16),
+          border:       Border.all(color: c.border, width: 1),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: loading
+            ? Center(
                 child: SizedBox(
                   width: 18, height: 18,
                   child: CircularProgressIndicator(color: c.amber, strokeWidth: 2),
                 ),
-              ),
-            )
-          : DropdownButtonHideUnderline(
-              child: DropdownButton<Doctor?>(
-                value:         selected,
-                isExpanded:    true,
-                dropdownColor: c.card,
-                icon: Icon(Icons.expand_more_rounded, color: c.textMuted, size: 20),
-                style: GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
-                hint: Text(s.noLinkedDoctor,
-                    style: GoogleFonts.poppins(fontSize: 13, color: c.textMuted)),
-                onChanged: onChanged,
-                items: [
-                  DropdownMenuItem<Doctor?>(
-                    value: null,
-                    child: Text(s.noLinkedDoctor,
-                        style: GoogleFonts.poppins(fontSize: 13, color: c.textMuted)),
+              )
+            : Row(
+                children: [
+                  Icon(Icons.medical_services_rounded, size: 18, color: c.amber),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      selected != null
+                          ? selected!.displayName +
+                              (selected!.specialty?.isNotEmpty == true
+                                  ? ' · ${selected!.specialty}'
+                                  : '')
+                          : s.selectDoctor,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: selected != null ? c.textPrimary : c.textMuted,
+                      ),
+                    ),
                   ),
-                  ...doctors.map((d) => DropdownMenuItem<Doctor?>(
-                        value: d,
-                        child: Text(
-                          d.displayName +
-                              (d.specialty?.isNotEmpty == true ? ' · ${d.specialty}' : ''),
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
-                        ),
-                      )),
+                  Icon(Icons.expand_more_rounded, color: c.textMuted, size: 20),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+// Searchable doctor picker sheet. Pops a Doctor, the string 'none' (clear), or
+// null (dismissed — no change).
+class _DoctorSearchSheet extends StatefulWidget {
+  final List<Doctor> doctors;
+  final Doctor?      selected;
+  const _DoctorSearchSheet({required this.doctors, required this.selected});
+
+  @override
+  State<_DoctorSearchSheet> createState() => _DoctorSearchSheetState();
+}
+
+class _DoctorSearchSheetState extends State<_DoctorSearchSheet> {
+  final _ctrl = TextEditingController();
+  String _q = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl.addListener(() => setState(() => _q = _ctrl.text.trim().toLowerCase()));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final s = S.of(context);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final maxH = MediaQuery.of(context).size.height * 0.7;
+
+    final filtered = widget.doctors.where((d) {
+      if (_q.isEmpty) return true;
+      return d.name.toLowerCase().contains(_q) ||
+          (d.specialty?.toLowerCase().contains(_q) ?? false) ||
+          (d.hospital?.toLowerCase().contains(_q) ?? false);
+    }).toList();
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        constraints: BoxConstraints(maxHeight: maxH),
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: c.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(s.selectDoctor,
+                style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: c.textPrimary)),
+            const SizedBox(height: 12),
+            // Search field
+            Container(
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: c.border),
+              ),
+              child: TextField(
+                controller: _ctrl,
+                autofocus: true,
+                style: GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'Search by name, specialty or hospital…',
+                  hintStyle:
+                      GoogleFonts.poppins(fontSize: 13, color: c.textMuted),
+                  prefixIcon:
+                      Icon(Icons.search_rounded, color: c.textSec, size: 20),
+                  suffixIcon: _ctrl.text.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () => _ctrl.clear(),
+                          child: Icon(Icons.close_rounded,
+                              color: c.textMuted, size: 18),
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  // Clear / no specific doctor
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.block_rounded, size: 20, color: c.textMuted),
+                    title: Text(s.noLinkedDoctor,
+                        style: GoogleFonts.poppins(
+                            fontSize: 13, color: c.textMuted)),
+                    trailing: widget.selected == null
+                        ? Icon(Icons.check_rounded, size: 18, color: c.amber)
+                        : null,
+                    onTap: () => Navigator.of(context).pop('none'),
+                  ),
+                  if (filtered.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text('No doctors found',
+                            style: GoogleFonts.poppins(
+                                fontSize: 13, color: c.textMuted)),
+                      ),
+                    ),
+                  ...filtered.map((d) {
+                    final isSel = widget.selected?.id == d.id;
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.medical_services_rounded,
+                          size: 20, color: c.amber),
+                      title: Text(d.displayName,
+                          style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: c.textPrimary)),
+                      subtitle: (d.specialty?.isNotEmpty == true ||
+                              d.hospital?.isNotEmpty == true)
+                          ? Text(
+                              [d.specialty, d.hospital]
+                                  .where((e) => e?.isNotEmpty == true)
+                                  .join(' · '),
+                              style: GoogleFonts.poppins(
+                                  fontSize: 11, color: c.textMuted),
+                            )
+                          : null,
+                      trailing: isSel
+                          ? Icon(Icons.check_rounded, size: 18, color: c.amber)
+                          : null,
+                      onTap: () => Navigator.of(context).pop(d),
+                    );
+                  }),
                 ],
               ),
             ),
+          ],
+        ),
+      ),
     );
   }
 }

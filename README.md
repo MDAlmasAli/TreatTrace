@@ -19,13 +19,17 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.82 — Active Development |
+| **Version** | v0.83 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-03 |
 
 ---
 
 ## Recent Updates
+
+**v0.83 — Searchable doctor picker in Add Appointment**
+- Replaced the plain dropdown with a tap-to-open bottom sheet that has a search box (filters My Doctors by name, specialty, or hospital) — no more long scrolling when you have many doctors
+- Shows the current selection, a "No Doctor Linked" clear option, and a checkmark on the selected doctor
 
 **v0.82 — Remove unused manual doctor-patient request code**
 - The manual "send request / accept" link flow was never wired into the UI; linking happens automatically when a doctor writes a prescription (auto-link)
