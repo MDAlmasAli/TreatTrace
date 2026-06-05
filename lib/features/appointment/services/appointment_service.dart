@@ -1,7 +1,7 @@
 // appointment_service.dart — Supabase CRUD for appointments table.
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/appointment.dart';
+import '../models/appointment_model.dart';
 
 /// Thrown when a patient tries to book a second active appointment with a
 /// doctor they already have a scheduled appointment with.

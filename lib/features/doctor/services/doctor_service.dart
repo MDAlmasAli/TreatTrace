@@ -1,7 +1,7 @@
 // doctor_service.dart — Supabase CRUD for doctors table.
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/doctor.dart';
+import '../models/doctor_model.dart';
 
 class DoctorService {
   final _client = Supabase.instance.client;

@@ -9,10 +9,10 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/utils/file_utils.dart';
-import '../../../core/widgets/linked_doctor_picker_card.dart';
-import '../../prescription/models/prescription.dart';
+import '../../../shared/widgets/linked_doctor_picker_card.dart';
+import '../../prescription/models/prescription_model.dart';
 import '../../prescription/services/prescription_service.dart';
-import '../models/test_report.dart';
+import '../models/test_report_model.dart';
 import '../services/test_report_service.dart';
 
 const _kPresetCategories = [

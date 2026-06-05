@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../features/profile/models/health_profile.dart';
+import '../../features/patient/models/health_profile_model.dart';
 
 class ProfileService {
   final _client = Supabase.instance.client;

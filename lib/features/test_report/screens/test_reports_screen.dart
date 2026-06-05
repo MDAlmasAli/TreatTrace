@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
-import '../models/test_report.dart';
+import '../models/test_report_model.dart';
 import '../services/test_report_service.dart';
 import '../../prescription/services/prescription_service.dart';
 import '../../prescription/screens/prescription_detail_screen.dart';

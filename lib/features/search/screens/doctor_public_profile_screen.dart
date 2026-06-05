@@ -5,9 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../appointment/screens/add_edit_appointment_screen.dart';
-import '../../doctor/models/doctor.dart';
+import '../../doctor/models/doctor_model.dart';
 import '../../doctor/services/doctor_service.dart';
-import '../../doctor_home/services/doctor_patient_link_service.dart';
+import '../../doctor/services/doctor_patient_link_service.dart';
 import '../../review/widgets/review_widgets.dart';
 
 class DoctorPublicProfileScreen extends StatefulWidget {

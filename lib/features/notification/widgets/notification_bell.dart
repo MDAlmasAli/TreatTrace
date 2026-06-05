@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/reminder_service.dart';
-import '../models/app_notification.dart';
+import '../models/app_notification_model.dart';
 import '../services/notification_service.dart';
 import '../screens/notifications_screen.dart';
 

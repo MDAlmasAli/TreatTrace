@@ -7,13 +7,13 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
-import '../../../features/prescription/models/prescription.dart';
+import '../../../features/prescription/models/prescription_model.dart';
 import '../../../features/prescription/services/prescription_service.dart';
 import '../../../features/prescription/screens/prescription_detail_screen.dart';
-import '../../../features/test_report/models/test_report.dart';
+import '../../../features/test_report/models/test_report_model.dart';
 import '../../../features/test_report/services/test_report_service.dart';
 import '../../../features/test_report/screens/test_report_detail_screen.dart';
-import '../models/appointment.dart';
+import '../models/appointment_model.dart';
 import '../services/appointment_service.dart';
 import 'add_edit_appointment_screen.dart';
 

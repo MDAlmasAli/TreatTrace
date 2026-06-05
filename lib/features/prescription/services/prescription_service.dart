@@ -7,8 +7,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/prescription.dart';
-import '../models/prescription_medicine.dart';
+import '../models/prescription_model.dart';
+import '../models/prescription_medicine_model.dart';
 
 class PrescriptionService {
   final _client = Supabase.instance.client;

@@ -6,7 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/test_report.dart';
+import '../models/test_report_model.dart';
 
 class TestReportService {
   final _client = Supabase.instance.client;

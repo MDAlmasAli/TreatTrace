@@ -5,7 +5,7 @@
 // patient reads/edits only their own row directly.
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/doctor_review.dart';
+import '../models/doctor_review_model.dart';
 
 class ReviewNotAllowedException implements Exception {
   final String message;

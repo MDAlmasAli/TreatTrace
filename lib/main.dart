@@ -31,8 +31,8 @@ import 'features/admin/screens/admin_home_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/role_selection_screen.dart';
 import 'features/doctor/screens/doctor_verification_submit_screen.dart';
-import 'features/home/screens/home_screen.dart';
-import 'features/doctor_home/screens/doctor_home_screen.dart';
+import 'features/patient/screens/patient_home_screen.dart';
+import 'features/doctor/screens/doctor_home_screen.dart';
 
 // ── App entry ──────────────────────────────────────────────────────────────
 Future<void> main() async {
@@ -290,7 +290,7 @@ class _RoleAwareRouterState extends State<_RoleAwareRouter> {
       );
     }
 
-    return HomeScreen(
+    return PatientHomeScreen(
       onThemeChanged:  widget.onThemeChanged,
       onLocaleChanged: widget.onLocaleChanged,
       currentTheme:    widget.currentTheme,

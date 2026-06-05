@@ -13,9 +13,9 @@ import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/profile_service.dart';
 import '../../../core/services/reminder_service.dart';
 import '../../../core/utils/file_utils.dart';
-import '../../../core/widgets/linked_doctor_picker_card.dart';
-import '../models/prescription.dart';
-import '../models/prescription_medicine.dart';
+import '../../../shared/widgets/linked_doctor_picker_card.dart';
+import '../models/prescription_model.dart';
+import '../models/prescription_medicine_model.dart';
 import '../services/prescription_service.dart';
 
 class AddEditPrescriptionScreen extends StatefulWidget {

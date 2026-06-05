@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
-import '../models/appointment.dart';
+import '../models/appointment_model.dart';
 import '../services/appointment_service.dart';
 import 'add_edit_appointment_screen.dart';
 import 'appointment_detail_screen.dart';

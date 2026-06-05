@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
-import '../models/prescription.dart';
+import '../models/prescription_model.dart';
 import '../services/prescription_service.dart';
 import 'add_edit_prescription_screen.dart';
 import 'prescription_detail_screen.dart';

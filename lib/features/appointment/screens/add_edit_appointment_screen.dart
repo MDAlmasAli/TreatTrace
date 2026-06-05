@@ -7,13 +7,13 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
-import '../../doctor/models/doctor.dart';
+import '../../doctor/models/doctor_model.dart';
 import '../../doctor/services/doctor_service.dart';
-import '../../prescription/models/prescription.dart';
+import '../../prescription/models/prescription_model.dart';
 import '../../prescription/services/prescription_service.dart';
-import '../../test_report/models/test_report.dart';
+import '../../test_report/models/test_report_model.dart';
 import '../../test_report/services/test_report_service.dart';
-import '../models/appointment.dart';
+import '../models/appointment_model.dart';
 import '../services/appointment_service.dart';
 
 class AddEditAppointmentScreen extends StatefulWidget {

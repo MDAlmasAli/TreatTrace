@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
-import '../models/doctor_review.dart';
+import '../models/doctor_review_model.dart';
 import '../services/review_service.dart';
 
 // ── Star row (read-only display) ──────────────────────────────────────────────

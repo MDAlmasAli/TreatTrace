@@ -6,13 +6,13 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
-import '../../doctor_home/models/doctor_patient_link.dart';
-import '../../doctor_home/services/doctor_patient_link_service.dart';
+import '../../doctor/models/doctor_patient_link_model.dart';
+import '../../doctor/services/doctor_patient_link_service.dart';
 import 'doctor_public_profile_screen.dart';
-import '../../prescription/models/prescription.dart';
+import '../../prescription/models/prescription_model.dart';
 import '../../prescription/services/prescription_service.dart';
 import '../../prescription/screens/prescription_detail_screen.dart';
-import '../../test_report/models/test_report.dart';
+import '../../test_report/models/test_report_model.dart';
 import '../../test_report/services/test_report_service.dart';
 import '../../test_report/screens/test_report_detail_screen.dart';
 import '../../review/widgets/review_widgets.dart';

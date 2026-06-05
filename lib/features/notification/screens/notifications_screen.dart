@@ -9,7 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../appointment/services/appointment_service.dart';
 import '../../appointment/screens/appointment_detail_screen.dart';
-import '../models/app_notification.dart';
+import '../models/app_notification_model.dart';
 import '../services/notification_service.dart';
 
 class NotificationsScreen extends StatefulWidget {

@@ -1,7 +1,7 @@
 // notification_service.dart — Supabase CRUD + realtime for in-app notifications.
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/app_notification.dart';
+import '../models/app_notification_model.dart';
 
 class NotificationService {
   final _client = Supabase.instance.client;
