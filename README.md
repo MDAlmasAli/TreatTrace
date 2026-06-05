@@ -19,7 +19,7 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.95 — Active Development |
+| **Version** | v0.96 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
 | **Last Updated** | 2026-06-05 |
 
@@ -179,6 +179,8 @@ flutter run
 ---
 
 ## 8. Changelog (highlights)
+
+**v0.96** — Appointment privacy, richer tiles, and an auth fix. (1) **Privacy:** in a doctor's view of a patient, only the doctor's *own* appointments show full details and open; other doctors' appointments are redacted (doctor name, date, status only) and can't be opened. (2) **Tiles:** each appointment row now leads with the doctor's name and shows linked prescription / test-report counts; the doctor's own appointments are tappable in both the patient-detail preview **and** the All Appointments list (both now share one `PatientAppointmentTile` widget). (3) **Logout→login fix:** logging out used to wipe the whole navigator stack and push a bare login screen, destroying the `AuthGate` that auto-navigates on login — so signing into a second account left it "stuck" until an app restart. Logout now pops back to the `AuthGate` root (which survives), so the next login routes itself. The same fix is applied to account deletion (which now also clears the local session).
 
 **v0.95** — Codebase housekeeping (no behaviour change). `lib/` reorganised into a clean role-based, feature-first layout: patient screens consolidated under `features/patient/`, the doctor portal merged under `features/doctor/`, and the one shared widget moved to `shared/widgets/`. Screens and classes renamed for clarity (e.g. `HomeScreen`→`PatientHomeScreen`, `DoctorsScreen`→`MyDoctorsScreen`); model files now use the `*_model.dart` suffix. Removed 7 dead/unwired files. Added [`PROJECT_MAP.md`](PROJECT_MAP.md) (a find-anything index of every screen/model/service) and [`database/SCHEMA_VERIFICATION.md`](database/SCHEMA_VERIFICATION.md) (object-by-object proof that the SQL matches the live database). All READMEs rebuilt to match the current code.
 

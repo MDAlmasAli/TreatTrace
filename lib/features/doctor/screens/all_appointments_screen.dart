@@ -2,19 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../appointment/models/appointment_model.dart';
 import '../../appointment/services/appointment_service.dart';
+import '../widgets/patient_appointment_tile.dart';
 
 class AllAppointmentsScreen extends StatefulWidget {
   final String patientId;
   final String patientName;
+  // Opens an appointment's full detail (doctor view). Only invoked for the
+  // current doctor's own appointments; passed in from the patient detail screen.
+  final void Function(Appointment)? onAppointmentTap;
 
   const AllAppointmentsScreen({
     super.key,
     required this.patientId,
     required this.patientName,
+    this.onAppointmentTap,
   });
 
   @override
@@ -24,6 +30,8 @@ class AllAppointmentsScreen extends StatefulWidget {
 class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
   final _svc        = AppointmentService();
   final _searchCtrl = TextEditingController();
+  final String _currentDoctorId =
+      Supabase.instance.client.auth.currentUser?.id ?? '';
 
   List<Appointment> _list      = [];
   bool              _loading   = true;
@@ -176,7 +184,11 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
                         child: ListView.builder(
                           padding:     const EdgeInsets.fromLTRB(20, 0, 20, 32),
                           itemCount:   filtered.length,
-                          itemBuilder: (ctx, i) => _AppointmentTile(appt: filtered[i])
+                          itemBuilder: (ctx, i) => PatientAppointmentTile(
+                                appt:            filtered[i],
+                                currentDoctorId: _currentDoctorId,
+                                onTap:           widget.onAppointmentTap,
+                              )
                               .animate()
                               .fadeIn(delay: Duration(milliseconds: 25 * i)),
                         ),
@@ -271,80 +283,6 @@ class _EmptyState extends StatelessWidget {
                 ? 'Try adjusting your search.'
                 : 'No appointments have been booked yet.',
             style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Appointment tile ──────────────────────────────────────────────────────────
-
-class _AppointmentTile extends StatelessWidget {
-  final Appointment appt;
-  const _AppointmentTile({required this.appt});
-
-  @override
-  Widget build(BuildContext context) {
-    final c       = context.colors;
-    final months  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    final d       = appt.appointmentDate;
-    final dateStr = '${d.day} ${months[d.month - 1]} ${d.year}';
-
-    final statusColor = appt.isUpcoming  ? c.green
-        : appt.isCancelled ? c.red
-        : c.textSec;
-    final statusLabel = appt.isUpcoming  ? 'Scheduled'
-        : appt.isCancelled ? 'Cancelled'
-        : 'Completed';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color:        c.card,
-        borderRadius: BorderRadius.circular(16),
-        border:       Border.all(color: c.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              color:        c.amber.withAlpha(15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.calendar_month_rounded, color: c.amber, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  appt.visitReason ?? appt.doctorNameSnapshot,
-                  style: GoogleFonts.poppins(
-                      fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  dateStr + (appt.appointmentTime != null ? ' · ${appt.appointmentTime}' : ''),
-                  style: GoogleFonts.poppins(fontSize: 11, color: c.textSec),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color:        statusColor.withAlpha(15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(statusLabel,
-                style: GoogleFonts.poppins(
-                    fontSize: 10, fontWeight: FontWeight.w600, color: statusColor)),
           ),
         ],
       ),

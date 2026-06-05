@@ -13,7 +13,6 @@ import '../../../core/services/account_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/doctor_verification_service.dart';
 import '../../../core/services/profile_service.dart';
-import '../../auth/screens/login_screen.dart';
 import '../../doctor/screens/doctor_credentials_screen.dart';
 import '../models/health_profile_model.dart';
 import 'patient_edit_profile_screen.dart';
@@ -517,12 +516,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
 
     try {
       await _authService.deleteAccount();
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (_) => false,
-        );
-      }
+      // Server-side user is gone — clear the local session, then pop back to the
+      // AuthGate root, which shows the login screen (and survives for next login).
+      await _authService.signOutLocal();
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -560,12 +557,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     );
     if (ok == true) {
       await _authService.signOut();
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (_) => false,
-        );
-      }
+      // AuthGate's auth listener swaps to the login screen on sign-out; just pop
+      // back to it so AuthGate stays alive and the next login navigates itself.
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 

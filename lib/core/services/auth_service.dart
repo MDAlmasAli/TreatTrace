@@ -93,6 +93,12 @@ class AuthService {
     await _client.auth.signOut();
   }
 
+  /// Clears only the local session (no server round-trip). Use after account
+  /// deletion, where the server-side user/session no longer exists.
+  Future<void> signOutLocal() async {
+    await _client.auth.signOut(scope: SignOutScope.local);
+  }
+
   // ── Password Reset ────────────────────────────────────────────────────────
 
   /// Sends a password reset email to the given address.

@@ -9,7 +9,6 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/doctor_verification_service.dart';
 import '../../../core/services/reminder_service.dart';
 import '../../appointment/services/appointment_service.dart';
-import '../../auth/screens/login_screen.dart';
 import '../../patient/screens/patient_profile_screen.dart';
 import '../services/doctor_patient_link_service.dart';
 import '../../notification/widgets/notification_bell.dart';
@@ -533,12 +532,9 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
     if (ok == true) {
       await _authService.signOut();
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (_) => false,
-        );
-      }
+      // AuthGate's auth listener swaps to the login screen on sign-out; just pop
+      // back to it so AuthGate stays alive and the next login navigates itself.
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 

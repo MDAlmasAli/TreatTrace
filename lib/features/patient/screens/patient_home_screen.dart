@@ -10,7 +10,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/auth_service.dart';
-import '../../auth/screens/login_screen.dart';
 import '../../prescription/screens/prescriptions_screen.dart';
 import '../../prescription/screens/prescription_detail_screen.dart';
 import '../../prescription/services/prescription_service.dart';
@@ -199,12 +198,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
     if (ok == true) {
       await _authService.signOut();
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (_) => false,
-        );
-      }
+      // AuthGate's auth listener swaps to the login screen on sign-out; just pop
+      // back to it so AuthGate stays alive and the next login navigates itself.
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 

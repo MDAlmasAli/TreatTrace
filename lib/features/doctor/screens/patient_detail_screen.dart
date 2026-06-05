@@ -20,6 +20,7 @@ import 'all_appointments_screen.dart';
 import 'doctor_prescription_view_screen.dart';
 import 'doctor_write_prescription_screen.dart';
 import '../../appointment/screens/appointment_detail_screen.dart';
+import '../widgets/patient_appointment_tile.dart';
 
 class PatientDetailScreen extends StatefulWidget {
   final String  patientId;
@@ -138,8 +139,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   Future<void> _goShowMoreAppts() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => AllAppointmentsScreen(
-        patientId:   widget.patientId,
-        patientName: widget.patientName,
+        patientId:        widget.patientId,
+        patientName:      widget.patientName,
+        onAppointmentTap: _openAppointmentDetail,
       ),
     ));
     _load();
@@ -273,6 +275,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           list:             _appts,
                           onShowMore:       _goShowMoreAppts,
                           onAppointmentTap: _openAppointmentDetail,
+                          currentDoctorId:  _currentDoctorId,
                         ).animate().fadeIn(delay: 250.ms),
                       ],
                     ),
@@ -847,6 +850,7 @@ class _AppointmentsSection extends StatelessWidget {
   final List<Appointment>            list;
   final VoidCallback                 onShowMore;
   final void Function(Appointment)?  onAppointmentTap;
+  final String                       currentDoctorId;
 
   static const _previewCount = 3;
 
@@ -854,6 +858,7 @@ class _AppointmentsSection extends StatelessWidget {
     required this.list,
     required this.onShowMore,
     this.onAppointmentTap,
+    required this.currentDoctorId,
   });
 
   @override
@@ -875,7 +880,11 @@ class _AppointmentsSection extends StatelessWidget {
         if (list.isEmpty)
           _EmptySection(message: 'No appointments found.')
         else ...[
-          ...visible.map((appt) => _ApptTile(appt: appt, onAppointmentTap: onAppointmentTap)),
+          ...visible.map((appt) => PatientAppointmentTile(
+                appt:            appt,
+                currentDoctorId: currentDoctorId,
+                onTap:           onAppointmentTap,
+              )),
           if (hasMore)
             GestureDetector(
               onTap: onShowMore,
@@ -905,147 +914,3 @@ class _AppointmentsSection extends StatelessWidget {
   }
 }
 
-class _ApptTile extends StatefulWidget {
-  final Appointment                 appt;
-  final void Function(Appointment)? onAppointmentTap;
-  const _ApptTile({required this.appt, this.onAppointmentTap});
-
-  @override
-  State<_ApptTile> createState() => _ApptTileState();
-}
-
-class _ApptTileState extends State<_ApptTile> {
-  final _prescSvc = PrescriptionService();
-  final Map<String, Prescription> _linkedPrescMap = {};
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.appt.prescriptionIds.isNotEmpty) _fetchLinkedRx();
-  }
-
-  Future<void> _fetchLinkedRx() async {
-    for (final id in widget.appt.prescriptionIds) {
-      try {
-        final p = await _prescSvc.fetchOne(id);
-        if (p != null && mounted) setState(() => _linkedPrescMap[id] = p);
-      } catch (_) {}
-    }
-  }
-
-  String _rxLabel(Prescription p) {
-    final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    final doc = p.doctorName?.isNotEmpty == true ? 'Dr. ${p.doctorName}' : 'Prescription';
-    final d = p.prescriptionDate;
-    return '$doc — ${d.day} ${months[d.month - 1]} ${d.year}';
-  }
-
-  String _prescBadgeLabel() {
-    final ids = widget.appt.prescriptionIds;
-    if (ids.isEmpty) return '';
-    if (ids.length == 1) {
-      final p = _linkedPrescMap[ids.first];
-      return p != null ? _rxLabel(p) : 'Linked Prescription';
-    }
-    final first = _linkedPrescMap[ids.first];
-    final firstLabel = first != null ? _rxLabel(first) : 'Linked Prescription';
-    return '$firstLabel  +${ids.length - 1} more';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final appt   = widget.appt;
-    final c      = context.colors;
-    final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    final d      = appt.appointmentDate;
-    final dateStr = '${d.day} ${months[d.month-1]} ${d.year}';
-
-    final statusColor = appt.isUpcoming  ? c.green
-        : appt.isCancelled ? c.red
-        : c.textSec;
-    final statusLabel = appt.isUpcoming  ? 'Scheduled'
-        : appt.isCancelled ? 'Cancelled'
-        : 'Completed';
-
-    final hasRx        = appt.prescriptionIds.isNotEmpty;
-    final hasTestRep   = appt.testReportIds.isNotEmpty;
-    final hasAnyLink   = hasRx || hasTestRep;
-
-    return GestureDetector(
-      onTap: widget.onAppointmentTap != null
-          ? () => widget.onAppointmentTap!(appt)
-          : null,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color:        c.card,
-          borderRadius: BorderRadius.circular(16),
-          border:       Border.all(color: hasAnyLink ? c.purpleBright.withAlpha(60) : c.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40, height: 40,
-              decoration: BoxDecoration(color: c.amber.withAlpha(15), borderRadius: BorderRadius.circular(12)),
-              child: Icon(Icons.calendar_month_rounded, color: c.amber, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(appt.visitReason ?? appt.doctorNameSnapshot,
-                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  Text(
-                    dateStr + (appt.appointmentTime != null ? ' · ${appt.appointmentTime}' : ''),
-                    style: GoogleFonts.poppins(fontSize: 11, color: c.textSec),
-                  ),
-                  if (hasRx) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.link_rounded, size: 10, color: c.purpleBright),
-                        const SizedBox(width: 3),
-                        Flexible(
-                          child: Text(_prescBadgeLabel(),
-                              style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: c.purpleBright),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (hasTestRep) ...[
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Icon(Icons.science_rounded, size: 10, color: c.cyan),
-                        const SizedBox(width: 3),
-                        Text(
-                          appt.testReportIds.length == 1
-                              ? '1 Test Report Linked'
-                              : '${appt.testReportIds.length} Test Reports Linked',
-                          style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: c.cyan),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: statusColor.withAlpha(15), borderRadius: BorderRadius.circular(8)),
-              child: Text(statusLabel, style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: statusColor)),
-            ),
-            const SizedBox(width: 6),
-            Icon(Icons.arrow_forward_ios_rounded, size: 12, color: c.textMuted),
-          ],
-        ),
-      ),
-    );
-  }
-}
