@@ -459,8 +459,11 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                 label: s.appointmentDate,
                                 value: _fmtDate(_appt.appointmentDate),
                               ),
-                              // Live queue position only (loaded async); never
-                              // the raw ticket_no, so it matches every card.
+                              // Permanent ticket serial (stable, matches the
+                              // schedule list & banner). _position is the live
+                              // queue position, loaded async — used here only as
+                              // a guard (non-null ⇒ scheduled with a ticket) and
+                              // to estimate the visit time.
                               if (_position != null &&
                                   _appt.status == AppointmentStatus.scheduled)
                                 _InfoRow(
@@ -468,8 +471,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                                   iconColor: c.green,
                                   label:     'Serial',
                                   value:     _estTime != null
-                                      ? '#$_position  ·  ~$_estTime'
-                                      : '#$_position',
+                                      ? '#${_appt.ticketNo}  ·  ~$_estTime'
+                                      : '#${_appt.ticketNo}',
                                   valueColor: c.green,
                                 ),
                               if (_appt.appointmentTime?.isNotEmpty == true)

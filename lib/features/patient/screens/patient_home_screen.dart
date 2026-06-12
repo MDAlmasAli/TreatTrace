@@ -2,14 +2,19 @@
 // patient_home_screen.dart — Dark futuristic dashboard for TreatTrace.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/auth_service.dart';
+import '../../appointment/models/appointment_model.dart';
+import '../../appointment/services/appointment_service.dart';
 import '../../prescription/screens/prescriptions_screen.dart';
 import '../../prescription/screens/prescription_detail_screen.dart';
 import '../../prescription/services/prescription_service.dart';
@@ -229,6 +234,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Live "now serving" queue for today's appointment (hidden
+                  // when the patient has no live appointment in progress).
+                  const _LiveServingBanner(),
+
                   // Section heading
                   Text(
                     s.quickActions,
@@ -309,6 +318,245 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         avatarUrl:           _avatarUrl,
       ),
     );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// _LiveServingBanner — live "now serving #N" for today's appointment
+// ══════════════════════════════════════════════════════════════════════════════
+// Finds the patient's earliest still-scheduled appointment for today (with a
+// registered doctor + ticket), then subscribes to that doctor's verification row
+// via Realtime. The doctor's app sets `now_serving_ticket` when they open a
+// patient; this banner updates instantly without leaving the screen. Renders
+// nothing when there's no live appointment or no active pointer for today.
+class _LiveServingBanner extends StatefulWidget {
+  const _LiveServingBanner();
+
+  @override
+  State<_LiveServingBanner> createState() => _LiveServingBannerState();
+}
+
+class _LiveServingBannerState extends State<_LiveServingBanner> {
+  final _apptSvc = AppointmentService();
+  final _client  = Supabase.instance.client;
+
+  String?         _doctorUserId;
+  String          _doctorName = 'Doctor';
+  int?            _myTicket;
+  int?            _nowServingTicket;
+  DateTime?       _nowServingDate;
+  RealtimeChannel? _channel;
+  Timer?          _poll;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    _channel?.unsubscribe();
+    super.dispose();
+  }
+
+  bool _isToday(DateTime d) {
+    final now = DateTime.now();
+    return d.year == now.year && d.month == now.month && d.day == now.day;
+  }
+
+  Future<void> _init() async {
+    final appts = await _apptSvc.fetchAll();
+    final todays = appts
+        .where((a) =>
+            a.status == AppointmentStatus.scheduled &&
+            a.doctorUserId != null &&
+            a.ticketNo != null &&
+            _isToday(a.appointmentDate))
+        .toList()
+      ..sort((a, b) => a.ticketNo!.compareTo(b.ticketNo!));
+    if (todays.isEmpty || !mounted) return;
+
+    final appt = todays.first;
+    _doctorUserId = appt.doctorUserId;
+    _myTicket     = appt.ticketNo;
+
+    final results = await Future.wait([
+      _client
+          .from('doctor_verifications')
+          .select('now_serving_ticket, now_serving_date')
+          .eq('id', _doctorUserId!)
+          .maybeSingle(),
+      _client
+          .from('profiles')
+          .select('full_name')
+          .eq('id', _doctorUserId!)
+          .maybeSingle(),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      final prof = results[1];
+      _doctorName =
+          (prof?['full_name'] as String?)?.trim().split(' ').first ?? 'Doctor';
+      _applyServing(results[0]);
+    });
+    // Realtime gives instant updates where available; the poll is the reliable
+    // fallback that keeps the banner live (every few seconds) without the
+    // patient having to leave and reopen the app.
+    _subscribe();
+    _poll = Timer.periodic(
+        const Duration(seconds: 3), (_) => _refreshServing());
+  }
+
+  Future<void> _refreshServing() async {
+    final id = _doctorUserId;
+    if (id == null) return;
+    try {
+      final row = await _client
+          .from('doctor_verifications')
+          .select('now_serving_ticket, now_serving_date')
+          .eq('id', id)
+          .maybeSingle();
+      if (!mounted) return;
+      setState(() => _applyServing(row));
+    } catch (_) {}
+  }
+
+  void _applyServing(Map<String, dynamic>? row) {
+    _nowServingTicket = (row?['now_serving_ticket'] as num?)?.toInt();
+    final ds = row?['now_serving_date'] as String?;
+    _nowServingDate = ds != null ? DateTime.tryParse(ds) : null;
+  }
+
+  void _subscribe() {
+    final id = _doctorUserId;
+    if (id == null) return;
+    _channel = _client
+        .channel('now_serving_$id')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'doctor_verifications',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: id,
+          ),
+          callback: (payload) {
+            if (!mounted) return;
+            setState(() => _applyServing(payload.newRecord));
+          },
+        )
+        .subscribe();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final serving = _nowServingTicket;
+    final mine    = _myTicket;
+    // Show only when there's an active pointer for today and we know our ticket.
+    if (serving == null ||
+        mine == null ||
+        _nowServingDate == null ||
+        !_isToday(_nowServingDate!)) {
+      return const SizedBox.shrink();
+    }
+
+    final c = context.colors;
+    final isMyTurn = serving == mine;
+    final ahead    = mine - serving; // >0 means patients still ahead of me
+    final accent   = isMyTurn ? c.green : c.accent;
+
+    final String subtitle;
+    if (isMyTurn) {
+      subtitle = "It's your turn — Dr. $_doctorName is seeing you now";
+    } else if (ahead > 0) {
+      subtitle =
+          'Dr. $_doctorName  ·  You are #$mine  ·  $ahead ahead of you';
+    } else {
+      // Serving is past our number — the doctor took someone out of order (e.g.
+      // an emergency) or briefly skipped ahead. Stay neutral: they may still
+      // return to our number, so don't claim our turn has passed.
+      subtitle = 'Dr. $_doctorName  ·  You are #$mine';
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: accent.withAlpha(14),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accent.withAlpha(70), width: 1),
+      ),
+      child: Row(
+        children: [
+          // Pulsing live dot + big serial.
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: accent.withAlpha(22),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Center(
+              child: Text(
+                '#$serving',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: accent,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        shape: BoxShape.circle,
+                      ),
+                    )
+                        .animate(onPlay: (con) => con.repeat(reverse: true))
+                        .fadeIn(duration: 700.ms)
+                        .then()
+                        .fadeOut(duration: 700.ms),
+                    const SizedBox(width: 7),
+                    Text(
+                      isMyTurn ? 'YOUR TURN' : 'NOW SERVING',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                        color: accent,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.5,
+                    color: c.textSec,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.1, end: 0);
   }
 }
 

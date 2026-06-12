@@ -45,6 +45,11 @@ create table if not exists public.doctor_verifications (
   visiting_end_time     time,
   daily_patient_limit   int,
   minutes_per_patient   int,
+  -- live "now serving" queue pointer (set/cleared by the doctor's live session;
+  -- patients subscribe to this row via Realtime — see set_now_serving below)
+  now_serving_ticket    int,
+  now_serving_date      date,
+  now_serving_appt_id   uuid,
   -- aggregate review rating (maintained by recalc_doctor_rating trigger)
   rating_avg            numeric not null default 0,
   rating_count          int     not null default 0,
@@ -138,3 +143,50 @@ drop trigger if exists trg_notify_doctor_edit_status_change on public.doctor_ver
 create trigger trg_notify_doctor_edit_status_change
   after update on public.doctor_verifications
   for each row execute function public.notify_doctor_edit_status_change();
+
+-- ── Live "now serving" queue ────────────────────────────────────────────────
+-- The doctor's live session sets a pointer to the patient currently being seen.
+-- Patients subscribe to the doctor's row via Realtime and show "Now serving #N".
+-- The date is stored so a stale pointer (e.g. doctor's app was killed) is
+-- naturally ignored once the day rolls over.
+
+-- Doctor: mark the appointment they just opened as the one being served now.
+create or replace function public.set_now_serving(p_appt_id uuid)
+ returns void language plpgsql security definer set search_path to 'public' as $function$
+declare
+  v_doc uuid; v_date date; v_ticket int; v_status text;
+begin
+  select doctor_user_id, appointment_date, ticket_no, status
+    into v_doc, v_date, v_ticket, v_status
+  from public.appointments where id = p_appt_id;
+
+  -- Only the appointment's own doctor may set this, and only while it is a
+  -- live (scheduled) appointment.
+  if v_doc is null or v_doc <> auth.uid() or v_status <> 'scheduled' then
+    return;
+  end if;
+
+  update public.doctor_verifications set
+    now_serving_ticket  = v_ticket,
+    now_serving_date    = v_date,
+    now_serving_appt_id = p_appt_id
+  where id = auth.uid();
+end;
+$function$;
+
+-- Doctor: clear the pointer when the live session ends (prescription written or
+-- the appointment screen is left).
+create or replace function public.clear_now_serving()
+ returns void language plpgsql security definer set search_path to 'public' as $function$
+begin
+  update public.doctor_verifications set
+    now_serving_ticket  = null,
+    now_serving_date    = null,
+    now_serving_appt_id = null
+  where id = auth.uid();
+end;
+$function$;
+
+-- Let patients receive live UPDATEs to the doctor's row (filtered by id = PK,
+-- so the default replica identity is sufficient).
+alter publication supabase_realtime add table public.doctor_verifications;

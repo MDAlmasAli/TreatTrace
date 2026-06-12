@@ -188,6 +188,7 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
       ));
       _exitSelection();
       await _load();
+      if (mounted) await _clearServingIfQueueEmpty();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -229,6 +230,7 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
       ));
       _exitSelection();
       await _load();
+      if (mounted) await _clearServingIfQueueEmpty();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -267,7 +269,8 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
           .where((a) =>
               _isSameDate(a.appointmentDate, today) &&
               a.status == AppointmentStatus.scheduled)
-          .toList();
+          .toList()
+        ..sort(_sortByDateThenTicket);
     }
 
     var list = _appointments.where((a) {
@@ -277,7 +280,8 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
         a.appointmentDate.day,
       );
       return !d.isBefore(today) && a.status == AppointmentStatus.scheduled;
-    }).toList();
+    }).toList()
+      ..sort(_sortByDateThenTicket);
 
     if (_selectedUpcomingDate != null) {
       list = list
@@ -285,6 +289,21 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
           .toList();
     }
     return list;
+  }
+
+  // Order the queue by ticket serial: earliest date first, then serial 1, 2,
+  // 3… within the same day. Tickets with no serial sink to the bottom of
+  // their day.
+  int _sortByDateThenTicket(Appointment a, Appointment b) {
+    final aDay = DateTime(
+        a.appointmentDate.year, a.appointmentDate.month, a.appointmentDate.day);
+    final bDay = DateTime(
+        b.appointmentDate.year, b.appointmentDate.month, b.appointmentDate.day);
+    final dayCmp = aDay.compareTo(bDay);
+    if (dayCmp != 0) return dayCmp;
+    final aTicket = a.ticketNo ?? (1 << 30);
+    final bTicket = b.ticketNo ?? (1 << 30);
+    return aTicket.compareTo(bTicket);
   }
 
   int _sortByDateTimeThenCreated(Appointment a, Appointment b) {
@@ -318,22 +337,6 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
 
   bool _isSameDate(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
-
-  // Live serial = how many still-scheduled patients that day are ahead, + 1.
-  // Closes gaps left by cancelled / no-show / rescheduled-away appointments.
-  int? _queueSerial(Appointment a) {
-    if (a.status != AppointmentStatus.scheduled || a.ticketNo == null) {
-      return null;
-    }
-    final ahead = _appointments
-        .where((o) =>
-            o.status == AppointmentStatus.scheduled &&
-            o.ticketNo != null &&
-            _isSameDate(o.appointmentDate, a.appointmentDate) &&
-            o.ticketNo! < a.ticketNo!)
-        .length;
-    return ahead + 1;
-  }
 
   Future<void> _pickCompletedDate() async {
     final picked = await showDatePicker(
@@ -413,6 +416,17 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
 
   Future<void> _openAppointmentDetail(Appointment appt) async {
     final pname = _patientNameOf(appt);
+
+    // Live "now serving": opening a still-scheduled appointment for today starts
+    // a session — patients see this ticket as the one being served. Cleared when
+    // we return (prescription written or the screen simply left).
+    final isLiveSession = appt.status == AppointmentStatus.scheduled &&
+        _isSameDate(appt.appointmentDate, DateTime.now());
+    if (isLiveSession) {
+      await _apptSvc.setNowServing(appt.id);
+      if (!mounted) return;
+    }
+
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AppointmentDetailScreen(
@@ -474,7 +488,38 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
         ),
       ),
     );
-    if (mounted) _load();
+    if (!mounted) return;
+    await _load();
+    if (!mounted) return;
+    if (isLiveSession) {
+      // Did a consultation actually happen? If the appointment is still
+      // 'scheduled', the doctor only viewed it and left — drop the pointer so
+      // patients don't keep seeing a stale "now serving / your turn". If it was
+      // completed (or cancelled/moved), keep it sticky until the queue is empty.
+      final fresh = _appointments.firstWhere(
+        (a) => a.id == appt.id,
+        orElse: () => appt,
+      );
+      if (fresh.status == AppointmentStatus.scheduled &&
+          !fresh.hasPendingReschedule) {
+        await _apptSvc.clearNowServing();
+      } else {
+        await _clearServingIfQueueEmpty();
+      }
+    }
+  }
+
+  // Clears the live "now serving" pointer once the doctor has no one left to see
+  // today — i.e. every remaining appointment is completed, cancelled, or moved
+  // to another day (a pending reschedule proposal counts as moved). Covers
+  // "finished the last patient" and "left mid-queue (cancel/reschedule all)".
+  Future<void> _clearServingIfQueueEmpty() async {
+    final now = DateTime.now();
+    final stillToSee = _appointments.any((a) =>
+        a.status == AppointmentStatus.scheduled &&
+        !a.hasPendingReschedule &&
+        _isSameDate(a.appointmentDate, now));
+    if (!stillToSee) await _apptSvc.clearNowServing();
   }
 
   @override
@@ -556,7 +601,10 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
                                     (prof?['full_name'] as String?) ??
                                     'Patient',
                                 patientPhone: prof?['phone'] as String?,
-                                displaySerial: _queueSerial(appt),
+                                displaySerial:
+                                    appt.status == AppointmentStatus.scheduled
+                                        ? appt.ticketNo
+                                        : null,
                                 selectionMode: _selectionMode,
                                 selected: _selectedIds.contains(appt.id),
                                 onTap: () => _selectionMode

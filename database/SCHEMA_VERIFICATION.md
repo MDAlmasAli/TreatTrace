@@ -16,8 +16,8 @@
 | Object type | Live in Supabase | Defined in `schema/` | Status |
 |---|---:|---:|:--:|
 | Tables | 12 | 12 | ✅ match |
-| Columns (all tables) | 158 | 158 | ✅ match |
-| Functions | 25 | 25 | ✅ match |
+| Columns (all tables) | 157 | 157 | ✅ match |
+| Functions | 26 | 26 | ✅ match |
 | Triggers | 19 (+1 on `auth.users`) | 19 (+1) | ✅ match |
 | RLS policies | 55 | 55 | ✅ match |
 | Indexes (declared) | all | all | ✅ match |
@@ -113,10 +113,13 @@ the SQL file and the live database with the same type → ✅.
 | visiting_days | smallint[] | YES |
 | visiting_start_time / visiting_end_time | time | YES |
 | daily_patient_limit / minutes_per_patient | integer | YES |
+| now_serving_ticket | integer | YES |
+| now_serving_date | date | YES |
+| now_serving_appt_id | uuid | YES |
 | rating_avg | numeric | NO |
 | rating_count | integer | NO |
 
-*(34 columns — all present in both file and live DB.)*
+*(37 columns — all present in both file and live DB.)*
 
 ### 1.5 `public.prescriptions` — ✅ verified (23 rows)
 **Created by:** [`schema/06_prescriptions.sql`](schema/06_prescriptions.sql) · PK `id`
@@ -244,7 +247,7 @@ the SQL file and the live database with the same type → ✅.
 
 ---
 
-## 2. Functions (25) — all ✅ present in the live DB
+## 2. Functions (26) — all ✅ present in the live DB
 
 | Function | Defined in | SECURITY DEFINER |
 |---|---|:--:|
@@ -253,6 +256,8 @@ the SQL file and the live database with the same type → ✅.
 | `check_username_available(text)` | 02_profiles.sql | ✅ |
 | `approve_doctor_edit(uuid)` | 05_doctor_verifications.sql | ✅ |
 | `notify_doctor_edit_status_change()` | 05_doctor_verifications.sql | ✅ |
+| `set_now_serving(uuid)` | 05_doctor_verifications.sql | ✅ |
+| `clear_now_serving()` | 05_doctor_verifications.sql | ✅ |
 | `notify_new_prescription()` | 06_prescriptions.sql | ✅ |
 | `notify_new_test_report()` | 07_test_reports.sql | ✅ |
 | `assign_ticket_and_check_slot()` | 08_appointments.sql | ✅ |

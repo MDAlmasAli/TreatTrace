@@ -234,14 +234,15 @@ class _AddEditAppointmentScreenState extends State<AddEditAppointmentScreen> {
         }
       }
 
-      // Use the live queue position (still-scheduled patients ahead + 1) so the
-      // confirmation matches what every card/detail shows — never the raw
-      // ticket_no, which counts cancelled/no-show/completed slots too.
-      final pos = await _apptSvc.queuePosition(created.id);
+      // Show the permanent ticket serial — the stable number that every card,
+      // detail screen and the live "now serving" banner also display.
+      final ticket = created.ticketNo;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
-            pos != null ? 'Appointment booked — Serial #$pos' : 'Appointment booked.',
+            ticket != null
+                ? 'Appointment booked — Serial #$ticket'
+                : 'Appointment booked.',
             style: GoogleFonts.poppins(),
           ),
         ));

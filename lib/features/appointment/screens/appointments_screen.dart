@@ -323,14 +323,18 @@ class _AppointmentCardState extends State<_AppointmentCard> {
         a.ticketNo == null) {
       return;
     }
+    // Permanent ticket is the displayed serial (never changes); the live queue
+    // position is still used to estimate the visit time (accounts for people
+    // ahead who cancelled / didn't show).
     final pos = await _svc.queuePosition(a.id);
     final sched = await _svc.fetchScheduleTimes(a.doctorUserId!);
     if (!mounted || pos == null) return;
     final time = (sched.startTime != null && sched.minutesPerPatient != null)
         ? _estimate(sched.startTime!, sched.minutesPerPatient!, pos)
         : null;
+    final ticket = a.ticketNo;
     setState(() =>
-        _serialTime = time != null ? '#$pos  ·  ~$time' : '#$pos');
+        _serialTime = time != null ? '#$ticket  ·  ~$time' : '#$ticket');
   }
 
   String _estimate(String startHms, int mins, int position) {

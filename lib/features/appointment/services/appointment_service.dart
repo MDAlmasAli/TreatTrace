@@ -229,6 +229,24 @@ class AppointmentService {
     }
   }
 
+  // ── Live "now serving" queue ──────────────────────────────────────────────
+
+  // Doctor: mark the appointment they just opened as the one being served now.
+  // Patients subscribed to this doctor's row see it live. Fails silently — a
+  // live pointer is best-effort and must never block opening an appointment.
+  Future<void> setNowServing(String appointmentId) async {
+    try {
+      await _client.rpc('set_now_serving', params: {'p_appt_id': appointmentId});
+    } catch (_) {}
+  }
+
+  // Doctor: clear the pointer when the live session ends.
+  Future<void> clearNowServing() async {
+    try {
+      await _client.rpc('clear_now_serving');
+    } catch (_) {}
+  }
+
   Future<void> markNoShow(String id) =>
       updateStatus(id, AppointmentStatus.noShow);
 

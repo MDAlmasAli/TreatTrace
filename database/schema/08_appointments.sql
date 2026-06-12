@@ -390,9 +390,12 @@ begin
 end;
 $function$;
 
--- When a scheduled appointment leaves a doctor+day queue (cancelled, no-show,
--- or rescheduled to another date), notify every still-scheduled patient behind
--- it that their serial moved up. Today/future queues only (skip past-date noise).
+-- When a scheduled appointment leaves a doctor+day queue EARLY — cancelled,
+-- no-show, or rescheduled to another date — notify every still-scheduled patient
+-- behind it that they'll be seen sooner. A normal completion (prescription
+-- written) is expected progression, NOT an early exit, so it is excluded.
+-- Serials are permanent, so no changing position number is quoted. Today/future
+-- queues only (skip past-date noise).
 create or replace function public.notify_queue_shift()
  returns trigger language plpgsql security definer set search_path to 'public' as $function$
 declare
@@ -403,7 +406,7 @@ begin
         and old.doctor_user_id is not null
         and old.ticket_no is not null
         and old.appointment_date >= current_date
-        and ( new.status is distinct from 'scheduled'
+        and ( new.status in ('cancelled', 'no_show')
               or new.appointment_date is distinct from old.appointment_date );
 
   if not v_left then
@@ -418,15 +421,9 @@ begin
     a.user_id,
     'queue_moved_up',
     'Queue updated',
-    'Good news — your serial moved up for Dr. ' || doc_name || ' on '
-      || to_char(old.appointment_date, 'DD Mon YYYY') || '. You are now #'
-      || ( select count(*) + 1
-             from public.appointments b
-            where b.doctor_user_id   = old.doctor_user_id
-              and b.appointment_date = old.appointment_date
-              and b.status           = 'scheduled'
-              and b.ticket_no        < a.ticket_no )
-      || '.',
+    'Good news — a patient ahead of you left the queue for Dr. ' || doc_name
+      || ' on ' || to_char(old.appointment_date, 'DD Mon YYYY')
+      || ', so you''ll likely be seen sooner.',
     jsonb_build_object('appointment_id', a.id)
   from public.appointments a
   where a.doctor_user_id   = old.doctor_user_id
