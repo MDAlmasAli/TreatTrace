@@ -55,20 +55,6 @@ begin
 end;
 $function$;
 
--- Patient lookup for the doctor portal (by phone, id, or username).
-create or replace function public.search_patient_by_query(query_text text)
- returns table(id uuid, full_name text, phone text, avatar_url text, username text)
- language plpgsql security definer set search_path to 'public' as $function$
-begin
-  return query
-  select p.id, p.full_name::text, p.phone::text, p.avatar_url::text, p.username::text
-  from   public.profiles p
-  where  p.role = 'patient'
-    and  (p.phone = query_text or p.id::text = query_text or p.username = lower(trim(query_text)))
-  limit  5;
-end;
-$function$;
-
 -- ── Triggers ─────────────────────────────────────────────────────────────────
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created

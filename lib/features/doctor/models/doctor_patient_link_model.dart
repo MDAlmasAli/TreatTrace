@@ -2,7 +2,7 @@ class DoctorPatientLink {
   final String    id;
   final String    doctorId;
   final String    patientId;
-  final String    status; // pending | accepted | rejected | revoked
+  final String    status;
   final DateTime  requestedAt;
   final DateTime? acceptedAt;
 
@@ -31,10 +31,7 @@ class DoctorPatientLink {
     this.doctorHospital,
   });
 
-  bool get isPending  => status == 'pending';
   bool get isAccepted => status == 'accepted';
-  bool get isRejected => status == 'rejected';
-  bool get isRevoked  => status == 'revoked';
 
   factory DoctorPatientLink.fromMap(Map<String, dynamic> m) => DoctorPatientLink(
         id:          m['id']           as String,

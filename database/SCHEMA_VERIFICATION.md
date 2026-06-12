@@ -251,7 +251,6 @@ the SQL file and the live database with the same type → ✅.
 | `set_updated_at()` | 01_functions_shared.sql | — |
 | `handle_new_user()` | 02_profiles.sql | ✅ |
 | `check_username_available(text)` | 02_profiles.sql | ✅ |
-| `search_patient_by_query(text)` | 02_profiles.sql | ✅ |
 | `approve_doctor_edit(uuid)` | 05_doctor_verifications.sql | ✅ |
 | `notify_doctor_edit_status_change()` | 05_doctor_verifications.sql | ✅ |
 | `notify_new_prescription()` | 06_prescriptions.sql | ✅ |
