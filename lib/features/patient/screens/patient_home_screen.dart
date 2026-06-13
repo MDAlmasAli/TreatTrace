@@ -13,8 +13,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/auth_service.dart';
-import '../../appointment/models/appointment_model.dart';
-import '../../appointment/services/appointment_service.dart';
 import '../../prescription/screens/prescriptions_screen.dart';
 import '../../prescription/screens/prescription_detail_screen.dart';
 import '../../prescription/services/prescription_service.dart';
@@ -336,9 +334,9 @@ class _LiveServingBanner extends StatefulWidget {
   State<_LiveServingBanner> createState() => _LiveServingBannerState();
 }
 
-class _LiveServingBannerState extends State<_LiveServingBanner> {
-  final _apptSvc = AppointmentService();
-  final _client  = Supabase.instance.client;
+class _LiveServingBannerState extends State<_LiveServingBanner>
+    with WidgetsBindingObserver {
+  final _client = Supabase.instance.client;
 
   String?         _doctorUserId;
   String          _doctorName = 'Doctor';
@@ -351,11 +349,23 @@ class _LiveServingBannerState extends State<_LiveServingBanner> {
   @override
   void initState() {
     super.initState();
-    _init();
+    WidgetsBinding.instance.addObserver(this);
+    _tick();
+    // Unconditional poll: re-discovers today's appointment and the doctor's
+    // "now serving" pointer every few seconds, so the banner self-heals no
+    // matter when the appointment was booked or when the app was opened.
+    _poll = Timer.periodic(const Duration(seconds: 3), (_) => _tick());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Refresh immediately when the app returns to the foreground.
+    if (state == AppLifecycleState.resumed) _tick();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _poll?.cancel();
     _channel?.unsubscribe();
     super.dispose();
@@ -366,60 +376,74 @@ class _LiveServingBannerState extends State<_LiveServingBanner> {
     return d.year == now.year && d.month == now.month && d.day == now.day;
   }
 
-  Future<void> _init() async {
-    final appts = await _apptSvc.fetchAll();
-    final todays = appts
-        .where((a) =>
-            a.status == AppointmentStatus.scheduled &&
-            a.doctorUserId != null &&
-            a.ticketNo != null &&
-            _isToday(a.appointmentDate))
-        .toList()
-      ..sort((a, b) => a.ticketNo!.compareTo(b.ticketNo!));
-    if (todays.isEmpty || !mounted) return;
-
-    final appt = todays.first;
-    _doctorUserId = appt.doctorUserId;
-    _myTicket     = appt.ticketNo;
-
-    final results = await Future.wait([
-      _client
-          .from('doctor_verifications')
-          .select('now_serving_ticket, now_serving_date')
-          .eq('id', _doctorUserId!)
-          .maybeSingle(),
-      _client
-          .from('profiles')
-          .select('full_name')
-          .eq('id', _doctorUserId!)
-          .maybeSingle(),
-    ]);
-    if (!mounted) return;
-    setState(() {
-      final prof = results[1];
-      _doctorName =
-          (prof?['full_name'] as String?)?.trim().split(' ').first ?? 'Doctor';
-      _applyServing(results[0]);
-    });
-    // Realtime gives instant updates where available; the poll is the reliable
-    // fallback that keeps the banner live (every few seconds) without the
-    // patient having to leave and reopen the app.
-    _subscribe();
-    _poll = Timer.periodic(
-        const Duration(seconds: 3), (_) => _refreshServing());
-  }
-
-  Future<void> _refreshServing() async {
-    final id = _doctorUserId;
-    if (id == null) return;
+  // Finds the patient's earliest still-scheduled appointment for today (with a
+  // registered doctor + ticket) and reads that doctor's live "now serving"
+  // pointer. Runs on the poll, on app resume, and at init — so it recovers
+  // whenever the appointment appears or the screen was opened too early.
+  Future<void> _tick() async {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) return;
     try {
-      final row = await _client
+      final now = DateTime.now();
+      final todayStr = '${now.year.toString().padLeft(4, '0')}-'
+          '${now.month.toString().padLeft(2, '0')}-'
+          '${now.day.toString().padLeft(2, '0')}';
+
+      final apptRows = await _client
+          .from('appointments')
+          .select('doctor_user_id, ticket_no')
+          .eq('user_id', uid)
+          .eq('status', 'scheduled')
+          .eq('appointment_date', todayStr)
+          .not('doctor_user_id', 'is', null)
+          .not('ticket_no', 'is', null)
+          .order('ticket_no', ascending: true)
+          .limit(1) as List;
+
+      // No live appointment today → clear so the banner hides.
+      if (apptRows.isEmpty) {
+        if (mounted && (_doctorUserId != null || _nowServingTicket != null)) {
+          setState(() {
+            _doctorUserId = null;
+            _myTicket = null;
+            _nowServingTicket = null;
+            _nowServingDate = null;
+          });
+        }
+        return;
+      }
+
+      final row      = apptRows.first as Map<String, dynamic>;
+      final docId    = row['doctor_user_id'] as String;
+      final myTicket = (row['ticket_no'] as num).toInt();
+
+      // (Re)subscribe for instant updates if the relevant doctor changed.
+      if (docId != _doctorUserId) {
+        _channel?.unsubscribe();
+        _doctorUserId = docId;
+        _subscribe(docId);
+        final prof = await _client
+            .from('profiles')
+            .select('full_name')
+            .eq('id', docId)
+            .maybeSingle();
+        if (prof != null) {
+          _doctorName =
+              (prof['full_name'] as String?)?.trim().split(' ').first ??
+                  'Doctor';
+        }
+      }
+
+      final serv = await _client
           .from('doctor_verifications')
           .select('now_serving_ticket, now_serving_date')
-          .eq('id', id)
+          .eq('id', docId)
           .maybeSingle();
       if (!mounted) return;
-      setState(() => _applyServing(row));
+      setState(() {
+        _myTicket = myTicket;
+        _applyServing(serv);
+      });
     } catch (_) {}
   }
 
@@ -429,9 +453,7 @@ class _LiveServingBannerState extends State<_LiveServingBanner> {
     _nowServingDate = ds != null ? DateTime.tryParse(ds) : null;
   }
 
-  void _subscribe() {
-    final id = _doctorUserId;
-    if (id == null) return;
+  void _subscribe(String id) {
     _channel = _client
         .channel('now_serving_$id')
         .onPostgresChanges(

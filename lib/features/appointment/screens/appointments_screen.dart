@@ -357,17 +357,29 @@ class _AppointmentCardState extends State<_AppointmentCard> {
     final sched = await _svc.fetchScheduleTimes(a.doctorUserId!);
     if (!mounted || pos == null) return;
     final time = (sched.startTime != null && sched.minutesPerPatient != null)
-        ? _estimate(sched.startTime!, sched.minutesPerPatient!, pos)
+        ? _estimate(sched.startTime!, sched.minutesPerPatient!, pos,
+            a.appointmentDate)
         : null;
     final ticket = a.ticketNo;
     setState(() =>
         _serialTime = time != null ? '#$ticket  ·  ~$time' : '#$ticket');
   }
 
-  String _estimate(String startHms, int mins, int position) {
+  String _estimate(String startHms, int mins, int position, DateTime apptDate) {
     final p = startHms.split(':');
-    final base = (int.tryParse(p[0]) ?? 0) * 60 +
+    var base = (int.tryParse(p[0]) ?? 0) * 60 +
         (p.length > 1 ? (int.tryParse(p[1]) ?? 0) : 0);
+    // For today's queue, never estimate a time already in the past: once the
+    // session has started, anchor to "now" (the doctor can only see you from
+    // now onward). Future-date appointments keep the visiting start as the base.
+    final now = DateTime.now();
+    final isToday = apptDate.year == now.year &&
+        apptDate.month == now.month &&
+        apptDate.day == now.day;
+    if (isToday) {
+      final nowMin = now.hour * 60 + now.minute;
+      if (nowMin > base) base = nowMin;
+    }
     final total = base + (position - 1) * mins;
     var h = (total ~/ 60) % 24;
     final m = total % 60;

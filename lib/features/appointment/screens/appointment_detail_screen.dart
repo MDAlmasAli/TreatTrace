@@ -59,7 +59,8 @@ class AppointmentDetailScreen extends StatefulWidget {
       _AppointmentDetailScreenState();
 }
 
-class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
+class _AppointmentDetailScreenState extends State<AppointmentDetailScreen>
+    with WidgetsBindingObserver {
   final _service    = AppointmentService();
   final _prescSvc   = PrescriptionService();
   final _testRepSvc = TestReportService();
@@ -79,6 +80,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   void initState() {
     super.initState();
     _appt = widget.appointment;
+    WidgetsBinding.instance.addObserver(this);
     _fetchLinkedData();
     _loadEstimatedTime();
     _subscribeRealtime();
@@ -86,8 +88,34 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _apptChannel?.unsubscribe();
     super.dispose();
+  }
+
+  // True while a doctor is actively viewing a live (today, still-scheduled)
+  // appointment — the window during which "now serving" should point here.
+  bool get _isDoctorLiveSession =>
+      widget.isDoctorView &&
+      _appt.status == AppointmentStatus.scheduled &&
+      _isSameDate(_appt.appointmentDate, DateTime.now());
+
+  bool _isSameDate(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  // If the doctor backgrounds/closes the app while still on this screen (e.g.
+  // checked the detail then killed the app), drop the "now serving" pointer so
+  // patients don't keep seeing a stale entry; restore it when the doctor
+  // returns to the still-open appointment.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_isDoctorLiveSession) return;
+    if (state == AppLifecycleState.resumed) {
+      _service.setNowServing(_appt.id);
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _service.clearNowServing();
+    }
   }
 
   // Live refresh: reflect changes the other party makes to this appointment
@@ -126,15 +154,27 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     setState(() {
       _position = pos;
       if (pos != null && s.startTime != null && s.minutesPerPatient != null) {
-        _estTime = _estimate(s.startTime!, s.minutesPerPatient!, pos);
+        _estTime = _estimate(
+            s.startTime!, s.minutesPerPatient!, pos, _appt.appointmentDate);
       }
     });
   }
 
-  String _estimate(String startHms, int mins, int position) {
+  String _estimate(String startHms, int mins, int position, DateTime apptDate) {
     final p = startHms.split(':');
-    final base = (int.tryParse(p[0]) ?? 0) * 60 +
+    var base = (int.tryParse(p[0]) ?? 0) * 60 +
         (p.length > 1 ? (int.tryParse(p[1]) ?? 0) : 0);
+    // For today's queue, never estimate a time already in the past: once the
+    // session has started, anchor to "now" (the doctor can only see you from
+    // now onward). Future-date appointments keep the visiting start as the base.
+    final now = DateTime.now();
+    final isToday = apptDate.year == now.year &&
+        apptDate.month == now.month &&
+        apptDate.day == now.day;
+    if (isToday) {
+      final nowMin = now.hour * 60 + now.minute;
+      if (nowMin > base) base = nowMin;
+    }
     final total = base + (position - 1) * mins;
     var h = (total ~/ 60) % 24;
     final m = total % 60;
