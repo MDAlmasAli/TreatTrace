@@ -18,3 +18,15 @@ create table if not exists public.notifications (
   created_at timestamptz not null default now()
 );
 create index if not exists notifications_user_created_idx on public.notifications (user_id, created_at desc);
+
+-- ── Realtime ────────────────────────────────────────────────────────────────
+-- Publish row changes so the notification bell's unread badge updates live.
+-- REPLICA IDENTITY FULL lets clients filter on the non-PK user_id column.
+alter table public.notifications replica identity full;
+do $$ begin
+  if not exists (select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public'
+      and tablename = 'notifications') then
+    alter publication supabase_realtime add table public.notifications;
+  end if;
+end $$;

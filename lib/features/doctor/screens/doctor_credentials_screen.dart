@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/doctor_verification_service.dart';
@@ -28,15 +29,18 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
   final _aboutCtrl      = TextEditingController();
   final _additionalCtrl = TextEditingController();
   final _formKey        = GlobalKey<FormState>();
+  RealtimeChannel? _verifChannel;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _subscribeRealtime();
   }
 
   @override
   void dispose() {
+    _verifChannel?.unsubscribe();
     _bmdcCtrl.dispose();
     _specialtyCtrl.dispose();
     _hospitalCtrl.dispose();
@@ -45,6 +49,29 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
     _aboutCtrl.dispose();
     _additionalCtrl.dispose();
     super.dispose();
+  }
+
+  // Live refresh: reload when an admin approves/rejects this doctor's
+  // verification. Skipped while the doctor is editing so their form isn't reset.
+  void _subscribeRealtime() {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return;
+    _verifChannel = Supabase.instance.client
+        .channel('credentials_$uid')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'doctor_verifications',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: uid,
+          ),
+          callback: (_) {
+            if (mounted && !_editing) _load();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _load() async {

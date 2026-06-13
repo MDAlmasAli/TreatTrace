@@ -56,3 +56,15 @@ create trigger set_test_reports_updated_at before update on public.test_reports
 drop trigger if exists trg_notify_new_test_report on public.test_reports;
 create trigger trg_notify_new_test_report after insert on public.test_reports
   for each row execute function public.notify_new_test_report();
+
+-- ── Realtime ────────────────────────────────────────────────────────────────
+-- Publish row changes so the patient's test-report list updates live. REPLICA
+-- IDENTITY FULL lets clients filter on non-PK columns (e.g. user_id).
+alter table public.test_reports replica identity full;
+do $$ begin
+  if not exists (select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public'
+      and tablename = 'test_reports') then
+    alter publication supabase_realtime add table public.test_reports;
+  end if;
+end $$;

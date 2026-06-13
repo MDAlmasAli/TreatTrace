@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../models/doctor_patient_link_model.dart';
@@ -21,18 +22,43 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
 
   List<DoctorPatientLink> _patients = [];
   bool _loading = true;
+  RealtimeChannel? _linkChannel;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _subscribeRealtime();
     _searchCtrl.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
+    _linkChannel?.unsubscribe();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  // Live refresh: reload when this doctor's patient links change (new link, etc.).
+  void _subscribeRealtime() {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return;
+    _linkChannel = Supabase.instance.client
+        .channel('my_patients_$uid')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'doctor_patient_links',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'doctor_id',
+            value: uid,
+          ),
+          callback: (_) {
+            if (mounted) _load();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _load() async {

@@ -35,18 +35,41 @@ class _AllPrescriptionsScreenState extends State<AllPrescriptionsScreen> {
   bool               _loading     = true;
   DateTime?          _selectedDate;
   bool               _sortNewest  = true;
+  RealtimeChannel?   _rxChannel;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _subscribeRealtime();
     _searchCtrl.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
+    _rxChannel?.unsubscribe();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  // Live refresh: reload when this patient's prescriptions change.
+  void _subscribeRealtime() {
+    _rxChannel = Supabase.instance.client
+        .channel('all_rx_${widget.patientId}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'prescriptions',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: widget.patientId,
+          ),
+          callback: (_) {
+            if (mounted) _load();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _load() async {

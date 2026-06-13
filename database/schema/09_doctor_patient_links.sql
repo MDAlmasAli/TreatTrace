@@ -80,3 +80,16 @@ $function$;
 drop trigger if exists trg_notify_link_change on public.doctor_patient_links;
 create trigger trg_notify_link_change after insert or update on public.doctor_patient_links
   for each row execute function public.notify_link_change();
+
+-- ── Realtime ────────────────────────────────────────────────────────────────
+-- Publish row changes so My Patients / My Doctors lists and the dashboard
+-- patient count update live. REPLICA IDENTITY FULL lets clients filter on
+-- non-PK columns (doctor_id / patient_id).
+alter table public.doctor_patient_links replica identity full;
+do $$ begin
+  if not exists (select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public'
+      and tablename = 'doctor_patient_links') then
+    alter publication supabase_realtime add table public.doctor_patient_links;
+  end if;
+end $$;

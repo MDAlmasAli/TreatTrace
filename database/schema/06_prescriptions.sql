@@ -88,3 +88,15 @@ create trigger set_prescriptions_updated_at before update on public.prescription
 drop trigger if exists trg_notify_new_prescription on public.prescriptions;
 create trigger trg_notify_new_prescription after insert on public.prescriptions
   for each row execute function public.notify_new_prescription();
+
+-- ── Realtime ────────────────────────────────────────────────────────────────
+-- Publish row changes so the patient's prescription list updates live. REPLICA
+-- IDENTITY FULL lets clients filter on non-PK columns (e.g. user_id).
+alter table public.prescriptions replica identity full;
+do $$ begin
+  if not exists (select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public'
+      and tablename = 'prescriptions') then
+    alter publication supabase_realtime add table public.prescriptions;
+  end if;
+end $$;

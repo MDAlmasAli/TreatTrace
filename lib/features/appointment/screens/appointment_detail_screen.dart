@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
@@ -72,12 +73,47 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 
   String? _estTime;  // estimated visit time from live queue position + schedule
   int?    _position; // live queue position (patients still ahead + 1)
+  RealtimeChannel? _apptChannel;
 
   @override
   void initState() {
     super.initState();
     _appt = widget.appointment;
     _fetchLinkedData();
+    _loadEstimatedTime();
+    _subscribeRealtime();
+  }
+
+  @override
+  void dispose() {
+    _apptChannel?.unsubscribe();
+    super.dispose();
+  }
+
+  // Live refresh: reflect changes the other party makes to this appointment
+  // (status / reschedule). Skipped while one of our own actions is in flight.
+  void _subscribeRealtime() {
+    _apptChannel = Supabase.instance.client
+        .channel('appt_detail_${_appt.id}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'appointments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: _appt.id,
+          ),
+          callback: (_) => _refreshFromRealtime(),
+        )
+        .subscribe();
+  }
+
+  Future<void> _refreshFromRealtime() async {
+    if (_loading) return; // don't clobber an in-flight action
+    final updated = await _service.fetchOne(_appt.id);
+    if (!mounted || updated == null) return;
+    setState(() => _appt = updated);
     _loadEstimatedTime();
   }
 

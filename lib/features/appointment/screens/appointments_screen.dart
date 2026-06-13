@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
@@ -28,19 +29,45 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
   bool              _loading = true;
   List<Appointment> _all     = [];
   String            _query   = '';
+  RealtimeChannel?  _apptChannel;
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 3, vsync: this);
     _load();
+    _subscribeRealtime();
   }
 
   @override
   void dispose() {
+    _apptChannel?.unsubscribe();
     _tabCtrl.dispose();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  // Live refresh: reload when any of this patient's appointments change
+  // (booking, status, reschedule, or a queue shift ahead of them).
+  void _subscribeRealtime() {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return;
+    _apptChannel = Supabase.instance.client
+        .channel('patient_appts_$uid')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'appointments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: uid,
+          ),
+          callback: (_) {
+            if (mounted) _load();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _load() async {

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
@@ -30,19 +31,45 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen>
   List<Prescription>    _all     = [];
   String                _query   = '';
   DateTime?             _date;   // null = no date filter
+  RealtimeChannel?      _rxChannel;
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 3, vsync: this);
     _load();
+    _subscribeRealtime();
   }
 
   @override
   void dispose() {
+    _rxChannel?.unsubscribe();
     _tabCtrl.dispose();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  // Live refresh: reload when this patient's prescriptions change (e.g. a doctor
+  // writes a new one).
+  void _subscribeRealtime() {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return;
+    _rxChannel = Supabase.instance.client
+        .channel('patient_rx_$uid')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'prescriptions',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: uid,
+          ),
+          callback: (_) {
+            if (mounted) _load();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _load() async {

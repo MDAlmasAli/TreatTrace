@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/l10n/app_strings.dart';
@@ -31,17 +32,42 @@ class _TestReportsScreenState extends State<TestReportsScreen> {
   String           _query          = '';
   String?          _selectedCategory; // null = show all
   DateTime?        _date;             // null = no date filter
+  RealtimeChannel? _reportChannel;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _subscribeRealtime();
   }
 
   @override
   void dispose() {
+    _reportChannel?.unsubscribe();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  // Live refresh: reload when this patient's test reports change.
+  void _subscribeRealtime() {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return;
+    _reportChannel = Supabase.instance.client
+        .channel('patient_reports_$uid')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'test_reports',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: uid,
+          ),
+          callback: (_) {
+            if (mounted) _load();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _load() async {

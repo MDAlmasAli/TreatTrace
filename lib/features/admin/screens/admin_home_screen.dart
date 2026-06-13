@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/doctor_verification_service.dart';
@@ -21,18 +22,37 @@ class _AdminHomeScreenState extends State<AdminHomeScreen>
   List<Map<String, dynamic>> _all      = [];
   List<Map<String, dynamic>> _edits    = [];
   bool _loading = true;
+  RealtimeChannel? _verifChannel;
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 4, vsync: this);
     _load();
+    _subscribeRealtime();
   }
 
   @override
   void dispose() {
+    _verifChannel?.unsubscribe();
     _tabs.dispose();
     super.dispose();
+  }
+
+  // Live refresh: reload when any doctor verification changes (new submission,
+  // status flip, or a pending edit) so the admin queues stay current.
+  void _subscribeRealtime() {
+    _verifChannel = Supabase.instance.client
+        .channel('admin_verifications')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'doctor_verifications',
+          callback: (_) {
+            if (mounted) _load();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _load() async {

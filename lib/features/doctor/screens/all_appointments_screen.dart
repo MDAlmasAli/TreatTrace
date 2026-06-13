@@ -36,18 +36,41 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
   List<Appointment> _list      = [];
   bool              _loading   = true;
   bool              _sortNewest = true;
+  RealtimeChannel?  _apptChannel;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _subscribeRealtime();
     _searchCtrl.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
+    _apptChannel?.unsubscribe();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  // Live refresh: reload when this patient's appointments change.
+  void _subscribeRealtime() {
+    _apptChannel = Supabase.instance.client
+        .channel('all_appts_${widget.patientId}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'appointments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: widget.patientId,
+          ),
+          callback: (_) {
+            if (mounted) _load();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _load() async {

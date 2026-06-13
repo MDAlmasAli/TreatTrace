@@ -187,6 +187,14 @@ begin
 end;
 $function$;
 
--- Let patients receive live UPDATEs to the doctor's row (filtered by id = PK,
--- so the default replica identity is sufficient).
-alter publication supabase_realtime add table public.doctor_verifications;
+-- Publish row changes so patients see "now serving" live, doctors see approval
+-- status flip, and admins see verification changes live. REPLICA IDENTITY FULL
+-- lets clients filter on non-PK columns (e.g. status).
+alter table public.doctor_verifications replica identity full;
+do $$ begin
+  if not exists (select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public'
+      and tablename = 'doctor_verifications') then
+    alter publication supabase_realtime add table public.doctor_verifications;
+  end if;
+end $$;

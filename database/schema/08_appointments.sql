@@ -464,3 +464,16 @@ create trigger trg_notify_appointment_change after update on public.appointments
 drop trigger if exists trg_notify_queue_shift on public.appointments;
 create trigger trg_notify_queue_shift after update on public.appointments
   for each row execute function public.notify_queue_shift();
+
+-- ── Realtime ────────────────────────────────────────────────────────────────
+-- Publish row changes so dashboards, schedules, appointment lists and the live
+-- queue update without leaving the screen. REPLICA IDENTITY FULL lets clients
+-- filter on non-PK columns (user_id / doctor_user_id).
+alter table public.appointments replica identity full;
+do $$ begin
+  if not exists (select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public'
+      and tablename = 'appointments') then
+    alter publication supabase_realtime add table public.appointments;
+  end if;
+end $$;

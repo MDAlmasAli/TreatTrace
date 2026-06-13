@@ -41,6 +41,7 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
   );
   final _completedSearchCtrl = TextEditingController();
   bool _loading = true;
+  RealtimeChannel? _apptChannel;
 
   // Multi-select (Today + Upcoming only).
   bool _selectionMode = false;
@@ -50,13 +51,37 @@ class _DoctorTodayScheduleScreenState extends State<DoctorTodayScheduleScreen> {
   void initState() {
     super.initState();
     _load();
+    _subscribeRealtime();
     _completedSearchCtrl.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
+    _apptChannel?.unsubscribe();
     _completedSearchCtrl.dispose();
     super.dispose();
+  }
+
+  // Live refresh: reload whenever any of this doctor's appointments change.
+  void _subscribeRealtime() {
+    final uid = _currentDoctorId;
+    if (uid == null) return;
+    _apptChannel = _client
+        .channel('doctor_schedule_$uid')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'appointments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'doctor_user_id',
+            value: uid,
+          ),
+          callback: (_) {
+            if (mounted) _load();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _load() async {

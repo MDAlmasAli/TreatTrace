@@ -37,18 +37,41 @@ class _AllTestReportsScreenState extends State<AllTestReportsScreen> {
   bool            _loading    = true;
   DateTime?       _selectedDate;
   bool            _sortNewest = true;
+  RealtimeChannel? _reportChannel;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _subscribeRealtime();
     _searchCtrl.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
+    _reportChannel?.unsubscribe();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  // Live refresh: reload when this patient's test reports change.
+  void _subscribeRealtime() {
+    _reportChannel = Supabase.instance.client
+        .channel('all_reports_${widget.patientId}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'test_reports',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: widget.patientId,
+          ),
+          callback: (_) {
+            if (mounted) _load();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _load() async {
