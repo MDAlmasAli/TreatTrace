@@ -107,6 +107,7 @@ class _DoctorReviewsSectionState extends State<DoctorReviewsSection> {
 
   List<DoctorReview> _reviews = [];
   bool   _loading = true;
+  bool   _showAllReviews = false; // collapsed to the first few until expanded
   bool   _canReview = false;
   ({int rating, String? comment})? _mine;
   late double _avg   = widget.initialAvg;
@@ -253,7 +254,27 @@ class _DoctorReviewsSectionState extends State<DoctorReviewsSection> {
             const SizedBox(height: 16),
             Divider(height: 1, color: c.border),
             const SizedBox(height: 8),
-            ..._reviews.map((r) => _ReviewTile(review: r)),
+            // Show the 3 most recent by default; expand on demand.
+            ...(_showAllReviews ? _reviews : _reviews.take(3))
+                .map((r) => _ReviewTile(review: r)),
+            if (_reviews.length > 3) ...[
+              const SizedBox(height: 4),
+              Center(
+                child: TextButton(
+                  onPressed: () =>
+                      setState(() => _showAllReviews = !_showAllReviews),
+                  child: Text(
+                    _showAllReviews
+                        ? 'Show less'
+                        : 'Show all ${_reviews.length} reviews',
+                    style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: c.accent),
+                  ),
+                ),
+              ),
+            ],
           ],
         ],
       ),

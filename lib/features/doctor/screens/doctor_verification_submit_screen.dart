@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/doctor_verification_service.dart';
+import '../../../core/services/reference_data_service.dart';
+import '../../../shared/widgets/searchable_picker_field.dart';
 
 class DoctorVerificationSubmitScreen extends StatefulWidget {
   final VoidCallback onSubmitted;
@@ -23,23 +25,59 @@ class _DoctorVerificationSubmitScreenState
     extends State<DoctorVerificationSubmitScreen> {
   final _formKey = GlobalKey<FormState>();
   final _service = DoctorVerificationService();
+  final _refSvc  = ReferenceDataService();
 
   final _bmdcCtrl       = TextEditingController();
   final _specialtyCtrl  = TextEditingController();
-  final _hospitalCtrl   = TextEditingController();
+  final _addressCtrl    = TextEditingController();
   final _nidCtrl        = TextEditingController();
   final _degreeCtrl     = TextEditingController();
   final _aboutCtrl      = TextEditingController();
   final _additionalCtrl = TextEditingController();
 
+  // Location pickers (district + hospital must be chosen from the lists).
+  List<District> _districts = [];
+  List<Hospital> _hospitals = [];
+  int?    _districtId;
+  String? _districtName;
+  String? _hospitalId;     // null when a manual entry
+  String? _hospitalName;
+  bool    _hospitalManual = false;
+  String? _districtError;
+  String? _hospitalError;
+
   bool _loading = false;
+  bool _loadingRef = true;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRef();
+  }
+
+  Future<void> _loadRef() async {
+    try {
+      final results = await Future.wait([
+        _refSvc.fetchDistricts(),
+        _refSvc.fetchApprovedHospitals(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _districts = results[0] as List<District>;
+        _hospitals = results[1] as List<Hospital>;
+        _loadingRef = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingRef = false);
+    }
+  }
 
   @override
   void dispose() {
     _bmdcCtrl.dispose();
     _specialtyCtrl.dispose();
-    _hospitalCtrl.dispose();
+    _addressCtrl.dispose();
     _nidCtrl.dispose();
     _degreeCtrl.dispose();
     _aboutCtrl.dispose();
@@ -47,14 +85,87 @@ class _DoctorVerificationSubmitScreenState
     super.dispose();
   }
 
+  String? _districtNameFor(int? id) {
+    if (id == null) return null;
+    for (final d in _districts) {
+      if (d.id == id) return d.nameEn;
+    }
+    return null;
+  }
+
+  Future<void> _pickDistrict() async {
+    final res = await showSearchablePicker(
+      context: context,
+      title: 'Select District',
+      searchHint: 'Search district…',
+      options: _districts
+          .map((d) => PickerOption(
+              id: '${d.id}',
+              label: d.nameEn,
+              subtitle: d.division,
+              searchTerms: [d.nameBn]))
+          .toList(),
+      selectedId: _districtId?.toString(),
+    );
+    if (res != null) {
+      setState(() {
+        _districtId = int.parse(res.id);
+        _districtName = res.label;
+        _districtError = null;
+      });
+    }
+  }
+
+  Future<void> _pickHospital() async {
+    final options = _hospitals
+        .map((h) => PickerOption(
+            id: h.id,
+            label: h.name,
+            subtitle: _districtNameFor(h.districtId)))
+        .toList();
+    final res = await showSearchablePicker(
+      context: context,
+      title: 'Select Hospital',
+      searchHint: 'Search hospital…',
+      options: options,
+      selectedId: _hospitalManual ? null : _hospitalId,
+      manualAddLabel: 'Add "{q}" as a new hospital',
+    );
+    if (res != null) {
+      setState(() {
+        _hospitalManual = res.isManual;
+        _hospitalId = res.isManual ? null : res.id;
+        _hospitalName = res.label;
+        _hospitalError = null;
+      });
+    }
+  }
+
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    final formOk = _formKey.currentState!.validate();
+    final districtOk = _districtId != null;
+    final hospitalOk = _hospitalId != null || _hospitalManual;
+    if (!districtOk || !hospitalOk) {
+      setState(() {
+        _districtError = districtOk ? null : 'Please select a district';
+        _hospitalError = hospitalOk ? null : 'Please select a hospital';
+      });
+    }
+    if (!formOk || !districtOk || !hospitalOk) return;
+
     setState(() { _loading = true; _error = null; });
     try {
+      // A manually-typed hospital is filed as a pending request first.
+      final hospitalId = _hospitalManual
+          ? await _refSvc.requestManualHospital(
+              name: _hospitalName!, districtId: _districtId)
+          : _hospitalId!;
       await _service.submitVerification(
         bmdcNumber:     _bmdcCtrl.text.trim(),
         specialty:      _specialtyCtrl.text.trim(),
-        hospital:       _hospitalCtrl.text.trim(),
+        hospitalId:     hospitalId,
+        districtId:     _districtId!,
+        fullAddress:    _addressCtrl.text.trim(),
         nidPassport:    _nidCtrl.text.trim(),
         degree:         _degreeCtrl.text.trim(),
         about:          _aboutCtrl.text.trim(),
@@ -164,13 +275,41 @@ class _DoctorVerificationSubmitScreenState
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                   ),
                   const SizedBox(height: 16),
+                  SearchablePickerField(
+                    label: 'District',
+                    icon: Icons.location_city_rounded,
+                    hint: 'Select your district',
+                    value: _districtName,
+                    errorText: _districtError,
+                    enabled: !_loadingRef,
+                    onTap: _pickDistrict,
+                  ),
+                  const SizedBox(height: 16),
                   _Field(
-                    label: 'Hospital / Clinic',
-                    hint: 'Current workplace name',
-                    controller: _hospitalCtrl,
-                    icon: Icons.local_hospital_rounded,
+                    label: 'Full Address',
+                    hint: 'Area, road, holding — full chamber address',
+                    controller: _addressCtrl,
+                    icon: Icons.location_on_rounded,
+                    maxLines: 2,
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                   ),
+                  const SizedBox(height: 16),
+                  SearchablePickerField(
+                    label: 'Hospital / Clinic',
+                    icon: Icons.local_hospital_rounded,
+                    hint: 'Select your hospital',
+                    value: _hospitalName,
+                    errorText: _hospitalError,
+                    enabled: !_loadingRef,
+                    onTap: _pickHospital,
+                  ),
+                  if (_hospitalManual) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'New hospital — visible on your profile once an admin approves it.',
+                      style: GoogleFonts.poppins(fontSize: 11, color: c.amber),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   _Field(
                     label: 'NID / Passport No.',

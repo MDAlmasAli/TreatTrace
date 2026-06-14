@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
+import '../../../core/services/reference_data_service.dart';
 import '../../doctor/models/doctor_patient_link_model.dart';
 import '../../doctor/services/doctor_patient_link_service.dart';
 import 'doctor_public_profile_screen.dart';
@@ -32,6 +34,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   final _linkSvc = DoctorPatientLinkService();
   final _prescriptionSvc = PrescriptionService();
   final _testReportSvc = TestReportService();
+  final _refSvc = ReferenceDataService();
 
   bool _loading = true;
   String _query = '';
@@ -41,29 +44,64 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   Set<String> _linkedIds = {};
   List<Prescription> _prescriptions = [];
   List<TestReport> _testReports = [];
+  // Full DB-backed option lists for the filter pickers.
+  List<String> _dbDistricts = [];
+  List<String> _dbHospitals = [];
+
+  RealtimeChannel? _doctorChannel;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _subscribeRealtime();
     _focusNode.requestFocus();
   }
 
   @override
   void dispose() {
+    _doctorChannel?.unsubscribe();
     _searchCtrl.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  // Live updates: silently reload the doctor list whenever a doctor's
+  // verification (status/edit/info) or a link changes — so doctors appear,
+  // disappear, or update without leaving and reopening the screen.
+  void _subscribeRealtime() {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    _doctorChannel = Supabase.instance.client
+        .channel('global_search_doctors_${uid ?? 'anon'}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'doctor_verifications',
+          callback: (_) {
+            if (mounted) _load(silent: true);
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'doctor_patient_links',
+          callback: (_) {
+            if (mounted) _load(silent: true);
+          },
+        )
+        .subscribe();
+  }
+
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     try {
       final results = await Future.wait([
         _linkSvc.fetchApprovedDoctors(),
         _linkSvc.fetchIncomingRequests(),
         _prescriptionSvc.fetchAll(),
         _testReportSvc.fetchAll(),
+        _refSvc.fetchDistricts(),
+        _refSvc.fetchApprovedHospitals(),
       ]);
       _allDoctors = results[0] as List<Map<String, dynamic>>;
       _linkedIds = (results[1] as List<DoctorPatientLink>)
@@ -72,6 +110,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           .toSet();
       _prescriptions = results[2] as List<Prescription>;
       _testReports = results[3] as List<TestReport>;
+      _dbDistricts = (results[4] as List<District>).map((d) => d.nameEn).toList();
+      _dbHospitals = (results[5] as List<Hospital>).map((h) => h.name).toList()
+        ..sort();
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -88,7 +129,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         : _allDoctors.where((d) =>
             ((d['full_name'] as String?)?.toLowerCase().contains(q) ?? false) ||
             ((d['specialty'] as String?)?.toLowerCase().contains(q) ?? false) ||
-            ((d['hospital'] as String?)?.toLowerCase().contains(q) ?? false)).toList();
+            ((d['hospital'] as String?)?.toLowerCase().contains(q) ?? false) ||
+            ((d['district'] as String?)?.toLowerCase().contains(q) ?? false)).toList();
     return applyDoctorFilter(base, _filter);
   }
 
@@ -102,13 +144,10 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           .toList()
         ..sort());
 
-  List<String> get _hospitalOptions => (_allDoctors
-          .map((d) => d['hospital'] as String?)
-          .whereType<String>()
-          .where((s) => s.trim().isNotEmpty)
-          .toSet()
-          .toList()
-        ..sort());
+  // Hospital & district options come from the full DB lists (so a patient can
+  // search any district/hospital), not only those of the loaded doctors.
+  List<String> get _hospitalOptions => _dbHospitals;
+  List<String> get _districtOptions => _dbDistricts;
 
   RangeValues? get _feeBounds {
     final fees = _allDoctors
@@ -127,6 +166,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       current:     _filter,
       specialties: _specialtyOptions,
       hospitals:   _hospitalOptions,
+      districts:   _districtOptions,
       feeBounds:   _feeBounds,
     );
     if (res != null) setState(() => _filter = res);
@@ -263,7 +303,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                 onChanged: (v) => setState(() => _query = v.trim()),
                 style: GoogleFonts.poppins(fontSize: 13, color: c.textPrimary),
                 decoration: InputDecoration(
-                  hintText: 'Search doctors, medicines, reportsâ€¦',
+                  hintText: 'Search doctors, medicines, reports...',
                   hintStyle: GoogleFonts.poppins(
                     fontSize: 12,
                     color: c.textMuted,

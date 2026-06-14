@@ -229,6 +229,8 @@ class _NotificationTile extends StatelessWidget {
         return (Icons.hourglass_top_rounded, c.amber);
       case 'doctor_available':
         return (Icons.verified_rounded, c.green);
+      case 'doctor_info_updated':
+        return (Icons.edit_note_rounded, c.accent);
       case 'edit_rejected':
         return (Icons.cancel_rounded, c.red);
       default:

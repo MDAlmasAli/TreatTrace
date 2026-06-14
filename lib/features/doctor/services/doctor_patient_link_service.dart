@@ -58,7 +58,8 @@ class DoctorPatientLinkService {
     final ids = profiles.map((p) => p['id'] as String).toList();
     final verifs = await _client
         .from('doctor_verifications')
-        .select('id, specialty, hospital, chamber, visiting_fee, degree, '
+        .select('id, specialty, hospital, full_address, district_id, '
+            'districts!district_id(name_en, name_bn), visiting_fee, degree, '
             'visiting_days, visiting_start_time, visiting_end_time, '
             'edit_status, rating_avg, rating_count')
         .eq('status', 'approved')
@@ -73,13 +74,17 @@ class DoctorPatientLinkService {
             approvedMap[p['id'] as String]?['edit_status'] != 'pending')
         .map((p) {
           final v = approvedMap[p['id'] as String];
+          final dist = v?['districts'] as Map<String, dynamic>?;
           return {
             'id':                  p['id'],
             'full_name':           p['full_name'],
             'avatar_url':          p['avatar_url'],
             'specialty':           v?['specialty'],
             'hospital':            v?['hospital'],
-            'chamber':             v?['chamber'],
+            'full_address':        v?['full_address'],
+            'district_id':         v?['district_id'],
+            'district':            dist?['name_en'],
+            'district_bn':         dist?['name_bn'],
             'visiting_fee':        v?['visiting_fee'],
             'degree':              v?['degree'],
             'visiting_days':       v?['visiting_days'],
@@ -112,7 +117,9 @@ class DoctorPatientLinkService {
           .maybeSingle(),
       _client
           .from('doctor_verifications')
-          .select('specialty, hospital, degree, visiting_fee, visiting_hours, chamber, about, edit_status, rating_avg, rating_count')
+          .select('specialty, hospital, degree, visiting_fee, visiting_hours, '
+              'full_address, district_id, districts!district_id(name_en, name_bn), '
+              'about, edit_status, rating_avg, rating_count')
           .eq('id', doctorId)
           .eq('status', 'approved')
           .maybeSingle(),
@@ -123,6 +130,7 @@ class DoctorPatientLinkService {
 
     if (profile == null) return null;
 
+    final dist = verif?['districts'] as Map<String, dynamic>?;
     return {
       'id':           doctorId,
       'full_name':    profile['full_name'],
@@ -133,7 +141,10 @@ class DoctorPatientLinkService {
       'degree':       verif?['degree'],
       'visiting_fee':   verif?['visiting_fee'],
       'visiting_hours': verif?['visiting_hours'],
-      'chamber':        verif?['chamber'],
+      'full_address':   verif?['full_address'],
+      'district_id':    verif?['district_id'],
+      'district':       dist?['name_en'],
+      'district_bn':    dist?['name_bn'],
       'about':          verif?['about'],
       'edit_status':    verif?['edit_status'],   // 'pending' = on hold
       'rating_avg':     verif?['rating_avg'],

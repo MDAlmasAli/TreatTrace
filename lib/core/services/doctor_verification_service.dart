@@ -16,7 +16,9 @@ class DoctorVerificationService {
   Future<void> submitVerification({
     required String bmdcNumber,
     required String specialty,
-    required String hospital,
+    required String hospitalId, // FK into hospitals (approved or pending)
+    required int districtId,
+    required String fullAddress,
     required String nidPassport,
     required String degree,
     required String about,
@@ -24,11 +26,14 @@ class DoctorVerificationService {
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('Not logged in');
+    // hospital (display text) is derived from hospital_id by a DB trigger.
     await _client.from('doctor_verifications').upsert({
       'id': userId,
       'bmdc_number': bmdcNumber,
       'specialty': specialty,
-      'hospital': hospital,
+      'hospital_id': hospitalId,
+      'district_id': districtId,
+      'full_address': fullAddress,
       'nid_passport': nidPassport,
       'degree': degree,
       'about': about,
@@ -41,7 +46,6 @@ class DoctorVerificationService {
 
   Future<void> updateVisitingInfo({
     int?         fee,
-    String?      chamber,
     List<int>?   days,       // ISO weekdays 1=Mon..7=Sun
     String?      startTime,  // 'HH:mm:ss' or null
     String?      endTime,    // 'HH:mm:ss' or null
@@ -57,7 +61,6 @@ class DoctorVerificationService {
 
     await _client.from('doctor_verifications').update({
       'visiting_fee':        fee,
-      'chamber':             chamber?.trim().isEmpty == true ? null : chamber?.trim(),
       'visiting_days':       sortedDays,
       'visiting_start_time': startTime,
       'visiting_end_time':   endTime,
@@ -126,7 +129,10 @@ class DoctorVerificationService {
   Future<void> submitEdit({
     required String bmdcNumber,
     required String specialty,
-    required String hospital,
+    required String hospitalId,   // FK into hospitals
+    required String hospitalName, // display text for the admin diff
+    required int districtId,
+    required String fullAddress,
     required String nidPassport,
     required String degree,
     required String about,
@@ -137,7 +143,10 @@ class DoctorVerificationService {
     await _client.from('doctor_verifications').update({
       'pending_bmdc':          bmdcNumber,
       'pending_specialty':     specialty,
-      'pending_hospital':      hospital,
+      'pending_hospital_id':   hospitalId,
+      'pending_hospital':      hospitalName, // shown in the admin edit diff
+      'pending_district_id':   districtId,
+      'pending_full_address':  fullAddress,
       'pending_nid_passport':  nidPassport,
       'pending_degree':        degree,
       'pending_about':         about,
@@ -183,6 +192,9 @@ class DoctorVerificationService {
       'pending_bmdc':           null,
       'pending_specialty':      null,
       'pending_hospital':       null,
+      'pending_hospital_id':    null,
+      'pending_district_id':    null,
+      'pending_full_address':   null,
       'pending_nid_passport':   null,
       'pending_degree':         null,
       'pending_about':          null,

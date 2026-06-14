@@ -4,7 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/doctor_verification_service.dart';
+import '../../../core/services/reference_data_service.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../shared/widgets/searchable_picker_field.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -16,21 +18,27 @@ class AdminHomeScreen extends StatefulWidget {
 class _AdminHomeScreenState extends State<AdminHomeScreen>
     with SingleTickerProviderStateMixin {
   final _service     = DoctorVerificationService();
+  final _refSvc      = ReferenceDataService();
   final _authService = AuthService();
   late final TabController _tabs;
 
   List<Map<String, dynamic>> _all      = [];
   List<Map<String, dynamic>> _edits    = [];
+  List<Hospital> _pendingHospitals     = [];
+  List<District> _districts            = [];
+  Map<int, String> _districtNames      = {};
   bool _loading = true;
   RealtimeChannel? _verifChannel;
 
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 4, vsync: this);
+    _tabs = TabController(length: 5, vsync: this);
     _load();
     _subscribeRealtime();
   }
+
+  String? _districtName(int? id) => id == null ? null : _districtNames[id];
 
   @override
   void dispose() {
@@ -60,11 +68,16 @@ class _AdminHomeScreenState extends State<AdminHomeScreen>
     final results = await Future.wait([
       _service.fetchAllVerifications().onError((e, s) => []),
       _service.fetchPendingEdits().onError((e, s) => []),
+      _refSvc.fetchDistricts().onError((e, s) => <District>[]),
+      _refSvc.fetchPendingHospitals().onError((e, s) => <Hospital>[]),
     ]);
     if (mounted) {
       setState(() {
-        _all   = results[0];
-        _edits = results[1];
+        _all   = results[0] as List<Map<String, dynamic>>;
+        _edits = results[1] as List<Map<String, dynamic>>;
+        _districts = results[2] as List<District>;
+        _districtNames = {for (final d in _districts) d.id: d.nameEn};
+        _pendingHospitals = results[3] as List<Hospital>;
         _loading = false;
       });
     }
@@ -207,6 +220,33 @@ class _AdminHomeScreenState extends State<AdminHomeScreen>
     await _load();
   }
 
+  Future<void> _approveHospital(String id, {String? name, int? districtId}) async {
+    await _refSvc.approveHospital(id, name: name, districtId: districtId);
+    await _load();
+  }
+
+  Future<void> _rejectHospital(String id) async {
+    await _refSvc.rejectHospital(id);
+    await _load();
+  }
+
+  Future<int?> _pickDistrictId(int? current) async {
+    final res = await showSearchablePicker(
+      context: context,
+      title: 'Select District',
+      searchHint: 'Search district…',
+      options: _districts
+          .map((d) => PickerOption(
+              id: '${d.id}',
+              label: d.nameEn,
+              subtitle: d.division,
+              searchTerms: [d.nameBn]))
+          .toList(),
+      selectedId: current?.toString(),
+    );
+    return res == null ? null : int.parse(res.id);
+  }
+
   Future<void> _signOut() async {
     await _authService.signOut();
   }
@@ -246,6 +286,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen>
             Tab(text: 'Approved (${_approved.length})'),
             Tab(text: 'Rejected (${_rejected.length})'),
             Tab(text: 'Edits (${_edits.length})'),
+            Tab(text: 'Hospitals (${_pendingHospitals.length})'),
           ],
         ),
       ),
@@ -256,22 +297,33 @@ class _AdminHomeScreenState extends State<AdminHomeScreen>
               children: [
                 _VerificationList(
                   items: _pending,
+                  districtName: _districtName,
                   onApprove: _approve,
                   onReject: _showRejectDialog,
                   emptyMessage: 'No pending verifications',
                 ),
                 _VerificationList(
                   items: _approved,
+                  districtName: _districtName,
                   emptyMessage: 'No approved doctors yet',
                 ),
                 _VerificationList(
                   items: _rejected,
+                  districtName: _districtName,
                   emptyMessage: 'No rejected verifications',
                 ),
                 _EditsList(
                   items: _edits,
+                  districtName: _districtName,
                   onApprove: _approveEdit,
                   onReject: _showRejectEditDialog,
+                ),
+                _HospitalsList(
+                  items: _pendingHospitals,
+                  districtName: _districtName,
+                  onApprove: _approveHospital,
+                  onReject: _rejectHospital,
+                  onPickDistrict: _pickDistrictId,
                 ),
               ],
             ),
@@ -281,12 +333,14 @@ class _AdminHomeScreenState extends State<AdminHomeScreen>
 
 class _VerificationList extends StatelessWidget {
   final List<Map<String, dynamic>> items;
+  final String? Function(int?) districtName;
   final Future<void> Function(String)? onApprove;
   final Future<void> Function(String)? onReject;
   final String emptyMessage;
 
   const _VerificationList({
     required this.items,
+    required this.districtName,
     this.onApprove,
     this.onReject,
     required this.emptyMessage,
@@ -310,6 +364,7 @@ class _VerificationList extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (_, i) => _VerificationCard(
           data: items[i],
+          districtName: districtName,
           onApprove: onApprove,
           onReject: onReject,
         ),
@@ -320,10 +375,16 @@ class _VerificationList extends StatelessWidget {
 
 class _VerificationCard extends StatefulWidget {
   final Map<String, dynamic> data;
+  final String? Function(int?) districtName;
   final Future<void> Function(String)? onApprove;
   final Future<void> Function(String)? onReject;
 
-  const _VerificationCard({required this.data, this.onApprove, this.onReject});
+  const _VerificationCard({
+    required this.data,
+    required this.districtName,
+    this.onApprove,
+    this.onReject,
+  });
 
   @override
   State<_VerificationCard> createState() => _VerificationCardState();
@@ -386,7 +447,14 @@ class _VerificationCardState extends State<_VerificationCard> {
           const SizedBox(height: 14),
           _InfoRow(icon: Icons.badge_rounded,           label: 'BMDC No.',  value: d['bmdc_number'] ?? '-'),
           _InfoRow(icon: Icons.medical_services_rounded, label: 'Specialty', value: d['specialty'] ?? '-'),
-          _InfoRow(icon: Icons.local_hospital_rounded,  label: 'Hospital',  value: d['hospital'] ?? '-'),
+          _InfoRow(
+              icon: Icons.local_hospital_rounded,
+              label: 'Hospital',
+              value: (d['hospital'] as String?)?.isNotEmpty == true
+                  ? d['hospital']
+                  : 'Pending hospital approval'),
+          _InfoRow(icon: Icons.location_city_rounded,   label: 'District',  value: widget.districtName(d['district_id'] as int?) ?? '-'),
+          _InfoRow(icon: Icons.location_on_rounded,     label: 'Address',   value: d['full_address'] ?? '-'),
           _InfoRow(icon: Icons.perm_identity_rounded,   label: 'NID/Pass.', value: d['nid_passport'] ?? '-'),
           if ((d['degree'] as String?)?.isNotEmpty == true)
             _InfoRow(icon: Icons.school_rounded, label: 'Degree', value: d['degree']!),
@@ -512,11 +580,13 @@ class _InfoRow extends StatelessWidget {
 
 class _EditsList extends StatelessWidget {
   final List<Map<String, dynamic>> items;
+  final String? Function(int?) districtName;
   final Future<void> Function(String) onApprove;
   final Future<void> Function(String) onReject;
 
   const _EditsList({
     required this.items,
+    required this.districtName,
     required this.onApprove,
     required this.onReject,
   });
@@ -536,6 +606,7 @@ class _EditsList extends StatelessWidget {
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (_, i) => _EditCard(
         data: items[i],
+        districtName: districtName,
         onApprove: onApprove,
         onReject: onReject,
       ),
@@ -545,10 +616,16 @@ class _EditsList extends StatelessWidget {
 
 class _EditCard extends StatefulWidget {
   final Map<String, dynamic> data;
+  final String? Function(int?) districtName;
   final Future<void> Function(String) onApprove;
   final Future<void> Function(String) onReject;
 
-  const _EditCard({required this.data, required this.onApprove, required this.onReject});
+  const _EditCard({
+    required this.data,
+    required this.districtName,
+    required this.onApprove,
+    required this.onReject,
+  });
 
   @override
   State<_EditCard> createState() => _EditCardState();
@@ -570,6 +647,8 @@ class _EditCardState extends State<_EditCard> {
       ('BMDC No.',     Icons.badge_rounded,             d['bmdc_number'],                  d['pending_bmdc']),
       ('Specialty',    Icons.medical_services_rounded,  d['specialty'],                    d['pending_specialty']),
       ('Hospital',     Icons.local_hospital_rounded,    d['hospital'],                     d['pending_hospital']),
+      ('District',     Icons.location_city_rounded,     widget.districtName(d['district_id'] as int?), widget.districtName(d['pending_district_id'] as int?)),
+      ('Address',      Icons.location_on_rounded,       d['full_address'],                 d['pending_full_address']),
       ('NID/Pass.',    Icons.perm_identity_rounded,     d['nid_passport'],                 d['pending_nid_passport']),
       ('Degree',       Icons.school_rounded,            d['degree'],                       d['pending_degree']),
       ('Visiting Fee', Icons.payments_rounded,          feeStr(d['visiting_fee']),         feeStr(d['pending_visiting_fee'])),
@@ -740,6 +819,212 @@ class _EditFieldRow extends StatelessWidget {
                 ],
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Pending-hospitals tab ──────────────────────────────────────────────────────
+
+class _HospitalsList extends StatelessWidget {
+  final List<Hospital> items;
+  final String? Function(int?) districtName;
+  final Future<void> Function(String, {String? name, int? districtId}) onApprove;
+  final Future<void> Function(String) onReject;
+  final Future<int?> Function(int?) onPickDistrict;
+
+  const _HospitalsList({
+    required this.items,
+    required this.districtName,
+    required this.onApprove,
+    required this.onReject,
+    required this.onPickDistrict,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    if (items.isEmpty) {
+      return Center(
+        child: Text('No pending hospital requests',
+            style: GoogleFonts.poppins(fontSize: 14, color: c.textMuted)),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: items.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (_, i) => _HospitalCard(
+        hospital: items[i],
+        districtName: districtName,
+        onApprove: onApprove,
+        onReject: onReject,
+        onPickDistrict: onPickDistrict,
+      ),
+    );
+  }
+}
+
+class _HospitalCard extends StatefulWidget {
+  final Hospital hospital;
+  final String? Function(int?) districtName;
+  final Future<void> Function(String, {String? name, int? districtId}) onApprove;
+  final Future<void> Function(String) onReject;
+  final Future<int?> Function(int?) onPickDistrict;
+
+  const _HospitalCard({
+    required this.hospital,
+    required this.districtName,
+    required this.onApprove,
+    required this.onReject,
+    required this.onPickDistrict,
+  });
+
+  @override
+  State<_HospitalCard> createState() => _HospitalCardState();
+}
+
+class _HospitalCardState extends State<_HospitalCard> {
+  late final TextEditingController _nameCtrl;
+  int? _districtId;
+  bool _acting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.hospital.name);
+    _districtId = widget.hospital.districtId;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final h = widget.hospital;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.local_hospital_rounded, size: 18, color: c.amber),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Requested by ${h.requesterName ?? 'a doctor'}',
+                    style: GoogleFonts.poppins(
+                        fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: c.amber.withAlpha(20),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: c.amber.withAlpha(60)),
+                ),
+                child: Text('PENDING',
+                    style: GoogleFonts.poppins(
+                        fontSize: 10, fontWeight: FontWeight.w700, color: c.amber)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Editable name (admin can fix typos before approving)
+          Text('Hospital name',
+              style: GoogleFonts.poppins(
+                  fontSize: 12, fontWeight: FontWeight.w600, color: c.textPrimary)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _nameCtrl,
+            style: GoogleFonts.poppins(fontSize: 14, color: c.textPrimary),
+            decoration: InputDecoration(
+              filled: true, fillColor: c.surface,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(11),
+                  borderSide: BorderSide(color: c.border)),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(11),
+                  borderSide: BorderSide(color: c.border)),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(11),
+                  borderSide: BorderSide(color: c.accent, width: 1.5)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SearchablePickerField(
+            label: 'District',
+            icon: Icons.location_city_rounded,
+            hint: 'Assign a district (optional)',
+            value: widget.districtName(_districtId),
+            onTap: () async {
+              final picked = await widget.onPickDistrict(_districtId);
+              if (picked != null) setState(() => _districtId = picked);
+            },
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _acting ? null : () async {
+                    setState(() => _acting = true);
+                    await widget.onReject(h.id);
+                    if (mounted) setState(() => _acting = false);
+                  },
+                  icon: Icon(Icons.delete_outline_rounded, size: 16, color: c.red),
+                  label: Text('Reject',
+                      style: GoogleFonts.poppins(
+                          fontSize: 13, fontWeight: FontWeight.w600, color: c.red)),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: c.red.withAlpha(80)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _acting ? null : () async {
+                    if (_nameCtrl.text.trim().isEmpty) return;
+                    setState(() => _acting = true);
+                    await widget.onApprove(h.id,
+                        name: _nameCtrl.text.trim(), districtId: _districtId);
+                    if (mounted) setState(() => _acting = false);
+                  },
+                  icon: _acting
+                      ? const SizedBox(
+                          width: 16, height: 16,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.check_circle_rounded, size: 16),
+                  label: Text(_acting ? 'Processing...' : 'Approve',
+                      style: GoogleFonts.poppins(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: c.green,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

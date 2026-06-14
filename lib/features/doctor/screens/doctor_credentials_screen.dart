@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/services/doctor_verification_service.dart';
+import '../../../core/services/reference_data_service.dart';
+import '../../../shared/widgets/searchable_picker_field.dart';
 
 class DoctorCredentialsScreen extends StatefulWidget {
   const DoctorCredentialsScreen({super.key});
@@ -14,6 +16,7 @@ class DoctorCredentialsScreen extends StatefulWidget {
 
 class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
   final _service = DoctorVerificationService();
+  final _refSvc  = ReferenceDataService();
 
   Map<String, dynamic>? _data;
   bool _loading = true;
@@ -23,7 +26,7 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
 
   final _bmdcCtrl       = TextEditingController();
   final _specialtyCtrl  = TextEditingController();
-  final _hospitalCtrl   = TextEditingController();
+  final _addressCtrl    = TextEditingController();
   final _nidCtrl        = TextEditingController();
   final _degreeCtrl     = TextEditingController();
   final _aboutCtrl      = TextEditingController();
@@ -31,11 +34,45 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
   final _formKey        = GlobalKey<FormState>();
   RealtimeChannel? _verifChannel;
 
+  // Location pickers (used while editing).
+  List<District> _districts = [];
+  List<Hospital> _hospitals = [];
+  int?    _districtId;
+  String? _districtName;
+  String? _hospitalId;     // null when a manual entry
+  String? _hospitalName;
+  bool    _hospitalManual = false;
+  String? _districtError;
+  String? _hospitalError;
+
   @override
   void initState() {
     super.initState();
     _load();
+    _loadRef();
     _subscribeRealtime();
+  }
+
+  Future<void> _loadRef() async {
+    try {
+      final results = await Future.wait([
+        _refSvc.fetchDistricts(),
+        _refSvc.fetchApprovedHospitals(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _districts = results[0] as List<District>;
+        _hospitals = results[1] as List<Hospital>;
+      });
+    } catch (_) {}
+  }
+
+  String? _districtNameFor(int? id) {
+    if (id == null) return null;
+    for (final d in _districts) {
+      if (d.id == id) return d.nameEn;
+    }
+    return null;
   }
 
   @override
@@ -43,7 +80,7 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
     _verifChannel?.unsubscribe();
     _bmdcCtrl.dispose();
     _specialtyCtrl.dispose();
-    _hospitalCtrl.dispose();
+    _addressCtrl.dispose();
     _nidCtrl.dispose();
     _degreeCtrl.dispose();
     _aboutCtrl.dispose();
@@ -93,22 +130,100 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
         (pending ? d[pendingKey] as String? : null) ?? (d[liveKey] as String?) ?? '';
     _bmdcCtrl.text       = pick('pending_bmdc',         'bmdc_number');
     _specialtyCtrl.text  = pick('pending_specialty',    'specialty');
-    _hospitalCtrl.text   = pick('pending_hospital',     'hospital');
     _nidCtrl.text        = pick('pending_nid_passport', 'nid_passport');
     _degreeCtrl.text     = pick('pending_degree',       'degree');
     _aboutCtrl.text      = pick('pending_about',        'about');
     _additionalCtrl.text = pick('pending_additional',   'additional_info');
+    _addressCtrl.text    = pick('pending_full_address', 'full_address');
+
+    // District + hospital pickers seed from pending (if any) else live values.
+    final districtId = (pending ? d['pending_district_id'] as int? : null) ??
+        d['district_id'] as int?;
+    final hospitalId = (pending ? d['pending_hospital_id'] as String? : null) ??
+        d['hospital_id'] as String?;
+    final hospitalName = (pending ? d['pending_hospital'] as String? : null) ??
+        d['hospital'] as String?;
+    _districtId   = districtId;
+    _districtName = _districtNameFor(districtId);
+    _hospitalId   = hospitalId;
+    _hospitalName = hospitalName;
+    _hospitalManual = false;
+    _districtError = null;
+    _hospitalError = null;
     setState(() { _editing = true; _error = null; });
   }
 
+  Future<void> _pickDistrict() async {
+    final res = await showSearchablePicker(
+      context: context,
+      title: 'Select District',
+      searchHint: 'Search district…',
+      options: _districts
+          .map((d) => PickerOption(
+              id: '${d.id}',
+              label: d.nameEn,
+              subtitle: d.division,
+              searchTerms: [d.nameBn]))
+          .toList(),
+      selectedId: _districtId?.toString(),
+    );
+    if (res != null) {
+      setState(() {
+        _districtId = int.parse(res.id);
+        _districtName = res.label;
+        _districtError = null;
+      });
+    }
+  }
+
+  Future<void> _pickHospital() async {
+    final options = _hospitals
+        .map((h) => PickerOption(
+            id: h.id, label: h.name, subtitle: _districtNameFor(h.districtId)))
+        .toList();
+    final res = await showSearchablePicker(
+      context: context,
+      title: 'Select Hospital',
+      searchHint: 'Search hospital…',
+      options: options,
+      selectedId: _hospitalManual ? null : _hospitalId,
+      manualAddLabel: 'Add "{q}" as a new hospital',
+    );
+    if (res != null) {
+      setState(() {
+        _hospitalManual = res.isManual;
+        _hospitalId = res.isManual ? null : res.id;
+        _hospitalName = res.label;
+        _hospitalError = null;
+      });
+    }
+  }
+
   Future<void> _submitEdit() async {
-    if (!_formKey.currentState!.validate()) return;
+    final formOk = _formKey.currentState!.validate();
+    final districtOk = _districtId != null;
+    final hospitalOk = _hospitalId != null || _hospitalManual;
+    if (!districtOk || !hospitalOk) {
+      setState(() {
+        _districtError = districtOk ? null : 'Please select a district';
+        _hospitalError = hospitalOk ? null : 'Please select a hospital';
+      });
+    }
+    if (!formOk || !districtOk || !hospitalOk) return;
+
     setState(() { _saving = true; _error = null; });
     try {
+      final hospitalId = _hospitalManual
+          ? await _refSvc.requestManualHospital(
+              name: _hospitalName!, districtId: _districtId)
+          : _hospitalId!;
       await _service.submitEdit(
         bmdcNumber:     _bmdcCtrl.text.trim(),
         specialty:      _specialtyCtrl.text.trim(),
-        hospital:       _hospitalCtrl.text.trim(),
+        hospitalId:     hospitalId,
+        hospitalName:   _hospitalName!.trim(),
+        districtId:     _districtId!,
+        fullAddress:    _addressCtrl.text.trim(),
         nidPassport:    _nidCtrl.text.trim(),
         degree:         _degreeCtrl.text.trim(),
         about:          _aboutCtrl.text.trim(),
@@ -215,8 +330,24 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
               _FieldRow(
                 label: 'Hospital / Clinic',
                 icon: Icons.local_hospital_rounded,
-                current: d['hospital'] ?? '-',
+                current: (d['hospital'] as String?)?.isNotEmpty == true
+                    ? d['hospital']
+                    : 'Pending admin approval',
                 pending: hasPending ? d['pending_hospital'] : null,
+              ),
+              _FieldRow(
+                label: 'District',
+                icon: Icons.location_city_rounded,
+                current: _districtNameFor(d['district_id'] as int?) ?? '-',
+                pending: hasPending
+                    ? _districtNameFor(d['pending_district_id'] as int?)
+                    : null,
+              ),
+              _FieldRow(
+                label: 'Full Address',
+                icon: Icons.location_on_rounded,
+                current: d['full_address'] ?? '-',
+                pending: hasPending ? d['pending_full_address'] : null,
               ),
               _FieldRow(
                 label: 'NID / Passport No.',
@@ -322,9 +453,35 @@ class _DoctorCredentialsScreenState extends State<DoctorCredentialsScreen> {
                 controller: _specialtyCtrl, icon: Icons.medical_services_rounded,
                 validator: (v) => v?.trim().isEmpty == true ? 'Required' : null),
             const SizedBox(height: 14),
-            _EditField(label: 'Hospital / Clinic', hint: 'Workplace name',
-                controller: _hospitalCtrl, icon: Icons.local_hospital_rounded,
+            SearchablePickerField(
+              label: 'District',
+              icon: Icons.location_city_rounded,
+              hint: 'Select your district',
+              value: _districtName,
+              errorText: _districtError,
+              onTap: _pickDistrict,
+            ),
+            const SizedBox(height: 14),
+            _EditField(label: 'Full Address', hint: 'Area, road, holding — full chamber address',
+                controller: _addressCtrl, icon: Icons.location_on_rounded,
+                maxLines: 2,
                 validator: (v) => v?.trim().isEmpty == true ? 'Required' : null),
+            const SizedBox(height: 14),
+            SearchablePickerField(
+              label: 'Hospital / Clinic',
+              icon: Icons.local_hospital_rounded,
+              hint: 'Select your hospital',
+              value: _hospitalName,
+              errorText: _hospitalError,
+              onTap: _pickHospital,
+            ),
+            if (_hospitalManual) ...[
+              const SizedBox(height: 6),
+              Text(
+                'New hospital — visible once an admin approves it.',
+                style: GoogleFonts.poppins(fontSize: 11, color: c.amber),
+              ),
+            ],
             const SizedBox(height: 14),
             _EditField(label: 'NID / Passport No.', hint: 'ID number',
                 controller: _nidCtrl, icon: Icons.perm_identity_rounded,

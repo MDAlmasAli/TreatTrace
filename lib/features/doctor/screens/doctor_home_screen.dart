@@ -49,7 +49,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   int _totalPatients = 0;
 
   int?    _visitingFee;
-  String? _chamber;
   List<int> _visitingDays = [];   // ISO weekdays 1=Mon..7=Sun
   String? _visitingStart;         // 'HH:mm:ss'
   String? _visitingEnd;           // 'HH:mm:ss'
@@ -79,23 +78,43 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     if (mounted) setState(() => _avatarUrl = profile?['avatar_url'] as String?);
   }
 
-  // ── Realtime: subscribe to new appointments for this doctor ──────────────
+  // ── Realtime: live appointment changes for this doctor ───────────────────
 
   void _subscribeToAppointments() {
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
+    final filter = PostgresChangeFilter(
+      type: PostgresChangeFilterType.eq,
+      column: 'doctor_user_id',
+      value: uid,
+    );
     _apptChannel = Supabase.instance.client
         .channel('doctor_appts_$uid')
+        // New appointment → notify the doctor + refresh stats.
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
           table: 'appointments',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'doctor_user_id',
-            value: uid,
-          ),
+          filter: filter,
           callback: (payload) => _onNewAppointment(payload.newRecord),
+        )
+        // Status change / cancel → silently refresh the live count.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'appointments',
+          filter: filter,
+          callback: (_) {
+            if (mounted) _loadDashboardStats();
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'appointments',
+          callback: (_) {
+            if (mounted) _loadDashboardStats();
+          },
         )
         .subscribe();
   }
@@ -152,7 +171,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       if (!mounted || data == null) return;
       setState(() {
         _visitingFee   = data['visiting_fee']   as int?;
-        _chamber       = data['chamber']        as String?;
         _visitingDays  = (data['visiting_days'] as List?)
                 ?.map((e) => (e as num).toInt())
                 .toList() ??
@@ -180,7 +198,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
   Future<void> _showVisitingInfoSheet() async {
     final feeCtrl     = TextEditingController(text: _visitingFee?.toString() ?? '');
-    final chamberCtrl = TextEditingController(text: _chamber ?? '');
     final limitCtrl   = TextEditingController(text: _dailyLimit?.toString() ?? '');
     final minsCtrl    = TextEditingController(text: _minutesPerPatient?.toString() ?? '');
     final selectedDays = List<int>.from(_visitingDays);
@@ -347,14 +364,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    _SheetField(
-                      label: 'Chamber / Location',
-                      hint: 'e.g. Room 203, City Hospital',
-                      controller: chamberCtrl,
-                      icon: Icons.location_on_rounded,
-                      c: c,
-                    ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -368,7 +377,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                       int.tryParse(feeCtrl.text.trim());
                                   await _verifySvc.updateVisitingInfo(
                                     fee:       fee,
-                                    chamber:   chamberCtrl.text,
                                     days:      selectedDays,
                                     startTime: _hmsFromTod(startTod),
                                     endTime:   _hmsFromTod(endTod),
@@ -417,7 +425,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     if (mounted) _loadVisitingInfo();
 
     feeCtrl.dispose();
-    chamberCtrl.dispose();
     limitCtrl.dispose();
     minsCtrl.dispose();
   }
@@ -634,7 +641,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                 child: _ActionCard(
                                   icon: Icons.schedule_rounded,
                                   label: 'Visiting Info',
-                                  subtitle: 'Hours, fee & chamber',
+                                  subtitle: 'Hours, fee & patient limit',
                                   accentColor: c.accent,
                                   onTap: _showVisitingInfoSheet,
                                 ).animate().fadeIn(delay: 260.ms).slideY(begin: 0.08),

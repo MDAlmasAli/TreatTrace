@@ -7,8 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/theme_colors.dart';
+import '../../../shared/widgets/searchable_picker_field.dart';
 
-enum DoctorSort { rating, feeLow, feeHigh, name, mostReviewed }
+enum DoctorSort { rating, feeLow, feeHigh, name, mostReviewed, district }
 
 extension DoctorSortLabel on DoctorSort {
   String get label => switch (this) {
@@ -17,6 +18,7 @@ extension DoctorSortLabel on DoctorSort {
         DoctorSort.feeHigh      => 'Fee (high → low)',
         DoctorSort.name         => 'Name (A → Z)',
         DoctorSort.mostReviewed => 'Most reviewed',
+        DoctorSort.district     => 'District (A → Z)',
       };
 }
 
@@ -31,8 +33,9 @@ const _dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 class DoctorFilter {
   final DoctorSort sort;
-  final Set<String> specialties;
-  final Set<String> hospitals;
+  final String? specialty;   // single selection from the DB-backed picker
+  final String? hospital;
+  final String? district;
   final RangeValues? feeRange; // null = no fee constraint
   final Set<int> days;         // ISO dow 1..7
   final Set<int> timeBands;    // indexes into _bandRanges
@@ -40,8 +43,9 @@ class DoctorFilter {
 
   const DoctorFilter({
     this.sort = DoctorSort.rating,
-    this.specialties = const {},
-    this.hospitals = const {},
+    this.specialty,
+    this.hospital,
+    this.district,
     this.feeRange,
     this.days = const {},
     this.timeBands = const {},
@@ -50,32 +54,13 @@ class DoctorFilter {
 
   // Number of active filter groups (sort isn't counted — it's always set).
   int get activeCount =>
-      (specialties.isEmpty ? 0 : 1) +
-      (hospitals.isEmpty ? 0 : 1) +
+      (specialty == null ? 0 : 1) +
+      (hospital == null ? 0 : 1) +
+      (district == null ? 0 : 1) +
       (feeRange == null ? 0 : 1) +
       (days.isEmpty ? 0 : 1) +
       (timeBands.isEmpty ? 0 : 1) +
       (minRating > 0 ? 1 : 0);
-
-  DoctorFilter copyWith({
-    DoctorSort? sort,
-    Set<String>? specialties,
-    Set<String>? hospitals,
-    RangeValues? feeRange,
-    bool clearFeeRange = false,
-    Set<int>? days,
-    Set<int>? timeBands,
-    double? minRating,
-  }) =>
-      DoctorFilter(
-        sort:        sort ?? this.sort,
-        specialties: specialties ?? this.specialties,
-        hospitals:   hospitals ?? this.hospitals,
-        feeRange:    clearFeeRange ? null : (feeRange ?? this.feeRange),
-        days:        days ?? this.days,
-        timeBands:   timeBands ?? this.timeBands,
-        minRating:   minRating ?? this.minRating,
-      );
 }
 
 // ── Apply (filter + sort) ──────────────────────────────────────────────────
@@ -110,14 +95,9 @@ bool _matchesDays(Map<String, dynamic> d, Set<int> days) {
 List<Map<String, dynamic>> applyDoctorFilter(
     List<Map<String, dynamic>> docs, DoctorFilter f) {
   final list = docs.where((d) {
-    if (f.specialties.isNotEmpty &&
-        !f.specialties.contains(d['specialty'] as String?)) {
-      return false;
-    }
-    if (f.hospitals.isNotEmpty &&
-        !f.hospitals.contains(d['hospital'] as String?)) {
-      return false;
-    }
+    if (f.specialty != null && d['specialty'] != f.specialty) return false;
+    if (f.hospital != null && d['hospital'] != f.hospital) return false;
+    if (f.district != null && d['district'] != f.district) return false;
     if (f.feeRange != null) {
       final fee = (d['visiting_fee'] as num?)?.toDouble();
       if (fee == null) return false;
@@ -137,6 +117,8 @@ List<Map<String, dynamic>> applyDoctorFilter(
   int? fee(Map<String, dynamic> d) => (d['visiting_fee'] as num?)?.toInt();
   String name(Map<String, dynamic> d) =>
       (d['full_name'] as String? ?? '').toLowerCase();
+  String district(Map<String, dynamic> d) =>
+      (d['district'] as String? ?? '').toLowerCase();
 
   int feeCmp(Map<String, dynamic> a, Map<String, dynamic> b, {required bool asc}) {
     final fa = fee(a), fb = fee(b);
@@ -165,6 +147,14 @@ List<Map<String, dynamic>> applyDoctorFilter(
       list.sort((a, b) => feeCmp(a, b, asc: false));
     case DoctorSort.name:
       list.sort((a, b) => name(a).compareTo(name(b)));
+    case DoctorSort.district:
+      list.sort((a, b) {
+        final da = district(a), db = district(b);
+        // Doctors without a district sort last.
+        if (da.isEmpty != db.isEmpty) return da.isEmpty ? 1 : -1;
+        final d = da.compareTo(db);
+        return d != 0 ? d : name(a).compareTo(name(b));
+      });
   }
   return list;
 }
@@ -176,6 +166,7 @@ Future<DoctorFilter?> showDoctorFilterSheet(
   required DoctorFilter current,
   required List<String> specialties,
   required List<String> hospitals,
+  required List<String> districts,
   required RangeValues? feeBounds, // null = no fee data
 }) {
   return showModalBottomSheet<DoctorFilter>(
@@ -186,6 +177,7 @@ Future<DoctorFilter?> showDoctorFilterSheet(
       current: current,
       specialties: specialties,
       hospitals: hospitals,
+      districts: districts,
       feeBounds: feeBounds,
     ),
   );
@@ -195,12 +187,14 @@ class _DoctorFilterSheet extends StatefulWidget {
   final DoctorFilter current;
   final List<String> specialties;
   final List<String> hospitals;
+  final List<String> districts;
   final RangeValues? feeBounds;
 
   const _DoctorFilterSheet({
     required this.current,
     required this.specialties,
     required this.hospitals,
+    required this.districts,
     required this.feeBounds,
   });
 
@@ -210,22 +204,22 @@ class _DoctorFilterSheet extends StatefulWidget {
 
 class _DoctorFilterSheetState extends State<_DoctorFilterSheet> {
   late DoctorSort _sort;
-  late Set<String> _specialties;
-  late Set<String> _hospitals;
+  String? _specialty;
+  String? _hospital;
+  String? _district;
   late RangeValues? _fee;
   late Set<int> _days;
   late Set<int> _bands;
   late double _minRating;
-  String _specialtyQuery = '';
-  String _hospitalQuery = '';
 
   @override
   void initState() {
     super.initState();
     final f = widget.current;
     _sort = f.sort;
-    _specialties = {...f.specialties};
-    _hospitals = {...f.hospitals};
+    _specialty = f.specialty;
+    _hospital = f.hospital;
+    _district = f.district;
     _fee = f.feeRange ?? widget.feeBounds;
     _days = {...f.days};
     _bands = {...f.timeBands};
@@ -234,8 +228,9 @@ class _DoctorFilterSheetState extends State<_DoctorFilterSheet> {
 
   void _reset() => setState(() {
         _sort = DoctorSort.rating;
-        _specialties = {};
-        _hospitals = {};
+        _specialty = null;
+        _hospital = null;
+        _district = null;
         _fee = widget.feeBounds;
         _days = {};
         _bands = {};
@@ -249,13 +244,32 @@ class _DoctorFilterSheetState extends State<_DoctorFilterSheet> {
         (_fee!.start > bounds.start || _fee!.end < bounds.end);
     Navigator.of(context).pop(DoctorFilter(
       sort: _sort,
-      specialties: _specialties,
-      hospitals: _hospitals,
+      specialty: _specialty,
+      hospital: _hospital,
+      district: _district,
       feeRange: narrowed ? _fee : null,
       days: _days,
       timeBands: _bands,
       minRating: _minRating,
     ));
+  }
+
+  // Opens the searchable picker for one filter category, backed by [options]
+  // (the full DB-backed list). Selecting again the current value clears it.
+  Future<String?> _pickOne({
+    required String title,
+    required String hint,
+    required List<String> options,
+    required String? current,
+  }) async {
+    final res = await showSearchablePicker(
+      context: context,
+      title: title,
+      searchHint: hint,
+      options: options.map((o) => PickerOption(id: o, label: o)).toList(),
+      selectedId: current,
+    );
+    return res?.id;
   }
 
   @override
@@ -313,26 +327,62 @@ class _DoctorFilterSheetState extends State<_DoctorFilterSheet> {
                 children: [
                   _section(c, 'Sort by'),
                   ...DoctorSort.values.map((s) => _radioRow(c, s)),
-                  if (widget.specialties.isNotEmpty) ...[
-                    _section(c, 'Specialty'),
-                    if (widget.specialties.length > 6)
-                      _searchField(c, 'Search specialties…',
-                          (v) => setState(() => _specialtyQuery = v)),
-                    _chipBox(
-                      c,
-                      _visible(widget.specialties, _specialties, _specialtyQuery),
-                      _specialties,
-                    ),
-                  ],
+                  _section(c, 'District'),
+                  _filterPicker(
+                    c,
+                    label: 'District',
+                    icon: Icons.location_city_rounded,
+                    hint: 'Search & select a district',
+                    value: _district,
+                    onTap: () async {
+                      final v = await _pickOne(
+                        title: 'Select District',
+                        hint: 'Search district…',
+                        options: widget.districts,
+                        current: _district,
+                      );
+                      if (v != null) setState(() => _district = v);
+                    },
+                    onClear: () => setState(() => _district = null),
+                  ),
                   if (widget.hospitals.isNotEmpty) ...[
                     _section(c, 'Hospital'),
-                    if (widget.hospitals.length > 6)
-                      _searchField(c, 'Search hospitals…',
-                          (v) => setState(() => _hospitalQuery = v)),
-                    _chipBox(
+                    _filterPicker(
                       c,
-                      _visible(widget.hospitals, _hospitals, _hospitalQuery),
-                      _hospitals,
+                      label: 'Hospital',
+                      icon: Icons.local_hospital_rounded,
+                      hint: 'Search & select a hospital',
+                      value: _hospital,
+                      onTap: () async {
+                        final v = await _pickOne(
+                          title: 'Select Hospital',
+                          hint: 'Search hospital…',
+                          options: widget.hospitals,
+                          current: _hospital,
+                        );
+                        if (v != null) setState(() => _hospital = v);
+                      },
+                      onClear: () => setState(() => _hospital = null),
+                    ),
+                  ],
+                  if (widget.specialties.isNotEmpty) ...[
+                    _section(c, 'Specialty'),
+                    _filterPicker(
+                      c,
+                      label: 'Specialty',
+                      icon: Icons.medical_services_rounded,
+                      hint: 'Search & select a specialty',
+                      value: _specialty,
+                      onTap: () async {
+                        final v = await _pickOne(
+                          title: 'Select Specialty',
+                          hint: 'Search specialty…',
+                          options: widget.specialties,
+                          current: _specialty,
+                        );
+                        if (v != null) setState(() => _specialty = v);
+                      },
+                      onClear: () => setState(() => _specialty = null),
                     ),
                   ],
                   if (bounds != null && bounds.end > bounds.start) ...[
@@ -403,77 +453,40 @@ class _DoctorFilterSheetState extends State<_DoctorFilterSheet> {
     );
   }
 
-  Widget _searchField(ThemeColors c, String hint, ValueChanged<String> onChanged) =>
-      Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: SizedBox(
-          height: 40,
-          child: TextField(
-            onChanged: onChanged,
-            style: GoogleFonts.poppins(fontSize: 12, color: c.textPrimary),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: GoogleFonts.poppins(fontSize: 12, color: c.textMuted),
-              prefixIcon: Icon(Icons.search_rounded, size: 18, color: c.textMuted),
-              filled: true,
-              fillColor: c.surface,
-              contentPadding: const EdgeInsets.symmetric(vertical: 4),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: c.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: c.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: c.accent),
-              ),
+  // A tap-to-search single-select field, with a Clear action once chosen.
+  Widget _filterPicker(
+    ThemeColors c, {
+    required String label,
+    required IconData icon,
+    required String hint,
+    required String? value,
+    required VoidCallback onTap,
+    required VoidCallback onClear,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SearchablePickerField(
+          label: '',
+          icon: icon,
+          hint: hint,
+          value: value,
+          onTap: onTap,
+        ),
+        if (value != null)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: onClear,
+              icon: Icon(Icons.close_rounded, size: 14, color: c.textSec),
+              label: Text('Clear',
+                  style: GoogleFonts.poppins(fontSize: 12, color: c.textSec)),
+              style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  minimumSize: const Size(0, 28)),
             ),
           ),
-        ),
-      );
-
-  // Selected options first, then alphabetical; narrowed by the search query.
-  List<String> _visible(List<String> all, Set<String> selected, String query) {
-    final q = query.trim().toLowerCase();
-    final list = (q.isEmpty
-        ? [...all]
-        : all.where((o) => o.toLowerCase().contains(q)).toList())
-      ..sort((a, b) {
-        final sa = selected.contains(a), sb = selected.contains(b);
-        if (sa != sb) return sa ? -1 : 1;
-        return a.toLowerCase().compareTo(b.toLowerCase());
-      });
-    return list;
-  }
-
-  // Chip wrap capped to a few rows; scrolls internally so one long list never
-  // dominates the sheet. Shows a friendly note when the search matches nothing.
-  Widget _chipBox(ThemeColors c, List<String> options, Set<String> selected) {
-    if (options.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Text('No matches',
-            style: GoogleFonts.poppins(fontSize: 12, color: c.textMuted)),
-      );
-    }
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 168),
-      child: SingleChildScrollView(
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: options
-              .map((o) => _chip(c, o, selected.contains(o), () {
-                    setState(() {
-                      selected.contains(o) ? selected.remove(o) : selected.add(o);
-                    });
-                  }))
-              .toList(),
-        ),
-      ),
+      ],
     );
   }
 

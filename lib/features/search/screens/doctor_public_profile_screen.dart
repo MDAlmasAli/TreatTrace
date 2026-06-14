@@ -218,7 +218,8 @@ class _DoctorPublicProfileScreenState
     final degree        = d['degree']        as String?;
     final visitingFee   = d['visiting_fee']  as int?;
     final visitingHours = d['visiting_hours'] as String?;
-    final chamber       = d['chamber']       as String?;
+    final fullAddress   = d['full_address']  as String?;
+    final district      = d['district']      as String?;
     final about         = d['about']         as String?;
     final email         = d['email']         as String?;
     final avatar        = d['avatar_url']    as String?;
@@ -354,6 +355,8 @@ class _DoctorPublicProfileScreenState
               items: [
                 if (hospital?.isNotEmpty == true)
                   (Icons.local_hospital_rounded, 'Hospital', hospital!),
+                if (district?.isNotEmpty == true)
+                  (Icons.location_city_rounded, 'District', district!),
                 if (degree?.isNotEmpty == true)
                   (Icons.school_rounded, 'Degree', degree!),
                 if (email?.isNotEmpty == true)
@@ -366,7 +369,7 @@ class _DoctorPublicProfileScreenState
         // ── Visiting Information ──────────────────────────────────────────
         if (visitingFee != null ||
             visitingHours?.isNotEmpty == true ||
-            chamber?.isNotEmpty == true)
+            fullAddress?.isNotEmpty == true)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -374,7 +377,7 @@ class _DoctorPublicProfileScreenState
                 c:       c,
                 fee:     visitingFee,
                 hours:   visitingHours,
-                chamber: chamber,
+                address: fullAddress,
               ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.04),
             ),
           ),
@@ -646,9 +649,9 @@ class _VisitingCard extends StatelessWidget {
   final ThemeColors c;
   final int?     fee;
   final String?  hours;
-  final String?  chamber;
+  final String?  address;
 
-  const _VisitingCard({required this.c, this.fee, this.hours, this.chamber});
+  const _VisitingCard({required this.c, this.fee, this.hours, this.address});
 
   @override
   Widget build(BuildContext context) {
@@ -659,8 +662,8 @@ class _VisitingCard extends StatelessWidget {
     if (hours?.isNotEmpty == true) {
       items.add((Icons.access_time_rounded, 'Visiting Hours', hours!, c.accent));
     }
-    if (chamber?.isNotEmpty == true) {
-      items.add((Icons.location_on_rounded, 'Chamber', chamber!, c.amber));
+    if (address?.isNotEmpty == true) {
+      items.add((Icons.location_on_rounded, 'Address', address!, c.amber));
     }
 
     return Container(
