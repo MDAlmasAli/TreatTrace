@@ -19,9 +19,9 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.96 — Active Development |
+| **Version** | v0.99 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-06-05 |
+| **Last Updated** | 2026-06-20 |
 
 ---
 
@@ -179,6 +179,12 @@ flutter run
 ---
 
 ## 8. Changelog (highlights)
+
+**v0.99** — Prescription list now has a **stable sort order**. Lists were ordered by `prescription_date` (descending) only, so multiple prescriptions sharing the same date had no guaranteed order and could shuffle between refreshes. A secondary `created_at` (descending) tiebreaker was added to both the patient's own list and the doctor's patient-view, so same-day prescriptions stay in a consistent, newest-added-first order.
+
+**v0.98** — Location is now constrained to a fixed district + hospital list during doctor credential submission, search results update in realtime, and long doctor reviews get a "show more" expander.
+
+**v0.97** — Live "now serving" queue: the patient's queue screen shows the doctor's current serving ticket in realtime, and ticket serials are now permanent (assigned once and kept) rather than recomputed.
 
 **v0.96** — Appointment privacy, richer tiles, and an auth fix. (1) **Privacy:** in a doctor's view of a patient, only the doctor's *own* appointments show full details and open; other doctors' appointments are redacted (doctor name, date, status only) and can't be opened. (2) **Tiles:** each appointment row now leads with the doctor's name and shows linked prescription / test-report counts; the doctor's own appointments are tappable in both the patient-detail preview **and** the All Appointments list (both now share one `PatientAppointmentTile` widget). (3) **Logout→login fix:** logging out used to wipe the whole navigator stack and push a bare login screen, destroying the `AuthGate` that auto-navigates on login — so signing into a second account left it "stuck" until an app restart. Logout now pops back to the `AuthGate` root (which survives), so the next login routes itself. The same fix is applied to account deletion (which now also clears the local session).
 

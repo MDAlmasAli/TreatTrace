@@ -25,7 +25,8 @@ class PrescriptionService {
         .from('prescriptions')
         .select('*, prescription_medicines(*)')
         .eq('user_id', uid)
-        .order('prescription_date', ascending: false);
+        .order('prescription_date', ascending: false)
+        .order('created_at', ascending: false);
 
     return rows.map((row) {
       final medRows = (row['prescription_medicines'] as List? ?? [])
@@ -234,7 +235,8 @@ class PrescriptionService {
         .from('prescriptions')
         .select('*, prescription_medicines(*)')
         .eq('user_id', patientId)
-        .order('prescription_date', ascending: false);
+        .order('prescription_date', ascending: false)
+        .order('created_at', ascending: false);
 
     return rows.map((row) {
       final medRows = (row['prescription_medicines'] as List? ?? [])
