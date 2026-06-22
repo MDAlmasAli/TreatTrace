@@ -761,14 +761,6 @@ class _PrescriptionCard extends StatelessWidget {
           Text('Upload your prescription',
               style: GoogleFonts.poppins(
                   fontSize: 11, color: context.colors.textSec)),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(child: _SubChip(icon: Icons.edit_note_rounded, label: 'Manual')),
-              const SizedBox(width: 7),
-              Expanded(child: _SubChip(icon: Icons.attach_file_rounded, label: 'File')),
-            ],
-          ),
         ],
       ),
     );
@@ -803,14 +795,6 @@ class _TestReportCard extends StatelessWidget {
           Text('Upload your test results',
               style: GoogleFonts.poppins(
                   fontSize: 11, color: context.colors.textSec)),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: _SubChip(
-                icon: Icons.attach_file_rounded,
-                label: 'File Upload',
-                fullWidth: true),
-          ),
         ],
       ),
     );
@@ -1014,49 +998,6 @@ class _CardIcon extends StatelessWidget {
   }
 }
 
-class _SubChip extends StatelessWidget {
-  final IconData icon;
-  final String   label;
-  final bool     fullWidth;
-
-  const _SubChip({
-    required this.icon,
-    required this.label,
-    this.fullWidth = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: c.borderLight, width: 1),
-      ),
-      child: Row(
-        mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 12, color: c.accent),
-          const SizedBox(width: 5),
-          Flexible(
-            child: Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: c.textSec,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // _BottomBar
