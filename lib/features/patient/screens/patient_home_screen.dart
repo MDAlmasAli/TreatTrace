@@ -1041,12 +1041,15 @@ class _SubChip extends StatelessWidget {
         children: [
           Icon(icon, size: 12, color: c.accent),
           const SizedBox(width: 5),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: c.textSec,
+          Flexible(
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: c.textSec,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

@@ -19,9 +19,9 @@
 
 | Item | Detail |
 |---|---|
-| **Version** | v0.99 — Active Development |
+| **Version** | v1.0.0 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-06-20 |
+| **Last Updated** | 2026-06-21 |
 
 ---
 
@@ -179,6 +179,8 @@ flutter run
 ---
 
 ## 8. Changelog (highlights)
+
+**v1.0.0** — Fixed "Manual" button text being clipped in the patient home screen Prescription card. Wrapped `_SubChip`'s label in `Flexible` with `overflow: TextOverflow.ellipsis` so button text renders fully at all screen sizes.
 
 **v0.99** — Prescription list now has a **stable sort order**. Lists were ordered by `prescription_date` (descending) only, so multiple prescriptions sharing the same date had no guaranteed order and could shuffle between refreshes. A secondary `created_at` (descending) tiebreaker was added to both the patient's own list and the doctor's patient-view, so same-day prescriptions stay in a consistent, newest-added-first order.
 
