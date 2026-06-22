@@ -21,7 +21,7 @@
 |---|---|
 | **Version** | v1.0.1 — Active Development |
 | **Platform** | Android · iOS · Web (Chrome) |
-| **Last Updated** | 2026-06-21 |
+| **Last Updated** | 2026-06-23 |
 
 ---
 
@@ -180,7 +180,9 @@ flutter run
 
 ## 8. Changelog (highlights)
 
-**v1.0.1** — Removed the "Manual", "File", and "File Upload" sub-chips from the Prescription and Test Report quick-action cards on the patient home screen.
+**v1.0.1** *(2026-06-23)* — Shortened verbose inline and doc comments in `appointment_detail_screen.dart` (code-only cleanup, no behaviour change).
+
+**v1.0.1** *(2026-06-21)* — Removed the "Manual", "File", and "File Upload" sub-chips from the Prescription and Test Report quick-action cards on the patient home screen.
 
 **v1.0.0** — Fixed "Manual" button text being clipped in the patient home screen Prescription card. Wrapped `_SubChip`'s label in `Flexible` with `overflow: TextOverflow.ellipsis` so button text renders fully at all screen sizes.
 
