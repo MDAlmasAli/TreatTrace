@@ -21,26 +21,22 @@ import 'add_edit_appointment_screen.dart';
 class AppointmentDetailScreen extends StatefulWidget {
   final Appointment appointment;
 
-  /// Doctor-side, read-only view: hides status/edit/delete controls, opens
-  /// linked items via the doctor-side callbacks below, and (optionally) shows
-  /// an "Open Patient Profile" button.
+  /// Hides patient-side controls; enables doctor callbacks.
   final bool isDoctorView;
 
-  /// Shown as the header title in doctor view (the patient who booked).
+  /// Header title in doctor view (patient name).
   final String? patientName;
 
-  /// Doctor view — tapping a linked prescription. Caller decides edit rights
-  /// (own prescription = editable, others = view only).
+  /// Doctor: prescription tapped (caller decides edit rights).
   final void Function(Prescription rx)? onPrescriptionTapDoctor;
 
-  /// Doctor view — tapping a linked test report (always view-only).
+  /// Doctor: test report tapped (view-only).
   final void Function(TestReport report)? onTestReportTapDoctor;
 
-  /// Doctor view — opens the patient's full profile. Null hides the button.
+  /// Doctor: open patient profile. Null hides the button.
   final VoidCallback? onOpenPatientProfile;
 
-  /// Doctor view — write a new prescription for this patient straight from the
-  /// appointment (no need to open the profile first). Null hides the button.
+  /// Doctor: write prescription for this appointment. Null hides the button.
   final VoidCallback? onWritePrescription;
 
   const AppointmentDetailScreen({
@@ -72,8 +68,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen>
   final Map<String, Prescription> _prescMap      = {};
   final Map<String, TestReport>   _testReportMap = {};
 
-  String? _estTime;  // estimated visit time from live queue position + schedule
-  int?    _position; // live queue position (patients still ahead + 1)
+  String? _estTime;  // ~visit time from queue + schedule
+  int?    _position; // queue position (ahead + 1)
   RealtimeChannel? _apptChannel;
 
   @override
@@ -93,8 +89,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen>
     super.dispose();
   }
 
-  // True while a doctor is actively viewing a live (today, still-scheduled)
-  // appointment — the window during which "now serving" should point here.
+  // True if doctor is viewing today's scheduled appointment.
   bool get _isDoctorLiveSession =>
       widget.isDoctorView &&
       _appt.status == AppointmentStatus.scheduled &&
@@ -103,10 +98,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen>
   bool _isSameDate(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  // If the doctor backgrounds/closes the app while still on this screen (e.g.
-  // checked the detail then killed the app), drop the "now serving" pointer so
-  // patients don't keep seeing a stale entry; restore it when the doctor
-  // returns to the still-open appointment.
+  // Drop "now serving" when backgrounded; restore on resume.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_isDoctorLiveSession) return;
@@ -118,8 +110,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen>
     }
   }
 
-  // Live refresh: reflect changes the other party makes to this appointment
-  // (status / reschedule). Skipped while one of our own actions is in flight.
+  // Live updates for this appointment row (other party's changes).
   void _subscribeRealtime() {
     _apptChannel = Supabase.instance.client
         .channel('appt_detail_${_appt.id}')
@@ -164,9 +155,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen>
     final p = startHms.split(':');
     var base = (int.tryParse(p[0]) ?? 0) * 60 +
         (p.length > 1 ? (int.tryParse(p[1]) ?? 0) : 0);
-    // For today's queue, never estimate a time already in the past: once the
-    // session has started, anchor to "now" (the doctor can only see you from
-    // now onward). Future-date appointments keep the visiting start as the base.
+    // For today, floor base to now so we never estimate a past time.
     final now = DateTime.now();
     final isToday = apptDate.year == now.year &&
         apptDate.month == now.month &&
@@ -355,9 +344,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen>
     if (mounted) Navigator.of(context).pop(true);
   }
 
-  // Doctor-only: move the appointment to a new date. Patient is notified by
-  // the DB trigger on the date change.
-  // A prescription may be written only on the appointment's own date.
+  // Rx is writable only on the appointment's own date.
   bool get _isAppointmentToday {
     final now = DateTime.now();
     final d   = _appt.appointmentDate;
@@ -483,9 +470,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen>
     ));
 
     return PopScope(
-      // canPop:false so the framework doesn't pop; we pop exactly once with the
-      // result. (canPop:true + a manual pop here caused a double-pop that tore
-      // down two routes mid gesture-dispatch → ConcurrentModificationError.)
+      // canPop:false — manual pop returns _changed; prevents double-pop crash.
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
@@ -535,11 +520,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen>
                                 label: s.appointmentDate,
                                 value: _fmtDate(_appt.appointmentDate),
                               ),
-                              // Permanent ticket serial (stable, matches the
-                              // schedule list & banner). _position is the live
-                              // queue position, loaded async — used here only as
-                              // a guard (non-null ⇒ scheduled with a ticket) and
-                              // to estimate the visit time.
+                              // Show serial only when queue position is known.
                               if (_position != null &&
                                   _appt.status == AppointmentStatus.scheduled)
                                 _InfoRow(
@@ -622,12 +603,9 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen>
                             ],
                           ),
 
-                          // Doctor view — no patient-style status controls;
-                          // doctor can write Rx, reschedule/cancel (if still
-                          // scheduled), and open the patient profile.
+                          // Doctor: Rx / reschedule / cancel / open profile.
                           if (widget.isDoctorView) ...[
-                            // Prescriptions can only be written for an active
-                            // (scheduled) appointment — not cancelled/no-show.
+                            // Rx only for scheduled appointments.
                             if (widget.onWritePrescription != null &&
                                 _appt.status ==
                                     AppointmentStatus.scheduled) ...[
